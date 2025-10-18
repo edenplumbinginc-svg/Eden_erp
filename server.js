@@ -148,26 +148,26 @@ app.post('/api/projects/:projectId/tasks', async (req, res) => {
   }
 });
 
-// --- Debug: show registered routes ---
-app.get('/routes', (_, res) => {
-  const routes = [];
-  app._router.stack.forEach(mw => {
-    if (mw.route) {
-      const methods = Object.keys(mw.route.methods)
-        .filter(Boolean)
-        .join(',')
-        .toUpperCase();
-      routes.push({ methods, path: mw.route.path });
-    }
-  });
-  res.json(routes);
-});
+// --- Ensure task_comments table ---
+(async () => {
+  try {
+    await pool.query(`
+      create table if not exists public.task_comments (
+        id uuid default gen_random_uuid() primary key,
+        task_id uuid references public.tasks(id) on delete cascade,
+        author_id uuid,
+        body text not null,
+        created_at timestamptz default now(),
+        updated_at timestamptz default now()
+      );
+    `);
+    console.log('✅ ensured task_comments table exists');
+  } catch (e) {
+    console.error('⚠️ failed to ensure task_comments table:', e.message);
+  }
+})();
 
-// --- Start server ---
-const port = process.env.PORT || 3000;
-app.listen(port, () => console.log(`api on :${port}`));
-// --- Task comments ---
-// list comments for a task
+// --- Task comments: list ---
 app.get('/api/tasks/:taskId/comments', async (req, res) => {
   try {
     const r = await pool.query(
@@ -178,10 +178,12 @@ app.get('/api/tasks/:taskId/comments', async (req, res) => {
       [req.params.taskId]
     );
     res.json(r.rows);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-// create a comment
+// --- Task comments: create ---
 app.post('/api/tasks/:taskId/comments', async (req, res) => {
   try {
     const { body, author_id } = req.body ?? {};
@@ -193,8 +195,11 @@ app.post('/api/tasks/:taskId/comments', async (req, res) => {
       [req.params.taskId, author_id ?? null, body]
     );
     res.status(201).json(r.rows[0]);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
+
 // --- Ensure ball_history table ---
 (async () => {
   try {
@@ -238,7 +243,9 @@ app.post('/api/tasks/:taskId/ball', async (req, res) => {
     );
 
     res.json(up.rows[0]);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // --- Ball history: list for a task ---
@@ -252,5 +259,28 @@ app.get('/api/tasks/:taskId/ball', async (req, res) => {
       [req.params.taskId]
     );
     res.json(r.rows);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
+
+// --- Debug: show registered routes ---
+app.get('/routes', (_, res) => {
+  const routes = [];
+  if (app._router && app._router.stack) {
+    app._router.stack.forEach(mw => {
+      if (mw.route) {
+        const methods = Object.keys(mw.route.methods)
+          .filter(Boolean)
+          .join(',')
+          .toUpperCase();
+        routes.push({ methods, path: mw.route.path });
+      }
+    });
+  }
+  res.json(routes);
+});
+
+// --- Start server ---
+const port = process.env.PORT || 3000;
+app.listen(port, () => console.log(`api on :${port}`));
