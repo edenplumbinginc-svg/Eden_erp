@@ -1,0 +1,7 @@
+{
+  "name": "eden_erp",
+  "private": true,
+  "version": "0.1.0",
+  "license": "UNLICENSED",
+  "scripts": { "verify": "node -e \"console.log('ok')\"" }
+}
