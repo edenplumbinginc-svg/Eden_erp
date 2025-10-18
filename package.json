@@ -5,7 +5,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "verify": "node -e \"console.log('ok')\"",
-    "dev": "node -r dotenv/config server.js"
+    "dev": "node server.js"
   },
   "description": "Monolithic shell.",
   "main": "index.js",
