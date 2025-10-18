@@ -139,6 +139,45 @@ app.post('/api/projects', async (req, res) => {
   }
 });
 
+// --- Projects: update ---
+app.patch('/api/projects/:id', async (req, res) => {
+  try {
+    const { name, code, status } = req.body ?? {};
+    const updates = [];
+    const values = [];
+    let idx = 1;
+
+    if (name !== undefined) { updates.push(`name = $${idx++}`); values.push(name); }
+    if (code !== undefined) { updates.push(`code = $${idx++}`); values.push(code); }
+    if (status !== undefined) { updates.push(`status = $${idx++}`); values.push(status); }
+
+    if (updates.length === 0) return res.status(400).json({ error: 'no fields to update' });
+
+    values.push(req.params.id);
+    const r = await pool.query(
+      `update public.projects set ${updates.join(', ')} 
+       where id = $${idx} 
+       returning id, name, code, status, created_at`,
+      values
+    );
+    if (r.rowCount === 0) return res.status(404).json({ error: 'project not found' });
+    res.json(r.rows[0]);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// --- Projects: delete ---
+app.delete('/api/projects/:id', async (req, res) => {
+  try {
+    const r = await pool.query('delete from public.projects where id = $1 returning id', [req.params.id]);
+    if (r.rowCount === 0) return res.status(404).json({ error: 'project not found' });
+    res.json({ deleted: true, id: r.rows[0].id });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // --- Tasks: list by project ---
 app.get('/api/projects/:projectId/tasks', async (req, res) => {
   try {
@@ -176,6 +215,50 @@ app.post('/api/projects/:projectId/tasks', async (req, res) => {
       priority ?? null
     ]);
     res.status(201).json(r.rows[0]);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// --- Tasks: update ---
+app.patch('/api/tasks/:id', async (req, res) => {
+  try {
+    const { title, description, status, priority, assignee_id, ball_in_court, due_at } = req.body ?? {};
+    const updates = [];
+    const values = [];
+    let idx = 1;
+
+    if (title !== undefined) { updates.push(`title = $${idx++}`); values.push(title); }
+    if (description !== undefined) { updates.push(`description = $${idx++}`); values.push(description); }
+    if (status !== undefined) { updates.push(`status = $${idx++}`); values.push(status); }
+    if (priority !== undefined) { updates.push(`priority = $${idx++}`); values.push(priority); }
+    if (assignee_id !== undefined) { updates.push(`assignee_id = $${idx++}`); values.push(assignee_id); }
+    if (ball_in_court !== undefined) { updates.push(`ball_in_court = $${idx++}`); values.push(ball_in_court); }
+    if (due_at !== undefined) { updates.push(`due_at = $${idx++}`); values.push(due_at); }
+
+    if (updates.length === 0) return res.status(400).json({ error: 'no fields to update' });
+
+    updates.push(`updated_at = now()`);
+    values.push(req.params.id);
+    const r = await pool.query(
+      `update public.tasks set ${updates.join(', ')} 
+       where id = $${idx} 
+       returning id, title, description, status, priority, assignee_id, ball_in_court, due_at, created_at, updated_at`,
+      values
+    );
+    if (r.rowCount === 0) return res.status(404).json({ error: 'task not found' });
+    res.json(r.rows[0]);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// --- Tasks: delete ---
+app.delete('/api/tasks/:id', async (req, res) => {
+  try {
+    const r = await pool.query('delete from public.tasks where id = $1 returning id', [req.params.id]);
+    if (r.rowCount === 0) return res.status(404).json({ error: 'task not found' });
+    res.json({ deleted: true, id: r.rows[0].id });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -282,6 +365,64 @@ app.get('/api/reports/tasks/ball', async (_, res) => {
       left join public.users u on u.id = t.ball_in_court
       group by owner
       order by owner
+    `);
+    res.json(r.rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// tasks by priority
+app.get('/api/reports/tasks/priority', async (_, res) => {
+  try {
+    const r = await pool.query(`
+      select priority, count(*)::int as count
+      from public.tasks
+      group by priority
+      order by 
+        case priority
+          when 'urgent' then 1
+          when 'high' then 2
+          when 'normal' then 3
+          when 'low' then 4
+        end
+    `);
+    res.json(r.rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// overdue tasks
+app.get('/api/reports/tasks/overdue', async (_, res) => {
+  try {
+    const r = await pool.query(`
+      select t.id, t.title, t.priority, t.due_at, 
+             p.name as project_name,
+             coalesce(u.email, 'unassigned') as owner
+      from public.tasks t
+      join public.projects p on p.id = t.project_id
+      left join public.users u on u.id = t.ball_in_court
+      where t.due_at < now() and t.status != 'closed'
+      order by t.due_at asc
+    `);
+    res.json(r.rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// activity summary (tasks created/updated in last 7 days)
+app.get('/api/reports/activity/recent', async (_, res) => {
+  try {
+    const r = await pool.query(`
+      select 
+        date_trunc('day', created_at) as day,
+        count(*)::int as tasks_created
+      from public.tasks
+      where created_at >= now() - interval '7 days'
+      group by day
+      order by day desc
     `);
     res.json(r.rows);
   } catch (e) {

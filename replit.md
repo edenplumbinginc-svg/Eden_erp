@@ -81,7 +81,16 @@ The backend server provides the following endpoints:
 - **Verify setup**: `npm run verify`
 
 ## Recent Changes
-- **Oct 18, 2025 (Latest)**: Projects and Tasks API Implementation
+- **Oct 18, 2025 (Latest)**: Major API Enhancements - Full CRUD + Advanced Reporting
+  - **CRUD Operations**: Added UPDATE (PATCH) and DELETE for both projects and tasks
+  - **Enhanced Reporting**: 5 reporting endpoints (status, owner, priority, overdue, activity)
+  - **Performance**: Added database indexes for status and ball_in_court
+  - **Schema Bootstrap**: Consolidated all table creation into single async function
+  - **Quality**: Added updated_at column to tasks with automatic timestamp
+  - **Validation**: Proper error handling and 404 responses
+  - Total: 25+ API endpoints fully functional
+  
+- **Oct 18, 2025**: Projects and Tasks API Implementation
   - Added full CRUD API for projects (GET/POST /api/projects)
   - Added tasks API with project relationship (GET/POST /api/projects/:id/tasks)
   - Implemented auto-table creation for projects and tasks on server startup
