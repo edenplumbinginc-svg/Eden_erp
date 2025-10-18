@@ -148,6 +148,58 @@ app.post('/api/projects/:projectId/tasks', async (req, res) => {
   }
 });
 
+// --- Ensure task_comments table ---
+(async () => {
+  try {
+    await pool.query(`
+      create table if not exists public.task_comments (
+        id uuid default gen_random_uuid() primary key,
+        task_id uuid references public.tasks(id) on delete cascade,
+        author_id uuid,
+        body text not null,
+        created_at timestamptz default now(),
+        updated_at timestamptz default now()
+      );
+    `);
+    console.log('✅ ensured task_comments table exists');
+  } catch (e) {
+    console.error('⚠️ failed to ensure task_comments table:', e.message);
+  }
+})();
+
+// --- Task comments: list ---
+app.get('/api/tasks/:taskId/comments', async (req, res) => {
+  try {
+    const r = await pool.query(
+      `select id, task_id, author_id, body, created_at, updated_at
+       from public.task_comments
+       where task_id = $1
+       order by created_at asc`,
+      [req.params.taskId]
+    );
+    res.json(r.rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// --- Task comments: create ---
+app.post('/api/tasks/:taskId/comments', async (req, res) => {
+  try {
+    const { body, author_id } = req.body ?? {};
+    if (!body) return res.status(400).json({ error: 'body required' });
+    const r = await pool.query(
+      `insert into public.task_comments (task_id, author_id, body)
+       values ($1, $2, $3)
+       returning id, task_id, author_id, body, created_at, updated_at`,
+      [req.params.taskId, author_id ?? null, body]
+    );
+    res.status(201).json(r.rows[0]);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // --- Debug: show registered routes ---
 app.get('/routes', (_, res) => {
   const routes = [];
