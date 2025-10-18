@@ -1,0 +1,118 @@
+🧠 REPLIT AGENT INSTRUCTION: ALIGN WITH GPT-5 ON ERP BACKEND SYNC
+
+Context Summary (read fully):
+We are building the backend for Eden_erp — a monolithic ERP API using Node.js (Express) and Supabase (PostgreSQL).
+
+We already:
+
+Created a Supabase project (https://jwehjdggkskmjrmoqibk.supabase.co).
+
+Added environment variables:
+
+SUPABASE_URL=https://jwehjdggkskmjrmoqibk.supabase.co
+SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
+DATABASE_URL=postgresql://postgres:[password]@db.jwehjdggkskmjrmoqibk.supabase.co:5432/postgres
+DATABASE_SSL=true
+
+
+Ran schema creation successfully in Supabase SQL Editor (tables created for users, roles, permissions, projects, tasks, etc.).
+
+Inserted initial role/permission seed data successfully.
+
+Verified in Supabase:
+
+users table exists.
+
+admin@edenmep.ca user record exists and has role admin.
+
+Local API (Express) runs and responds to /health and /db/ping.
+
+Current issue: /db/users returns an empty array ([]), even though the users table in Supabase contains data.
+
+Goal:
+Diagnose and fix the /db/users route so that it successfully returns user records from Supabase.
+
+✅ REQUIRED ACTION PLAN (step-by-step)
+
+Confirm Environment Variables
+
+Verify DATABASE_URL matches Supabase connection string shown under Connect → Connection String → Direct connection (with the real password included).
+
+Ensure .env file is actually loaded by Node in Replit (check “Secrets” tab or .env import).
+
+Confirm SSL config: "rejectUnauthorized": false.
+
+Replace server.js with this version (if not already exact):
+
+const express = require('express');
+const { Pool } = require('pg');
+const app = express();
+app.use(express.json());
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false
+});
+
+app.get('/health', (_, res) => res.json({ ok: true }));
+
+app.get('/db/ping', async (_, res) => {
+  if (!process.env.DATABASE_URL) return res.status(200).json({ db: 'not_configured' });
+  try {
+    const r = await pool.query('select 1 as ok');
+    res.json({ db: 'ok', rows: r.rows });
+  } catch (e) {
+    res.status(500).json({ db: 'error', error: e.message });
+  }
+});
+
+app.get('/db/users', async (_, res) => {
+  try {
+    const r = await pool.query('select id, email, name from public.users order by email');
+    res.json(r.rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+const port = process.env.PORT || 3000;
+app.listen(port, () => console.log(`api on :${port}`));
+
+
+Restart the environment completely (kill all Node processes, stop server, re-run npm run dev).
+
+Run endpoint tests:
+
+curl http://localhost:3000/health
+curl http://localhost:3000/db/ping
+curl http://localhost:3000/db/users
+
+
+Expect:
+
+Health ✅ {ok:true}
+
+Ping ✅ {"db":"ok","rows":[{"ok":1}]}
+
+Users ✅ array of users (not empty).
+
+If /db/users still returns []:
+
+Have the agent run this directly:
+
+node -e "const {Pool}=require('pg');const p=new Pool({connectionString:process.env.DATABASE_URL,ssl:{rejectUnauthorized:false}});p.query('select id,email,name from public.users').then(r=>console.log(r.rows)).catch(e=>console.error(e)).finally(()=>p.end())"
+
+
+→ If this returns users, then the Node process and Express are fine — likely environment caching issue.
+→ If not, the connection string is wrong (Replit needs correct password or secrets import).
+
+If confirmed working, instruct the Agent to create a checkpoint called:
+
+✅ Backend connected successfully — Supabase + Express integration verified
+
+
+Then return control back to GPT-5 for next ERP phase (auth routes, task management endpoints, etc.).
+
+End instruction.
+Do not summarize — execute step 1 immediately, then report logs and /db/users output.
