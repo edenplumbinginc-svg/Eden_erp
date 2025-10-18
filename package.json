@@ -3,5 +3,15 @@
   "private": true,
   "version": "0.1.0",
   "license": "UNLICENSED",
-  "scripts": { "verify": "node -e \"console.log('ok')\"" }
+  "scripts": {
+    "verify": "node -e \"console.log('ok')\""
+  },
+  "description": "Monolithic shell.",
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "dependencies": {
+    "express": "^5.1.0",
+    "pg": "^8.16.3"
+  }
 }
