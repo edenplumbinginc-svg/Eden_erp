@@ -1,6 +1,7 @@
 -- PostgreSQL schema for Phase-1
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS citext;
 
 -- ========== Auth / ACL ==========
 CREATE TABLE users (

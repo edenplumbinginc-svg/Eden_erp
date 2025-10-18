@@ -1,10 +1,10 @@
 # Eden ERP - Project Documentation
 
 ## Overview
-Monolithic ERP shell for Eden Plumbing Inc. This is a foundation scaffolding (Track B) with database schema and organizational structure. No frontend or backend implementation yet.
+Monolithic ERP shell for Eden Plumbing Inc. This is a foundation scaffolding (Track B) with database schema, organizational structure, and a basic REST API backend running on port 3000.
 
 **Created**: October 18, 2025  
-**Status**: Foundation/Scaffolding Phase
+**Status**: Backend API Running - Foundation Phase
 
 ## Project Structure
 
@@ -33,9 +33,11 @@ Monolithic ERP shell for Eden Plumbing Inc. This is a foundation scaffolding (Tr
   - `migrations/` - Future migration files
 
 ## Technology Stack
-- **Database**: PostgreSQL (via Supabase)
+- **Backend**: Express.js REST API (port 3000)
+- **Database**: PostgreSQL (Neon) with SSL
 - **Runtime**: Node.js 20
-- **Extensions**: pgcrypto
+- **Dependencies**: express, pg
+- **Extensions**: pgcrypto, citext
 
 ## Database Schema
 The schema includes:
@@ -53,11 +55,24 @@ See `.env.example` for required variables:
 - SMTP configuration for email
 - `INBOUND_WEBHOOK_SECRET` - Webhook authentication
 
+## API Endpoints
+The backend server provides the following endpoints:
+- `GET /health` - Health check (returns `{"ok": true}`)
+- `GET /db/ping` - Database connectivity test
+- `GET /db/users` - List all users (returns array of users with id, email, name)
+
+## Running the Project
+- **Start server**: `npm run dev` (runs on port 3000)
+- **Verify setup**: `npm run verify`
+
 ## Recent Changes
-- **Oct 18, 2025**: Initial repository setup with foundation structure
+- **Oct 18, 2025**: Backend API and database setup
+  - Created Express.js server with PostgreSQL integration
+  - Initialized database with schema (users, roles, permissions, projects, tasks, etc.)
+  - Configured SSL for Neon database connection
+  - Set up health check and database endpoints
   - Created directory structure for apps, core, ui, db
   - Defined PostgreSQL schema with auth, coordination, and notification tables
-  - Set up environment variable template
 
 ## Next Steps
 This is a foundation/scaffolding project. Future development would include:

@@ -4,7 +4,8 @@
   "version": "0.1.0",
   "license": "UNLICENSED",
   "scripts": {
-    "verify": "node -e \"console.log('ok')\""
+    "verify": "node -e \"console.log('ok')\"",
+    "dev": "node server.js"
   },
   "description": "Monolithic shell.",
   "main": "index.js",
