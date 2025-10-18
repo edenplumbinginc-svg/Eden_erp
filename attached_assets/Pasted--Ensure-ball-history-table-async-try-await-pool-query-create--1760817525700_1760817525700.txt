@@ -1,0 +1,59 @@
+// --- Ensure ball_history table ---
+(async () => {
+  try {
+    await pool.query(`
+      create table if not exists public.ball_history (
+        id uuid default gen_random_uuid() primary key,
+        task_id uuid not null references public.tasks(id) on delete cascade,
+        from_user_id uuid,
+        to_user_id uuid,
+        note text,
+        changed_at timestamptz not null default now()
+      );
+    `);
+    console.log('✅ ensured ball_history table exists');
+  } catch (e) {
+    console.error('⚠️ failed to ensure ball_history table:', e.message);
+  }
+})();
+
+// --- Ball handoff: set ball_in_court and record history ---
+app.post('/api/tasks/:taskId/ball', async (req, res) => {
+  try {
+    const { to_user_id, from_user_id, note } = req.body ?? {};
+    if (!to_user_id) return res.status(400).json({ error: 'to_user_id required' });
+
+    // update task owner
+    const up = await pool.query(
+      `update public.tasks
+         set ball_in_court = $1, updated_at = now()
+       where id = $2
+       returning id, project_id, title, ball_in_court, updated_at`,
+      [to_user_id, req.params.taskId]
+    );
+    if (up.rowCount === 0) return res.status(404).json({ error: 'task not found' });
+
+    // write history
+    await pool.query(
+      `insert into public.ball_history (task_id, from_user_id, to_user_id, note)
+       values ($1,$2,$3,$4)`,
+      [req.params.taskId, from_user_id ?? null, to_user_id, note ?? null]
+    );
+
+    res.json(up.rows[0]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// --- Ball history: list for a task ---
+app.get('/api/tasks/:taskId/ball', async (req, res) => {
+  try {
+    const r = await pool.query(
+      `select id, task_id, from_user_id, to_user_id, note, changed_at
+         from public.ball_history
+        where task_id = $1
+        order by changed_at desc`,
+      [req.params.taskId]
+    );
+    res.json(r.rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});

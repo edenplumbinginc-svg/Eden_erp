@@ -148,26 +148,26 @@ app.post('/api/projects/:projectId/tasks', async (req, res) => {
   }
 });
 
-// --- Ensure task_comments table ---
-(async () => {
-  try {
-    await pool.query(`
-      create table if not exists public.task_comments (
-        id uuid default gen_random_uuid() primary key,
-        task_id uuid references public.tasks(id) on delete cascade,
-        author_id uuid,
-        body text not null,
-        created_at timestamptz default now(),
-        updated_at timestamptz default now()
-      );
-    `);
-    console.log('✅ ensured task_comments table exists');
-  } catch (e) {
-    console.error('⚠️ failed to ensure task_comments table:', e.message);
-  }
-})();
+// --- Debug: show registered routes ---
+app.get('/routes', (_, res) => {
+  const routes = [];
+  app._router.stack.forEach(mw => {
+    if (mw.route) {
+      const methods = Object.keys(mw.route.methods)
+        .filter(Boolean)
+        .join(',')
+        .toUpperCase();
+      routes.push({ methods, path: mw.route.path });
+    }
+  });
+  res.json(routes);
+});
 
-// --- Task comments: list ---
+// --- Start server ---
+const port = process.env.PORT || 3000;
+app.listen(port, () => console.log(`api on :${port}`));
+// --- Task comments ---
+// list comments for a task
 app.get('/api/tasks/:taskId/comments', async (req, res) => {
   try {
     const r = await pool.query(
@@ -178,12 +178,10 @@ app.get('/api/tasks/:taskId/comments', async (req, res) => {
       [req.params.taskId]
     );
     res.json(r.rows);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// --- Task comments: create ---
+// create a comment
 app.post('/api/tasks/:taskId/comments', async (req, res) => {
   try {
     const { body, author_id } = req.body ?? {};
@@ -195,28 +193,64 @@ app.post('/api/tasks/:taskId/comments', async (req, res) => {
       [req.params.taskId, author_id ?? null, body]
     );
     res.status(201).json(r.rows[0]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+// --- Ensure ball_history table ---
+(async () => {
+  try {
+    await pool.query(`
+      create table if not exists public.ball_history (
+        id uuid default gen_random_uuid() primary key,
+        task_id uuid not null references public.tasks(id) on delete cascade,
+        from_user_id uuid,
+        to_user_id uuid,
+        note text,
+        changed_at timestamptz not null default now()
+      );
+    `);
+    console.log('✅ ensured ball_history table exists');
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    console.error('⚠️ failed to ensure ball_history table:', e.message);
   }
+})();
+
+// --- Ball handoff: set ball_in_court and record history ---
+app.post('/api/tasks/:taskId/ball', async (req, res) => {
+  try {
+    const { to_user_id, from_user_id, note } = req.body ?? {};
+    if (!to_user_id) return res.status(400).json({ error: 'to_user_id required' });
+
+    // update task owner
+    const up = await pool.query(
+      `update public.tasks
+         set ball_in_court = $1, updated_at = now()
+       where id = $2
+       returning id, project_id, title, ball_in_court, updated_at`,
+      [to_user_id, req.params.taskId]
+    );
+    if (up.rowCount === 0) return res.status(404).json({ error: 'task not found' });
+
+    // write history
+    await pool.query(
+      `insert into public.ball_history (task_id, from_user_id, to_user_id, note)
+       values ($1,$2,$3,$4)`,
+      [req.params.taskId, from_user_id ?? null, to_user_id, note ?? null]
+    );
+
+    res.json(up.rows[0]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// --- Debug: show registered routes ---
-app.get('/routes', (_, res) => {
-  const routes = [];
-  if (app._router && app._router.stack) {
-    app._router.stack.forEach(mw => {
-      if (mw.route) {
-        const methods = Object.keys(mw.route.methods)
-          .filter(Boolean)
-          .join(',')
-          .toUpperCase();
-        routes.push({ methods, path: mw.route.path });
-      }
-    });
-  }
-  res.json(routes);
+// --- Ball history: list for a task ---
+app.get('/api/tasks/:taskId/ball', async (req, res) => {
+  try {
+    const r = await pool.query(
+      `select id, task_id, from_user_id, to_user_id, note, changed_at
+         from public.ball_history
+        where task_id = $1
+        order by changed_at desc`,
+      [req.params.taskId]
+    );
+    res.json(r.rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
-
-// --- Start server ---
-const port = process.env.PORT || 3000;
-app.listen(port, () => console.log(`api on :${port}`));
