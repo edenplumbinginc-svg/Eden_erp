@@ -5,13 +5,14 @@
   "license": "UNLICENSED",
   "scripts": {
     "verify": "node -e \"console.log('ok')\"",
-    "dev": "node server.js"
+    "dev": "node -r dotenv/config server.js"
   },
   "description": "Monolithic shell.",
   "main": "index.js",
   "keywords": [],
   "author": "",
   "dependencies": {
+    "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "pg": "^8.16.3"
   }
