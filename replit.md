@@ -34,9 +34,9 @@ Monolithic ERP shell for Eden Plumbing Inc. This is a foundation scaffolding (Tr
 
 ## Technology Stack
 - **Backend**: Express.js REST API (port 3000)
-- **Database**: PostgreSQL (Neon) with SSL
+- **Database**: Supabase PostgreSQL (Session pooler, IPv4 compatible)
 - **Runtime**: Node.js 20
-- **Dependencies**: express, pg
+- **Dependencies**: express, pg, dotenv
 - **Extensions**: pgcrypto, citext
 
 ## Database Schema
@@ -57,22 +57,46 @@ See `.env.example` for required variables:
 
 ## API Endpoints
 The backend server provides the following endpoints:
+
+### System & Database
 - `GET /health` - Health check (returns `{"ok": true}`)
 - `GET /db/ping` - Database connectivity test
-- `GET /db/users` - List all users (returns array of users with id, email, name)
+- `GET /db/users` - List all users from Supabase (returns array: id, email, name)
+- `GET /routes` - Debug endpoint showing registered routes
+
+### Projects API
+- `GET /api/projects` - List all projects (ordered by created_at desc)
+- `POST /api/projects` - Create new project
+  - Body: `{"name": "string", "code": "string"}`
+  - Returns: Created project with id, name, code, status, created_at
+
+### Tasks API
+- `GET /api/projects/:projectId/tasks` - List tasks for a specific project
+- `POST /api/projects/:projectId/tasks` - Create task for a project
+  - Body: `{"title": "string", "description": "string", "priority": "normal|high|urgent", "assignee_id": "uuid", "ball_in_court": "uuid", "due_at": "ISO date"}`
+  - Returns: Created task with all fields
 
 ## Running the Project
 - **Start server**: `npm run dev` (runs on port 3000)
 - **Verify setup**: `npm run verify`
 
 ## Recent Changes
-- **Oct 18, 2025**: Backend API and database setup
-  - Created Express.js server with PostgreSQL integration
-  - Initialized database with schema (users, roles, permissions, projects, tasks, etc.)
-  - Configured SSL for Neon database connection
-  - Set up health check and database endpoints
+- **Oct 18, 2025 (Latest)**: Projects and Tasks API Implementation
+  - Added full CRUD API for projects (GET/POST /api/projects)
+  - Added tasks API with project relationship (GET/POST /api/projects/:id/tasks)
+  - Implemented auto-table creation for projects and tasks on server startup
+  - Tables auto-create with proper foreign keys and constraints
+  - Successfully tested all endpoints with Supabase database
+  
+- **Oct 18, 2025**: Backend API and Supabase Connection
+  - Migrated from Replit Neon to Supabase PostgreSQL database
+  - Using Supabase Session pooler (aws-1-us-east-2.pooler.supabase.com:5432) for IPv4 compatibility
+  - Created Express.js server with connection pooling
+  - Configured dotenv with override:true to prioritize .env file
+  - Set up health check and database ping endpoints
   - Created directory structure for apps, core, ui, db
   - Defined PostgreSQL schema with auth, coordination, and notification tables
+  - Verified connection to existing Supabase data (admin@edenmep.ca user)
 
 ## Next Steps
 This is a foundation/scaffolding project. Future development would include:
