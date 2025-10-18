@@ -1,7 +1,9 @@
+// server.js
 require('dotenv').config({ override: true });
 
 const express = require('express');
 const { Pool } = require('pg');
+
 const app = express();
 app.use(express.json());
 
@@ -10,6 +12,78 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false
 });
+
+// --- Bootstrap: extensions, tables, columns, indexes ---
+(async () => {
+  try {
+    // UUIDs for gen_random_uuid()
+    await pool.query(`create extension if not exists pgcrypto;`);
+
+    // Projects
+    await pool.query(`
+      create table if not exists public.projects (
+        id uuid default gen_random_uuid() primary key,
+        name text not null,
+        code text,
+        status text default 'active',
+        created_at timestamptz default now()
+      );
+    `);
+
+    // Tasks (ensure table, then ensure updated_at exists)
+    await pool.query(`
+      create table if not exists public.tasks (
+        id uuid default gen_random_uuid() primary key,
+        project_id uuid references public.projects(id) on delete cascade,
+        title text not null,
+        description text,
+        status text default 'open',
+        priority text default 'normal',
+        assignee_id uuid,
+        ball_in_court uuid,
+        due_at timestamptz,
+        created_at timestamptz default now(),
+        updated_at timestamptz default now()
+      );
+      alter table public.tasks
+        add column if not exists updated_at timestamptz default now();
+    `);
+
+    // Helpful indexes for reports
+    await pool.query(`
+      create index if not exists idx_tasks_status on public.tasks(status);
+      create index if not exists idx_tasks_ball_in_court on public.tasks(ball_in_court);
+    `);
+
+    // Task comments
+    await pool.query(`
+      create table if not exists public.task_comments (
+        id uuid default gen_random_uuid() primary key,
+        task_id uuid references public.tasks(id) on delete cascade,
+        author_id uuid,
+        body text not null,
+        created_at timestamptz default now(),
+        updated_at timestamptz default now()
+      );
+    `);
+
+    // Ball history
+    await pool.query(`
+      create table if not exists public.ball_history (
+        id uuid default gen_random_uuid() primary key,
+        task_id uuid not null references public.tasks(id) on delete cascade,
+        from_user_id uuid,
+        to_user_id uuid,
+        note text,
+        changed_at timestamptz not null default now()
+      );
+    `);
+
+    console.log('✅ schema ensured');
+  } catch (e) {
+    console.error('⚠️ schema bootstrap failed:', e.message);
+  }
+})();
 
 // --- Health check ---
 app.get('/health', (_, res) => res.json({ ok: true }));
@@ -35,24 +109,6 @@ app.get('/db/users', async (_, res) => {
     res.status(500).json({ error: e.message });
   }
 });
-
-// --- Ensure projects table ---
-(async () => {
-  try {
-    await pool.query(`
-      create table if not exists public.projects (
-        id uuid default gen_random_uuid() primary key,
-        name text not null,
-        code text,
-        status text default 'active',
-        created_at timestamptz default now()
-      );
-    `);
-    console.log('✅ ensured projects table exists');
-  } catch (e) {
-    console.error('⚠️ failed to ensure projects table:', e.message);
-  }
-})();
 
 // --- Projects: list ---
 app.get('/api/projects', async (_, res) => {
@@ -83,35 +139,12 @@ app.post('/api/projects', async (req, res) => {
   }
 });
 
-// --- Ensure tasks table ---
-(async () => {
-  try {
-    await pool.query(`
-      create table if not exists public.tasks (
-        id uuid default gen_random_uuid() primary key,
-        project_id uuid references public.projects(id) on delete cascade,
-        title text not null,
-        description text,
-        status text default 'open',
-        priority text default 'normal',
-        assignee_id uuid,
-        ball_in_court uuid,
-        due_at timestamptz,
-        created_at timestamptz default now()
-      );
-    `);
-    console.log('✅ ensured tasks table exists');
-  } catch (e) {
-    console.error('⚠️ failed to ensure tasks table:', e.message);
-  }
-})();
-
 // --- Tasks: list by project ---
 app.get('/api/projects/:projectId/tasks', async (req, res) => {
   try {
     const q = `
       select t.id, t.title, t.description, t.status, t.priority,
-             t.assignee_id, t.ball_in_court, t.due_at, t.created_at
+             t.assignee_id, t.ball_in_court, t.due_at, t.created_at, t.updated_at
       from public.tasks t
       where t.project_id = $1
       order by t.created_at desc`;
@@ -132,7 +165,7 @@ app.post('/api/projects/:projectId/tasks', async (req, res) => {
         (project_id, title, description, status, priority, assignee_id, ball_in_court, due_at)
       values
         ($1, $2, $3, 'open', coalesce($7,'normal'), $4, $5, $6)
-      returning id, title, description, status, priority, assignee_id, ball_in_court, due_at, created_at`;
+      returning id, title, description, status, priority, assignee_id, ball_in_court, due_at, created_at, updated_at`;
     const r = await pool.query(q, [
       req.params.projectId,
       title,
@@ -147,25 +180,6 @@ app.post('/api/projects/:projectId/tasks', async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
-
-// --- Ensure task_comments table ---
-(async () => {
-  try {
-    await pool.query(`
-      create table if not exists public.task_comments (
-        id uuid default gen_random_uuid() primary key,
-        task_id uuid references public.tasks(id) on delete cascade,
-        author_id uuid,
-        body text not null,
-        created_at timestamptz default now(),
-        updated_at timestamptz default now()
-      );
-    `);
-    console.log('✅ ensured task_comments table exists');
-  } catch (e) {
-    console.error('⚠️ failed to ensure task_comments table:', e.message);
-  }
-})();
 
 // --- Task comments: list ---
 app.get('/api/tasks/:taskId/comments', async (req, res) => {
@@ -200,32 +214,12 @@ app.post('/api/tasks/:taskId/comments', async (req, res) => {
   }
 });
 
-// --- Ensure ball_history table ---
-(async () => {
-  try {
-    await pool.query(`
-      create table if not exists public.ball_history (
-        id uuid default gen_random_uuid() primary key,
-        task_id uuid not null references public.tasks(id) on delete cascade,
-        from_user_id uuid,
-        to_user_id uuid,
-        note text,
-        changed_at timestamptz not null default now()
-      );
-    `);
-    console.log('✅ ensured ball_history table exists');
-  } catch (e) {
-    console.error('⚠️ failed to ensure ball_history table:', e.message);
-  }
-})();
-
 // --- Ball handoff: set ball_in_court and record history ---
 app.post('/api/tasks/:taskId/ball', async (req, res) => {
   try {
     const { to_user_id, from_user_id, note } = req.body ?? {};
     if (!to_user_id) return res.status(400).json({ error: 'to_user_id required' });
 
-    // update task owner
     const up = await pool.query(
       `update public.tasks
          set ball_in_court = $1, updated_at = now()
@@ -235,7 +229,6 @@ app.post('/api/tasks/:taskId/ball', async (req, res) => {
     );
     if (up.rowCount === 0) return res.status(404).json({ error: 'task not found' });
 
-    // write history
     await pool.query(
       `insert into public.ball_history (task_id, from_user_id, to_user_id, note)
        values ($1,$2,$3,$4)`,
@@ -264,16 +257,45 @@ app.get('/api/tasks/:taskId/ball', async (req, res) => {
   }
 });
 
+// --- Reports ---
+// tasks by status
+app.get('/api/reports/tasks/status', async (_, res) => {
+  try {
+    const r = await pool.query(`
+      select status, count(*)::int as count
+      from public.tasks
+      group by status
+      order by status
+    `);
+    res.json(r.rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// tasks by ball_in_court (null grouped as 'unassigned')
+app.get('/api/reports/tasks/ball', async (_, res) => {
+  try {
+    const r = await pool.query(`
+      select coalesce(u.email, 'unassigned') as owner, count(*)::int as count
+      from public.tasks t
+      left join public.users u on u.id = t.ball_in_court
+      group by owner
+      order by owner
+    `);
+    res.json(r.rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // --- Debug: show registered routes ---
 app.get('/routes', (_, res) => {
   const routes = [];
   if (app._router && app._router.stack) {
     app._router.stack.forEach(mw => {
       if (mw.route) {
-        const methods = Object.keys(mw.route.methods)
-          .filter(Boolean)
-          .join(',')
-          .toUpperCase();
+        const methods = Object.keys(mw.route.methods).filter(Boolean).join(',').toUpperCase();
         routes.push({ methods, path: mw.route.path });
       }
     });
