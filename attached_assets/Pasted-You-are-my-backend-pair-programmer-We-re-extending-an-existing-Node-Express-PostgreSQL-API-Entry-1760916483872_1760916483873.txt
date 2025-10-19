@@ -1,0 +1,160 @@
+You are my backend pair-programmer. We’re extending an existing Node/Express + PostgreSQL API. Entry: server.js at repo root. DB via pg Pool using DATABASE_URL and optional DATABASE_SSL=true.
+
+### Current state (do not break)
+- Already present in `server.js` (keep shapes):
+  - Tables: projects, tasks, task_comments, ball_history (+ indexes).
+  - Endpoints: health, db/ping, users list, projects CRUD, tasks CRUD, task comments CRUD, ball handoff + history.
+  - Reports: tasks by status, ball owner, priority, overdue, recent activity.
+  - /routes introspection.
+- Code is idempotent for schema bootstrapping. Preserve that style.
+
+### My Phase-1 Checklist to implement now (Backend focus)
+- API Endpoints (CRUD unless noted): Projects, Tasks (incl. ball-in-court), Comments, **Notifications (CRUD + enqueue on events)**, **Attachments (upload URL, list, delete)**.
+- Task Infrastructure: title, description, priority, due date, assignee, **status flow** (todo → in_progress → review → done), **subtasks**, **tags**, **ball_in_court** separate from assignee, **ball transfer logging** (already), **“stalled X days” indicator**.
+- Roles & Permissions: users have role and department; role gate for protected routes (Admin/Manager/User/Guest/System). Restrict “ball take/return” by role. (Simple role middleware is fine.)
+- Notifications: enqueue on task create, assign, update, comment; due reminders; daily summary; weekly manager digest. (Queue rows + console “send”; cron-ready endpoint/script.)
+- Reporting: keep existing; add owner/status/priority if needed (already present).
+- Attachments: metadata table + storage_key; return upload URL (stub local or data URL) and support list/delete. (We will integrate Supabase Storage later; for now implement a pluggable adapter and env placeholders.)
+- Logging & Backup: audit trail for all task actions (activity_log table); soft delete; export endpoint for project activity.
+- Performance Metrics: store task-level metrics fields (complexity, speed, collaboration, quality) + basic computed completion % per project/person.
+
+### Make the following schema changes (idempotent; USE create if not exists / alter add column if not exists)
+- users: ensure exists with `id uuid pk default gen_random_uuid(), email text unique, name text, role text default 'User', department text, created_at timestamptz default now()`.
+- tasks: add if missing:
+  - `tags text[] default '{}'`
+  - `status text default 'todo'` (migrate 'open' → 'todo' on read/response; keep backward compatibility in update handler by accepting 'open' and mapping)
+  - `origin text`
+  - `deleted_at timestamptz`
+- subtasks: `id uuid pk, task_id uuid fk, title text, done boolean default false, order_index int default 0, created_at/updated_at`
+- task_dependencies: `task_id uuid fk, blocks_task_id uuid fk`
+- attachments: `id uuid pk, task_id uuid fk, filename text, mime text, size_bytes int, storage_key text, uploaded_by uuid, created_at`
+- notifications: `id uuid pk, user_id uuid fk nullable, task_id uuid fk nullable, type text, payload jsonb default '{}'::jsonb, status text default 'queued', scheduled_at timestamptz default now(), sent_at timestamptz`
+- activity_log: `id uuid pk, actor_id uuid nullable, entity_type text, entity_id uuid, action text, meta jsonb, created_at default now(), ip text`
+- performance: `id uuid pk, task_id uuid fk unique, complexity int default 1, speed int default 0, collaboration int default 0, quality int default 0, updated_at`
+- permissions_matrix (future-ready, simple now): `id uuid pk, role text, can_view bool, can_edit bool, can_close bool`
+
+Add helpful indexes for status, ball_in_court, due_at, tags GIN, notifications(status, scheduled_at), activity_log(entity_type, entity_id).
+
+### Extend/adjust endpoints
+1) **Tasks**
+   - Validate allowed status transitions: todo → in_progress → review → done, and allow Manager/Admin to move backward.
+   - Accept “open” as alias of “todo” for backward compatibility.
+   - Support `tags` array and `origin` on create/update.
+   - Add routes:
+     - `POST /api/tasks/:id/subtasks` (create), `PATCH /api/subtasks/:id`, `DELETE /api/subtasks/:id`, `GET /api/tasks/:id/subtasks`
+     - `POST /api/tasks/:id/dependencies` (add { blocks_task_id }), `DELETE /api/tasks/:id/dependencies/:blocksId`, `GET /api/tasks/:id/dependencies`
+   - Add computed field in responses: `stalled_days` when ball_in_court unchanged for N days (derive from ball_history.latest change).
+
+2) **Ball-in-court**
+   - Keep existing POST /api/tasks/:taskId/ball; enforce role rule: only Manager/Admin or current ball owner can pass the ball (Guest cannot).
+   - Add inline comment action: If `POST /api/tasks/:taskId/comments` has `pass_ball_to`, then perform ball transfer in same tx and record activity.
+
+3) **Attachments**
+   - `POST /api/tasks/:id/attachments/init` → returns `{ upload_url, storage_key }` (stub adapter: if `SUPABASE_URL` and `SUPABASE_BUCKET` not set, fall back to local tmp dir; still store metadata).
+   - `POST /api/tasks/:id/attachments/complete` → finalize by saving filename/mime/size using provided storage_key.
+   - `GET /api/tasks/:id/attachments`, `DELETE /api/attachments/:attachmentId`.
+
+4) **Notifications**
+   - CRUD for notifications (list by user, mark sent).
+   - Enqueue on events:
+     - Task created → notify assignee + ball owner if present.
+     - Status change, comment added, due reminders (scheduled_at = due_at - interval '24 hours').
+   - Provide manual runners:
+     - `POST /ops/notifications/run?limit=50` → send queued (log to console).
+     - `POST /ops/notifications/daily-summary` → aggregate per user.
+     - `POST /ops/notifications/weekly-digest` → for Managers.
+   - Respect `USER_ROLE` in queries.
+
+5) **Reports** (keep existing)
+   - Add: `GET /api/reports/completion` → per project/person completion % (done/total), and on-time vs late.
+   - Add: `GET /api/reports/stalled?days=3` → tasks with no ball change >= days.
+
+6) **Security**
+   - Add minimal JWT middleware (`Authorization: Bearer <token>`). If `JWT_SECRET` undefined, allow passthrough in dev.
+   - Attach `req.user = { id, role, department, email }` from token or dev header.
+   - Gate routes: delete, ball handoff, notifications runners → Manager/Admin only; attachments delete → Manager/Admin or uploader.
+
+7) **Audit & Soft delete**
+   - On every create/update/delete/ball change/comment/attachment: insert into `activity_log`.
+   - Soft delete projects/tasks (set deleted_at) and filter out by default. Provide `?include_deleted=1` to include.
+
+### Developer Experience
+- Add CORS (`CORS_ORIGIN`), morgan logger (tiny) if not present, and graceful shutdown (SIGINT/SIGTERM close DB/server).
+- Add `scripts/smoke.js` to run a small end-to-end flow.
+- Add `docs/curl-smoke.sh` with the curl set below.
+- Update `package.json`:
+  - "start": "node server.js"
+  - "smoke": "node scripts/smoke.js"
+
+### Acceptance checks
+- Server boots and logs `api on :<port>`.
+- `/health`, `/db/ping`, `/routes` work.
+- Projects/Tasks/Comments existing routes still work (backward compatible).
+- New routes exist and pass basic smoke: subtasks CRUD, attachments init/complete/list/delete, notifications enqueue + runners, reports/completion, reports/stalled.
+- Activity_log grows with operations; soft deletes hide rows by default.
+- Role gating enforced; dev passthrough allowed if `JWT_SECRET` missing.
+
+### Provide BEFORE APPLYING
+1) A bullet plan mapping these checklist items to specific file changes.
+2) Unified diffs for each file to be created/modified:
+   - `server.js` (or extracted routers under `/api/*` if you refactor)
+   - `scripts/smoke.js`
+   - `docs/curl-smoke.sh`
+   - `.env.example`
+   - `README.md` section: “Coordination API — Run & Verify”
+3) Then apply changes, run `npm run smoke`, and paste results.
+
+### Curl (put into docs/curl-smoke.sh)
+# Health
+curl -s http://localhost:${PORT:-3000}/health | jq .
+curl -s http://localhost:${PORT:-3000}/db/ping | jq .
+curl -s http://localhost:${PORT:-3000}/routes | jq .
+
+# Create project
+PID=$(curl -s -X POST http://localhost:${PORT:-3000}/api/projects \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Demo","code":"DEMO"}' | jq -r .id)
+
+# Create task
+TID=$(curl -s -X POST http://localhost:${PORT:-3000}/api/projects/$PID/tasks \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"First task","priority":"high","tags":["Coordination","Follow-up"]}' | jq -r .id)
+
+# Subtask
+SID=$(curl -s -X POST http://localhost:${PORT:-3000}/api/tasks/$TID/subtasks \
+  -H 'Content-Type: application/json' -d '{"title":"Sub 1"}' | jq -r .id)
+
+# Status transition
+curl -s -X PATCH http://localhost:${PORT:-3000}/api/tasks/$TID \
+  -H 'Content-Type: application/json' -d '{"status":"in_progress"}' | jq .
+
+# Comment + optional pass ball
+curl -s -X POST http://localhost:${PORT:-3000}/api/tasks/$TID/comments \
+  -H 'Content-Type: application/json' -d '{"body":"Working on it"}' | jq .
+
+# Attachments init/complete (simulate)
+INIT=$(curl -s -X POST http://localhost:${PORT:-3000}/api/tasks/$TID/attachments/init | jq .)
+SK=$(echo $INIT | jq -r .storage_key)
+curl -s -X POST http://localhost:${PORT:-3000}/api/tasks/$TID/attachments/complete \
+  -H 'Content-Type: application/json' -d "{\"storage_key\":\"$SK\",\"filename\":\"note.txt\",\"mime\":\"text/plain\",\"size_bytes\":12}" | jq .
+
+# Notifications run
+curl -s -X POST "http://localhost:${PORT:-3000}/ops/notifications/run?limit=20" | jq .
+
+# Reports
+curl -s http://localhost:${PORT:-3000}/api/reports/tasks/status | jq .
+curl -s "http://localhost:${PORT:-3000}/api/reports/stalled?days=0" | jq .
+curl -s http://localhost:${PORT:-3000}/api/reports/completion | jq .
+
+# Cleanup
+curl -s -X DELETE http://localhost:${PORT:-3000}/api/projects/$PID | jq .
+
+### Env additions (.env.example)
+PORT=3000
+DATABASE_URL=postgres://user:pass@host:5432/db
+DATABASE_SSL=true
+CORS_ORIGIN=http://localhost:5000
+JWT_SECRET=devonly-change-me
+SUPABASE_URL=
+SUPABASE_ANON_KEY=
+SUPABASE_BUCKET=attachments
