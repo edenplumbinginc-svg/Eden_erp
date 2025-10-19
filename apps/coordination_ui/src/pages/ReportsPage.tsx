@@ -37,13 +37,16 @@ export default function ReportsPage() {
   return (
     <div style={{ padding: 16 }}>
       <h1>Dashboard Reports</h1>
-      <button
-        onClick={loadReports}
-        style={{ background: "#2563eb", color: "white", padding: "8px 16px", border: "none", borderRadius: 6, cursor: "pointer" }}
-      >
-        {loading ? "Refreshing..." : "Refresh Reports"}
+      <button onClick={loadReports} disabled={loading}>
+        {loading ? "Refreshing…" : "Refresh Reports"}
       </button>
+
       {err && <div style={{ color: "red" }}>Error: {err}</div>}
+      {/* existing tables stay below */}
+    </div>
+  );
+}
+
 
       <section style={{ marginTop: 24 }}>
         <h2>Tasks by Status</h2>
