@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 type StatusRow = { status: string; count: number };
 type BallRow = { owner: string; count: number };
+type PriorityRow = { priority: string; count: number };
 
 async function fetchJSON<T>(url: string): Promise<T> {
   const r = await fetch(url);
@@ -12,18 +13,21 @@ async function fetchJSON<T>(url: string): Promise<T> {
 export default function ReportsPage() {
   const [statusRows, setStatusRows] = useState<StatusRow[] | null>(null);
   const [ballRows, setBallRows] = useState<BallRow[] | null>(null);
+  const [priorityRows, setPriorityRows] = useState<PriorityRow[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function loadReports() {
     try {
       setLoading(true);
-      const [s, b] = await Promise.all([
+      const [s, b, p] = await Promise.all([
         fetchJSON<StatusRow[]>("/api/reports/tasks/status"),
         fetchJSON<BallRow[]>("/api/reports/tasks/ball"),
+        fetchJSON<PriorityRow[]>("/api/reports/tasks/priority"),
       ]);
       setStatusRows(s);
       setBallRows(b);
+      setPriorityRows(p);
       setErr(null);
     } catch (e) {
       setErr(String(e));
@@ -42,11 +46,6 @@ export default function ReportsPage() {
       </button>
 
       {err && <div style={{ color: "red" }}>Error: {err}</div>}
-      {/* existing tables stay below */}
-    </div>
-  );
-}
-
 
       <section style={{ marginTop: 24 }}>
         <h2>Tasks by Status</h2>
@@ -70,6 +69,20 @@ export default function ReportsPage() {
             <tbody>
               {ballRows.map(r => (
                 <tr key={r.owner}><td>{r.owner}</td><td>{r.count}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      <section style={{ marginTop: 24 }}>
+        <h2>Tasks by Priority</h2>
+        {!priorityRows ? <p>Loading…</p> : (
+          <table>
+            <thead><tr><th>Priority</th><th>Count</th></tr></thead>
+            <tbody>
+              {priorityRows.map(r => (
+                <tr key={r.priority}><td>{r.priority}</td><td>{r.count}</td></tr>
               ))}
             </tbody>
           </table>
