@@ -14,20 +14,23 @@ export default function ReportsPage() {
   const [statusRows, setStatusRows] = useState<StatusRow[] | null>(null);
   const [ballRows, setBallRows] = useState<BallRow[] | null>(null);
   const [priorityRows, setPriorityRows] = useState<PriorityRow[] | null>(null);
+  const [overdueCount, setOverdueCount] = useState<number | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function loadReports() {
     try {
       setLoading(true);
-      const [s, b, p] = await Promise.all([
+      const [s, b, p, o] = await Promise.all([
         fetchJSON<StatusRow[]>("/api/reports/tasks/status"),
         fetchJSON<BallRow[]>("/api/reports/tasks/ball"),
         fetchJSON<PriorityRow[]>("/api/reports/tasks/priority"),
+        fetchJSON<any[]>("/api/reports/tasks/overdue"),
       ]);
       setStatusRows(s);
       setBallRows(b);
       setPriorityRows(p);
+      setOverdueCount(Array.isArray(o) ? o.length : 0);
       setErr(null);
     } catch (e) {
       setErr(String(e));
@@ -86,6 +89,17 @@ export default function ReportsPage() {
               ))}
             </tbody>
           </table>
+        )}
+      </section>
+
+      <section style={{ marginTop: 24 }}>
+        <h2>Overdue Tasks</h2>
+        {overdueCount === null ? (
+          <p>Loading…</p>
+        ) : overdueCount === 0 ? (
+          <p>None</p>
+        ) : (
+          <p>{overdueCount}</p>
         )}
       </section>
     </div>
