@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, NavLink, useNavigate, useParams } from 'react-router-dom';
 import { apiService } from './services/api';
 import ProjectList from './components/ProjectList';
 import TaskList from './components/TaskList';
 import Reports from './components/Reports';
 
-function App() {
-  const [activeTab, setActiveTab] = useState('projects');
+function AppContent() {
   const [projects, setProjects] = useState([]);
-  const [selectedProject, setSelectedProject] = useState(null);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadProjects();
@@ -40,8 +40,7 @@ function App() {
   };
 
   const handleProjectSelect = (project) => {
-    setSelectedProject(project);
-    setActiveTab('tasks');
+    navigate(`/tasks/${project.id}`, { state: { project } });
   };
 
   return (
@@ -52,25 +51,18 @@ function App() {
       </div>
 
       <div className="tabs">
-        <button
-          className={`tab ${activeTab === 'projects' ? 'active' : ''}`}
-          onClick={() => setActiveTab('projects')}
+        <NavLink
+          to="/"
+          className={({ isActive }) => `tab ${isActive ? 'active' : ''}`}
         >
           Projects
-        </button>
-        <button
-          className={`tab ${activeTab === 'tasks' ? 'active' : ''}`}
-          onClick={() => setActiveTab('tasks')}
-          disabled={!selectedProject}
-        >
-          Tasks {selectedProject && `(${selectedProject.name})`}
-        </button>
-        <button
-          className={`tab ${activeTab === 'reports' ? 'active' : ''}`}
-          onClick={() => setActiveTab('reports')}
+        </NavLink>
+        <NavLink
+          to="/reports"
+          className={({ isActive }) => `tab ${isActive ? 'active' : ''}`}
         >
           Reports
-        </button>
+        </NavLink>
       </div>
 
       {error && <div className="error">{error}</div>}
@@ -78,27 +70,59 @@ function App() {
       {loading && <div className="loading">Loading...</div>}
 
       {!loading && (
-        <>
-          {activeTab === 'projects' && (
-            <ProjectList
-              projects={projects}
-              onRefresh={loadProjects}
-              onSelectProject={handleProjectSelect}
-            />
-          )}
-
-          {activeTab === 'tasks' && selectedProject && (
-            <TaskList
-              project={selectedProject}
-              users={users}
-              onBack={() => setActiveTab('projects')}
-            />
-          )}
-
-          {activeTab === 'reports' && <Reports />}
-        </>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <ProjectList
+                projects={projects}
+                onRefresh={loadProjects}
+                onSelectProject={handleProjectSelect}
+              />
+            }
+          />
+          <Route
+            path="/tasks/:projectId"
+            element={
+              <TasksRoute
+                projects={projects}
+                users={users}
+                onBack={() => navigate('/')}
+              />
+            }
+          />
+          <Route path="/reports" element={<Reports />} />
+        </Routes>
       )}
     </div>
+  );
+}
+
+function TasksRoute({ projects, users, onBack }) {
+  const { projectId } = useParams();
+  const location = window.location;
+  
+  const project = location.state?.project || projects.find(p => p.id === projectId);
+
+  if (!project) {
+    return (
+      <div className="card">
+        <h2>Project Not Found</h2>
+        <button className="btn btn-primary" onClick={onBack}>
+          Back to Projects
+        </button>
+      </div>
+    );
+  }
+
+  return <TaskList project={project} users={users} onBack={onBack} />;
+}
+
+function App() {
+  return (
+    <Router>
+      <AppContent />
+    </Router>
   );
 }
 
