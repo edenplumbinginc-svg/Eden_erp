@@ -110,6 +110,16 @@ app.get('/db/users', async (_, res) => {
   }
 });
 
+// --- Users list (API route) ---
+app.get('/api/users', async (_, res) => {
+  try {
+    const r = await pool.query('select id, email, name from public.users order by email');
+    res.json(r.rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // --- Projects: list ---
 app.get('/api/projects', async (_, res) => {
   try {

@@ -38,5 +38,5 @@ export const apiService = {
   getRecentActivity: () => api.get('/reports/activity/recent'),
 
   // Users
-  getUsers: () => api.get('/db/users')
+  getUsers: () => api.get('/users')
 };
