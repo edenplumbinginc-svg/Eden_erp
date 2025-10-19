@@ -4,8 +4,10 @@
   "version": "0.1.0",
   "license": "UNLICENSED",
   "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
     "verify": "node -e \"console.log('ok')\"",
-    "dev": "node server.js"
+    "smoke": "node scripts/smoke.js"
   },
   "description": "Monolithic shell.",
   "main": "index.js",
