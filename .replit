@@ -20,7 +20,11 @@ args = "Verify"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Server"
+args = "Backend"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "UI"
 
 [[workflows.workflow]]
 name = "Verify"
@@ -34,16 +38,37 @@ args = "npm run verify"
 outputType = "console"
 
 [[workflows.workflow]]
-name = "Server"
+name = "Backend"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm run dev"
+waitForPort = 3000
 
 [workflows.workflow.metadata]
 outputType = "console"
 
+[[workflows.workflow]]
+name = "UI"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd apps/coordination_ui && npm run dev"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
 [[ports]]
 localPort = 3000
+externalPort = 3000
+
+[[ports]]
+localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 38131
+externalPort = 3001
