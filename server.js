@@ -58,6 +58,50 @@ app.use('/api/tasks', require('./routes/tasks'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/ops/notifications', require('./routes/notifications'));
 
+// --- Subtask routes need to be at /api level ---
+const { pool } = require('./services/database');
+const { authenticate } = require('./middleware/auth');
+
+app.patch('/api/subtasks/:id', authenticate, async (req, res) => {
+  try {
+    const { title, done, order_index } = req.body ?? {};
+    const updates = [];
+    const values = [];
+    let idx = 1;
+
+    if (title !== undefined) { updates.push(`title = $${idx++}`); values.push(title); }
+    if (done !== undefined) { updates.push(`done = $${idx++}`); values.push(!!done); }
+    if (order_index !== undefined) { updates.push(`order_index = $${idx++}`); values.push(order_index); }
+
+    if (updates.length === 0) return res.status(400).json({ error: 'no fields to update' });
+    
+    updates.push(`updated_at = now()`);
+    values.push(req.params.id);
+    
+    const r = await pool.query(
+      `UPDATE public.subtasks SET ${updates.join(', ')} 
+       WHERE id = $${idx} 
+       RETURNING id, task_id, title, done, order_index, created_at, updated_at`,
+      values
+    );
+    
+    if (r.rowCount === 0) return res.status(404).json({ error: 'subtask not found' });
+    res.json(r.rows[0]);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/api/subtasks/:id', authenticate, async (req, res) => {
+  try {
+    const r = await pool.query('DELETE FROM public.subtasks WHERE id = $1 RETURNING id', [req.params.id]);
+    if (r.rowCount === 0) return res.status(404).json({ error: 'subtask not found' });
+    res.json({ deleted: true, id: r.rows[0].id });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // --- Debug: show registered routes ---
 app.get('/routes', (_, res) => {
   const routes = [];

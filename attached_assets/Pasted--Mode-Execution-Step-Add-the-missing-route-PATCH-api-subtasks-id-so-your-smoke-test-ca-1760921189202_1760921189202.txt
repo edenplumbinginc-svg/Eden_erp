@@ -1,0 +1,87 @@
+[Mode: Execution]
+
+**Step:** Add the missing route `PATCH /api/subtasks/:id` so your smoke test can mark a subtask as done.
+
+**Why it matters:** Your suite fails at step 5 because there’s no handler for updating a subtask.
+
+**Inputs needed:** Your backend code (either `routes/tasks.js` if modular, or `server.js` if monolithic).
+
+**Command (paste the code into your API — pick ONE location):**
+
+**Option A — modular (`routes/tasks.js`):**
+
+```js
+// --- Subtasks: update ---
+router.patch('/api/subtasks/:id', async (req, res) => {
+  try {
+    const { title, done, order_index } = req.body ?? {};
+    const updates = [];
+    const values = [];
+    let i = 1;
+
+    if (title !== undefined)      { updates.push(`title = $${i++}`);       values.push(title); }
+    if (done !== undefined)       { updates.push(`done = $${i++}`);        values.push(!!done); }
+    if (order_index !== undefined){ updates.push(`order_index = $${i++}`); values.push(order_index); }
+
+    if (updates.length === 0) return res.status(400).json({ error: 'no fields to update' });
+    updates.push(`updated_at = now()`);
+
+    values.push(req.params.id);
+    const q = `
+      update public.subtasks
+         set ${updates.join(', ')}
+       where id = $${i}
+       returning id, task_id, title, done, order_index, created_at, updated_at`;
+    const r = await pool.query(q, values);
+    if (r.rowCount === 0) return res.status(404).json({ error: 'subtask not found' });
+    res.json(r.rows[0]);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+```
+
+**Option B — single file (`server.js`):**
+
+```js
+// --- Subtasks: update ---
+app.patch('/api/subtasks/:id', async (req, res) => {
+  try {
+    const { title, done, order_index } = req.body ?? {};
+    const updates = [];
+    const values = [];
+    let i = 1;
+
+    if (title !== undefined)      { updates.push(`title = $${i++}`);       values.push(title); }
+    if (done !== undefined)       { updates.push(`done = $${i++}`);        values.push(!!done); }
+    if (order_index !== undefined){ updates.push(`order_index = $${i++}`); values.push(order_index); }
+
+    if (updates.length === 0) return res.status(400).json({ error: 'no fields to update' });
+    updates.push(`updated_at = now()`);
+
+    values.push(req.params.id);
+    const q = `
+      update public.subtasks
+         set ${updates.join(', ')}
+       where id = $${i}
+       returning id, task_id, title, done, order_index, created_at, updated_at`;
+    const r = await pool.query(q, values);
+    if (r.rowCount === 0) return res.status(404).json({ error: 'subtask not found' });
+    res.json(r.rows[0]);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+```
+
+**Success check:**
+
+```bash
+npm run start & sleep 2
+npm run smoke
+# Expect step 5 to print: "✅ Subtask marked as done"
+```
+
+**Next:** wait for user
+
+Tip: Your tests are a living spec. When a route is “Cannot PATCH…”, don’t hunt ghosts—add the exact, minimal handler that the spec expects.
