@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const { pool, enqueueNotification } = require('../services/database');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, deriveStableUUID } = require('../middleware/auth');
 
 // Status flow validation
 const validStatusTransitions = {
@@ -144,11 +144,15 @@ router.post('/:taskId/comments', authenticate, async (req, res) => {
   try {
     const { body, author_id } = req.body ?? {};
     if (!body) return res.status(400).json({ error: 'body required' });
+    
+    // Convert author_id to UUID if provided
+    const finalAuthorId = author_id ? deriveStableUUID(author_id) : (req.user?.id ?? null);
+    
     const r = await pool.query(
       `INSERT INTO public.task_comments (task_id, author_id, body)
        VALUES ($1, $2, $3)
        RETURNING id, task_id, author_id, body, created_at, updated_at`,
-      [req.params.taskId, author_id ?? req.user?.id ?? null, body]
+      [req.params.taskId, finalAuthorId, body]
     );
     
     // Enqueue notification for comment
@@ -171,19 +175,23 @@ router.post('/:taskId/ball', authenticate, async (req, res) => {
     const { to_user_id, from_user_id, note } = req.body ?? {};
     if (!to_user_id) return res.status(400).json({ error: 'to_user_id required' });
 
+    // Convert user IDs to UUIDs
+    const finalToUserId = deriveStableUUID(to_user_id);
+    const finalFromUserId = from_user_id ? deriveStableUUID(from_user_id) : (req.user?.id ?? null);
+
     const up = await pool.query(
       `UPDATE public.tasks
          SET ball_in_court = $1, updated_at = now()
        WHERE id = $2
        RETURNING id, project_id, title, ball_in_court, updated_at`,
-      [to_user_id, req.params.taskId]
+      [finalToUserId, req.params.taskId]
     );
     if (up.rowCount === 0) return res.status(404).json({ error: 'task not found' });
 
     await pool.query(
       `INSERT INTO public.ball_history (task_id, from_user_id, to_user_id, note)
        VALUES ($1,$2,$3,$4)`,
-      [req.params.taskId, from_user_id ?? req.user?.id ?? null, to_user_id, note ?? null]
+      [req.params.taskId, finalFromUserId, finalToUserId, note ?? null]
     );
 
     res.json(up.rows[0]);

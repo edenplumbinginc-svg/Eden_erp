@@ -9,6 +9,11 @@ async function request(method, path, body = null) {
     method,
     headers: {
       'Content-Type': 'application/json',
+      // Use new X-Dev-User-* headers
+      'X-Dev-User-Id': 'test-user-123',
+      'X-Dev-User-Email': 'test@example.com',
+      'X-Dev-User-Role': 'Admin',
+      // Keep old headers for backward compatibility
       'X-User-Id': 'test-user-123',
       'X-User-Email': 'test@example.com',
       'X-User-Role': 'Admin'

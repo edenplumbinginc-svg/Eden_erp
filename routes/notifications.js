@@ -13,13 +13,14 @@ router.post('/run', authenticate, authorize(['Admin', 'System']), async (req, re
     const notifications = await pool.query(
       `SELECT n.*, 
               u.email as user_email, u.name as user_name,
-              t.title as task_title
+              t.title as task_title,
+              COALESCE(n.scheduled_at, n.schedule_at) as effective_scheduled_at
        FROM public.notifications n
        LEFT JOIN public.users u ON u.id = n.user_id
        LEFT JOIN public.tasks t ON t.id = n.task_id
        WHERE n.status = 'queued' 
-       AND n.scheduled_at <= now()
-       ORDER BY n.scheduled_at
+       AND COALESCE(n.scheduled_at, n.schedule_at) <= now()
+       ORDER BY COALESCE(n.scheduled_at, n.schedule_at)
        LIMIT $1`,
       [limit]
     );
@@ -46,7 +47,7 @@ router.post('/run', authenticate, authorize(['Admin', 'System']), async (req, re
         type: n.type,
         user: n.user_email || n.user_id,
         task: n.task_title,
-        scheduled_at: n.scheduled_at
+        scheduled_at: n.effective_scheduled_at || n.scheduled_at || n.schedule_at
       }))
     });
   } catch (e) {

@@ -143,6 +143,12 @@ async function bootstrapDatabase() {
       );
     `);
 
+    // Add backward compatibility for schedule_at column (legacy alias)
+    await pool.query(`
+      ALTER TABLE public.notifications
+        ADD COLUMN IF NOT EXISTS schedule_at timestamptz;
+    `);
+
     // Activity log
     await pool.query(`
       CREATE TABLE IF NOT EXISTS public.activity_log (
@@ -187,7 +193,7 @@ async function bootstrapDatabase() {
       CREATE INDEX IF NOT EXISTS idx_tasks_ball_in_court ON public.tasks(ball_in_court);
       CREATE INDEX IF NOT EXISTS idx_tasks_tags ON public.tasks USING GIN(tags);
       CREATE INDEX IF NOT EXISTS idx_tasks_due_at ON public.tasks(due_at);
-      CREATE INDEX IF NOT EXISTS idx_notifications_status ON public.notifications(status, scheduled_at);
+      CREATE INDEX IF NOT EXISTS idx_notifications_status ON public.notifications(status, COALESCE(scheduled_at, schedule_at));
       CREATE INDEX IF NOT EXISTS idx_activity_log_entity ON public.activity_log(entity_type, entity_id);
     `);
 

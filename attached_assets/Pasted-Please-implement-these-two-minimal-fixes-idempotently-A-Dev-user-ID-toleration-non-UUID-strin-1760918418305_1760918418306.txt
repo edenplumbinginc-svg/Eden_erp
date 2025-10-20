@@ -1,0 +1,53 @@
+Please implement these two minimal fixes, idempotently:
+
+A) Dev user ID toleration (non-UUID strings)
+- File: middleware/auth.js
+- Behavior: If Authorization is missing and X-Dev-User-Id is present but NOT a UUID, derive a stable UUID from the string for dev sessions.
+- Implementation (node built-in crypto):
+  function deriveStableUUID(input) {
+    const { createHash } = require('crypto');
+    const h = createHash('sha256').update(String(input)).digest('hex'); // 64 hex
+    // format as v4-like UUID from the first 32 hex chars (no DB impact)
+    return `${h.slice(0,8)}-${h.slice(8,12)}-4${h.slice(13,16)}-a${h.slice(17,20)}-${h.slice(20,32)}`;
+  }
+- In auth middleware:
+  - Read headers: x-dev-user-id, x-dev-user-role, x-dev-user-email, x-dev-user-dept
+  - If no JWT and x-dev-user-id exists:
+      const uid = isUUID(xDevId) ? xDevId : deriveStableUUID(xDevId);
+      req.user = { id: uid, role: xDevRole || 'User', department: xDevDept || null, email: xDevEmail || null };
+      next();
+- Keep existing JWT path unchanged.
+- Export isUUID helper if not already present (regex or use a tiny util).
+
+B) Notifications column normalization
+- DB: Ensure BOTH columns exist to be backward compatible, but use scheduled_at going forward.
+- In services/database.js bootstrap block:
+  alter table if exists public.notifications
+    add column if not exists scheduled_at timestamptz,
+    add column if not exists schedule_at timestamptz; -- legacy alias
+  create index if not exists idx_notifications_status_sched on public.notifications(status, coalesce(scheduled_at, schedule_at));
+- In routes/notifications.js:
+  - Everywhere you refer to the schedule column, use COALESCE(scheduled_at, schedule_at).
+  - When inserting new rows, write scheduled_at and omit schedule_at.
+  - When selecting queued jobs, filter with:
+      where status = 'queued' and coalesce(scheduled_at, schedule_at) <= now()
+- In any reports or runners, also switch comparisons to coalesce(scheduled_at, schedule_at).
+
+C) Tests
+- scripts/smoke.js: set dev headers so we never need a “real UUID”:
+    const dev = { 'X-Dev-User-Id': 'test-user-123', 'X-Dev-User-Role': 'Manager', 'X-Dev-User-Email': 'test@example.com' };
+    // pass `-H 'X-Dev-User-Id: test-user-123' -H 'X-Dev-User-Role: Manager'` to fetch calls or curl wrapper
+- docs/curl-smoke.sh: add the same headers to calls that create comments, pass ball, or create notifications.
+
+Please show unified diffs for:
+- middleware/auth.js
+- services/database.js
+- routes/notifications.js
+- scripts/smoke.js
+- docs/curl-smoke.sh
+
+Then run:
+npm run start & sleep 1
+npm run smoke || bash docs/curl-smoke.sh
+
+Goal: 17/17 tests passing, with queued notifications picked up via coalesced scheduled_at.
