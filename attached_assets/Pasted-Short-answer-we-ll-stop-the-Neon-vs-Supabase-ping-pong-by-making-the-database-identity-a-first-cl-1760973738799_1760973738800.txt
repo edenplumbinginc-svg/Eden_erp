@@ -1,0 +1,119 @@
+Short answer: we’ll stop the Neon-vs-Supabase ping-pong by making the **database identity a first-class contract** and checking it at **four layers**—code, config, CI, and runtime. No more mystery socks in the dryer.
+
+Here’s the concrete, low-friction plan you can keep forever:
+
+# 1) Single source of truth (config hygiene)
+
+* **Exactly one DATABASE_URL per environment.** `.env` in dev, platform secrets in prod. Never export a different `DATABASE_URL` in your shell.
+* **No legacy vars:** delete `SUPABASE_URL`, `SUPABASE_ANON_KEY`, etc. from anywhere the backend could see them unless they’re for auth/storage (not DB).
+* **Session pooler only:** always use Supabase **aws-0 …:5432** (session mode). Ban `aws-1` and the IPv6 `db.<ref>.supabase.co` in Replit.
+* **Lock the expected host:** set `EXPECTED_DB_HOST=aws-0-us-east-2.pooler.supabase.com:5432` in each environment.
+
+# 2) Code guardrails (already started, add two tiny upgrades)
+
+You already have `assertSingleDatabaseUrl()`. Strengthen it to also:
+
+* **Validate host pattern** matches `aws-0-*.pooler.supabase.com:5432`.
+* **Pin project ref**: parse `postgresql://postgres.<PROJECT_REF>:` and compare to `EXPECTED_DB_PROJECT_REF`.
+
+If either check fails → **fail fast on boot** with a loud message.
+
+# 3) CI / deploy safety checks (prevents bad pushes)
+
+Add a tiny node script `scripts/verify-db.js` that:
+
+* Loads `DATABASE_URL`
+* Rejects if host ≠ expected session pooler
+* Optional: open a connection and `SELECT current_database(), inet_server_addr()` to print a fingerprint
+
+Then in CI:
+
+* Run `node scripts/verify-db.js` **before** building.
+* Run `drizzle-kit check` (or your “db:push --dry”) to ensure the target DB is reachable and in the right shape.
+
+If the check fails, the build fails. No surprise cutovers.
+
+# 4) Runtime “tripwires” (so drift can’t hide)
+
+* Keep the **admin-only** `/api/debug/dbinfo` endpoint. It should return:
+
+  * parsed host, project_ref
+  * `current_database()`, `inet_server_addr()`
+  * whether `aws-0` session pooler is detected
+* Add a **boot preflight** (non-prod is fine to be writey; prod read-only):
+
+  * **Staging:** do a canary transaction: insert+delete in a temp table in one tx and assert it commits.
+  * **Prod:** read-only fingerprint check only.
+
+If any preflight fails → refuse to serve traffic (readiness probe stays red).
+
+# 5) Operational habits (the human layer)
+
+* **Runbook snippet** any time DB creds are touched:
+
+  1. Update platform secret `DATABASE_URL` (session pooler).
+  2. Restart app.
+  3. Hit `/api/debug/dbinfo` (must show aws-0 host + expected project ref).
+  4. Run the 30-second smoke (create project→task→notification; verify counts = 1/≥1).
+* **Red flags** to watch:
+
+  * API shows projects that psql does not (or vice versa) → drift.
+  * Health is green but writes “disappear” → you’re on transaction pooler or wrong host.
+
+# 6) Quick copy-paste hardening (drop-in)
+
+Add this to your envs (staging/prod dashboards):
+
+```
+EXPECTED_DB_HOST=aws-0-us-east-2.pooler.supabase.com:5432
+EXPECTED_DB_PROJECT_REF=jwehjdggkskmjrmoqibk
+```
+
+Add this lightweight verify script `scripts/verify-db.js`:
+
+```js
+// scripts/verify-db.js
+require('dotenv').config({ override: true });
+const url = new URL(process.env.DATABASE_URL || '');
+const expectedHost = process.env.EXPECTED_DB_HOST;
+const expectedRef  = process.env.EXPECTED_DB_PROJECT_REF;
+
+function die(msg) { console.error(`❌ ${msg}`); process.exit(1); }
+
+if (!process.env.DATABASE_URL) die('DATABASE_URL missing');
+const hostOk = url.host === expectedHost;
+const ref = (url.username || '').replace(/^postgres\./, ''); // postgres.<ref>
+const refOk = !expectedRef || ref === expectedRef;
+
+if (!/aws-0-.*\.pooler\.supabase\.com:5432$/.test(url.host)) {
+  die(`Host ${url.host} is not Supabase session pooler (aws-0 ...:5432)`);
+}
+if (expectedHost && !hostOk) {
+  die(`Host mismatch. Expected ${expectedHost} got ${url.host}`);
+}
+if (expectedRef && !refOk) {
+  die(`Project ref mismatch. Expected ${expectedRef} got ${ref || '(none)'}`);
+}
+
+console.log(`✅ DB checks passed: host=${url.host}, ref=${ref || '(n/a)'}`);
+```
+
+Then in CI (or before `node server.js`):
+
+```
+node scripts/verify-db.js
+```
+
+# 7) “Do not step on the rake” rules (Replit/staging)
+
+* Never do `export DATABASE_URL=...` for Neon while `.env` points to Supabase. If you must test locally, **echo both**:
+
+  * `node -e "require('dotenv').config({override:true}); console.log(process.env.DATABASE_URL)"`
+  * `echo "$DATABASE_URL"`
+    They must match. If not, fix before you do anything else.
+
+---
+
+If we follow this, the dual-DB fiasco can’t reappear without the system yelling at us during boot or CI. It’s cheap, fast, and boring—in the best way.
+
+Next step I recommend: I’ll drop `scripts/verify-db.js` into the repo and wire it in `package.json` as `"prestart": "node scripts/verify-db.js"`. That way **every start** refuses to run on a wrong DB.
