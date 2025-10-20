@@ -79,9 +79,31 @@ The backend server provides the following endpoints:
 ## Running the Project
 - **Start server**: `npm run dev` (runs on port 3000)
 - **Verify setup**: `npm run verify`
+- **Run idle reminder job**: `npm run job:idle` (finds tasks with no activity for 2+ days)
+
+## Automation Jobs
+- **`jobs/idleReminder.js`** - Automated idle task reminder system
+  - Finds tasks with no activity for configurable days (default: 2 days via `REMIND_IDLE_AFTER_DAYS`)
+  - Creates `idle_reminder` notifications with task details
+  - Prevents duplicate reminders on same day (daily deduplication)
+  - Excludes done/closed/cancelled tasks
+  - Uses `last_activity_at` column (auto-updated via trigger)
+  - Run manually: `npm run job:idle`
+  - Ready for cron scheduling in production
 
 ## Recent Changes
-- **Oct 20, 2025 (Latest)**: Drizzle ORM Migration - Removed Boot-Time DDL
+- **Oct 20, 2025 (Latest)**: Idle Task Reminder Automation
+  - **Feature**: Automated job to remind about stalled tasks with no recent activity
+  - **Database**: Added `last_activity_at` column to tasks table with auto-update trigger
+  - **Trigger**: activity_log inserts automatically bump task.last_activity_at
+  - **Job Script**: `jobs/idleReminder.js` finds idle tasks and creates notifications
+  - **Deduplication**: Prevents multiple reminders for same task on same day
+  - **Configuration**: Threshold configurable via REMIND_IDLE_AFTER_DAYS (default: 2 days)
+  - **Testing**: Successfully tested with 5-day-old task
+  - **Production Ready**: Can be scheduled as cron job (daily recommended)
+  - **Known Issue**: SSL configuration uses TLS bypass (same as Backend workflow)
+
+- **Oct 20, 2025**: Drizzle ORM Migration - Removed Boot-Time DDL
   - **Schema Management**: Replaced ad-hoc CREATE/ALTER statements with Drizzle ORM
   - **Introspection**: Successfully captured 17 tables, 111 columns, 22 foreign keys
   - **Clean Startup**: Server no longer creates schema on boot (200+ lines of DDL removed)

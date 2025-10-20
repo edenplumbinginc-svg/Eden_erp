@@ -4,7 +4,10 @@ require("dotenv").config({ override: true });
 const DAYS = parseInt(process.env.REMIND_IDLE_AFTER_DAYS || "2", 10);
 
 (async () => {
-  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  const client = new Client({ 
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
+  });
   await client.connect();
 
   const q = `
