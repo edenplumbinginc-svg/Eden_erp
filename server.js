@@ -31,9 +31,23 @@ app.use((req, res, next) => {
 app.use(logActivity);
 
 // Bootstrap database on startup
-bootstrapDatabase().then(() => {
+bootstrapDatabase().then(async () => {
   // Refresh metadata after schema changes to clear cached prepared statements
-  refreshPoolMetadata();
+  await refreshPoolMetadata();
+  
+  // Force clearing of all pool connections to reset metadata cache
+  const { pool } = require('./services/database');
+  
+  // Execute DISCARD ALL on a fresh connection to ensure metadata refresh
+  try {
+    const client = await pool.connect();
+    await client.query('DISCARD ALL');
+    await client.query('DEALLOCATE ALL');
+    client.release();
+    console.log('✅ Pool connections reset');
+  } catch (e) {
+    console.error('Failed to reset connections:', e.message);
+  }
 });
 
 // --- Health check ---
