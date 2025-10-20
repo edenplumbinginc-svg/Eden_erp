@@ -43,14 +43,28 @@ app.get('/api/debug/dbinfo', async (req, res) => {
              current_schema() as schema,
              now() at time zone 'utc' as utc_now;
     `);
-    const hostFromEnv = (() => {
-      try { return new URL(process.env.DATABASE_URL).host; } catch { return null; }
-    })();
+    
+    const { parseDatabaseDetails } = require('./lib/config-db');
+    const details = parseDatabaseDetails(process.env.DATABASE_URL);
+    
     res.json({
-      node_env: process.env.NODE_ENV,
-      expected_db_host: process.env.EXPECTED_DB_HOST || null,
-      env_db_host: hostFromEnv,
+      environment: {
+        node_env: process.env.NODE_ENV || 'development',
+        expected_db_host: process.env.EXPECTED_DB_HOST || null,
+        expected_db_project_ref: process.env.EXPECTED_DB_PROJECT_REF || null,
+      },
+      connection_config: details ? {
+        host: details.host,
+        project_ref: details.projectRef,
+        pooler_type: details.poolerType,
+        is_session_pooler: details.isSessionPooler,
+        is_transaction_pooler: details.isTransactionPooler,
+        is_supabase_pooler: details.isSupabasePooler,
+      } : null,
       db_runtime: rows[0],
+      warnings: details && details.isTransactionPooler ? [
+        'Using transaction pooler (aws-1). Session pooler (aws-0) recommended for better compatibility.'
+      ] : [],
     });
   } catch (e) {
     res.status(500).json({ error: { code: 'DBINFO_FAIL', message: e.message } });
