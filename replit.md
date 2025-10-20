@@ -81,7 +81,16 @@ The backend server provides the following endpoints:
 - **Verify setup**: `npm run verify`
 
 ## Recent Changes
-- **Oct 18, 2025 (Latest)**: Major API Enhancements - Full CRUD + Advanced Reporting
+- **Oct 20, 2025 (Latest)**: Global Authentication Enforcement
+  - **Security**: Enforced authentication on all /api/* routes
+  - **Development Mode**: Dev headers (X-Dev-Email, X-Dev-User-Id) work in development
+  - **Production Mode**: JWT Bearer token required (stub implementation, ready for Auth0/Clerk)
+  - **Public Endpoints**: Health checks (/health, /api/health, /db/ping) remain public
+  - **Error Format**: Structured error responses with code and message
+  - **Middleware**: requireAuth and requireRole functions for granular access control
+  - All 25+ API endpoints now protected against unauthorized access
+  
+- **Oct 18, 2025**: Major API Enhancements - Full CRUD + Advanced Reporting
   - **CRUD Operations**: Added UPDATE (PATCH) and DELETE for both projects and tasks
   - **Enhanced Reporting**: 5 reporting endpoints (status, owner, priority, overdue, activity)
   - **Performance**: Added database indexes for status and ball_in_court
