@@ -4,6 +4,7 @@ const router = express.Router();
 const { pool, enqueueNotification } = require('../services/database');
 const { authenticate, deriveStableUUID } = require('../middleware/auth');
 const { notify, actorFromHeaders } = require('../lib/notify');
+const { withTx } = require('../lib/tx');
 
 // Status flow validation
 const validStatusTransitions = {
@@ -53,12 +54,15 @@ router.patch('/:id', authenticate, async (req, res) => {
   try {
     const { title, description, status, priority, assignee_id, ball_in_court, due_at, tags, origin } = req.body ?? {};
     
-    // If status is being updated, validate the transition
+    // Capture old status before transaction (if status is being updated)
+    let currentStatus = null;
+    let currentTaskData = null;
     if (status !== undefined) {
       const currentTask = await pool.query('SELECT status, ball_in_court, project_id, title, priority, due_at FROM public.tasks WHERE id = $1', [req.params.id]);
       if (currentTask.rowCount === 0) return res.status(404).json({ error: 'task not found' });
       
-      let currentStatus = currentTask.rows[0].status;
+      currentStatus = currentTask.rows[0].status;
+      currentTaskData = currentTask.rows[0];
       let newStatus = status === 'open' ? 'todo' : status; // Map open to todo
       
       if (!isValidStatusTransition(currentStatus, newStatus)) {
@@ -66,64 +70,74 @@ router.patch('/:id', authenticate, async (req, res) => {
           error: `Invalid status transition from '${currentStatus}' to '${newStatus}'` 
         });
       }
-      
-      // Fire-and-forget notification event (type-stable)
-      if (currentStatus !== newStatus) {
-        (async () => {
-          try {
-            const { actorEmail } = actorFromHeaders(req);
-            await notify(pool, {
-              type: 'status_changed',
-              projectId: currentTask.rows[0].project_id,
-              taskId: req.params.id,
-              actorId: req.user?.id || null,
-              actorEmail: actorEmail || null,
-              payload: {
-                title: currentTask.rows[0].title,
-                old_status: currentStatus,
-                new_status: newStatus,
-                priority: currentTask.rows[0].priority,
-                due_date: currentTask.rows[0].due_at
-              }
-            });
-          } catch (e) {
-            console.warn('notify(status_changed) failed:', e.message);
-          }
-        })();
-      }
     }
     
-    const updates = [];
-    const values = [];
-    let idx = 1;
+    const result = await withTx(pool, async (tx) => {
+      const updates = [];
+      const values = [];
+      let idx = 1;
 
-    if (title !== undefined) { updates.push(`title = $${idx++}`); values.push(title); }
-    if (description !== undefined) { updates.push(`description = $${idx++}`); values.push(description); }
-    if (status !== undefined) { 
-      const mappedStatus = status === 'open' ? 'todo' : status;
-      updates.push(`status = $${idx++}`); 
-      values.push(mappedStatus); 
-    }
-    if (priority !== undefined) { updates.push(`priority = $${idx++}`); values.push(priority); }
-    if (assignee_id !== undefined) { updates.push(`assignee_id = $${idx++}`); values.push(assignee_id); }
-    if (ball_in_court !== undefined) { updates.push(`ball_in_court = $${idx++}`); values.push(ball_in_court); }
-    if (due_at !== undefined) { updates.push(`due_at = $${idx++}`); values.push(due_at); }
-    if (tags !== undefined) { updates.push(`tags = $${idx++}`); values.push(tags); }
-    if (origin !== undefined) { updates.push(`origin = $${idx++}`); values.push(origin); }
+      if (title !== undefined) { updates.push(`title = $${idx++}`); values.push(title); }
+      if (description !== undefined) { updates.push(`description = $${idx++}`); values.push(description); }
+      if (status !== undefined) { 
+        const mappedStatus = status === 'open' ? 'todo' : status;
+        updates.push(`status = $${idx++}`); 
+        values.push(mappedStatus); 
+      }
+      if (priority !== undefined) { updates.push(`priority = $${idx++}`); values.push(priority); }
+      if (assignee_id !== undefined) { updates.push(`assignee_id = $${idx++}`); values.push(assignee_id); }
+      if (ball_in_court !== undefined) { updates.push(`ball_in_court = $${idx++}`); values.push(ball_in_court); }
+      if (due_at !== undefined) { updates.push(`due_at = $${idx++}`); values.push(due_at); }
+      if (tags !== undefined) { updates.push(`tags = $${idx++}`); values.push(tags); }
+      if (origin !== undefined) { updates.push(`origin = $${idx++}`); values.push(origin); }
 
-    if (updates.length === 0) return res.status(400).json({ error: 'no fields to update' });
+      if (updates.length === 0) throw new Error('no fields to update');
 
-    updates.push(`updated_at = now()`);
-    values.push(req.params.id);
-    const r = await pool.query(
-      `UPDATE public.tasks SET ${updates.join(', ')} 
-       WHERE id = $${idx} 
-       RETURNING id, title, description, status, priority, assignee_id, ball_in_court, due_at, tags, origin, created_at, updated_at`,
-      values
-    );
-    if (r.rowCount === 0) return res.status(404).json({ error: 'task not found' });
-    res.json(r.rows[0]);
+      updates.push(`updated_at = now()`);
+      values.push(req.params.id);
+      const r = await tx.query(
+        `UPDATE public.tasks SET ${updates.join(', ')} 
+         WHERE id = $${idx} 
+         RETURNING id, title, description, status, priority, assignee_id, ball_in_court, due_at, tags, origin, created_at, updated_at, project_id`,
+        values
+      );
+      if (r.rowCount === 0) throw new Error('task not found');
+      
+      const updatedTask = r.rows[0];
+      
+      // Insert notification within the same transaction if status changed
+      if (status !== undefined && currentStatus !== null) {
+        const newStatus = status === 'open' ? 'todo' : status;
+        if (currentStatus !== newStatus) {
+          const { actorEmail } = actorFromHeaders(req);
+          await notify(tx, {
+            type: 'status_changed',
+            projectId: currentTaskData.project_id,
+            taskId: req.params.id,
+            actorId: req.user?.id || null,
+            actorEmail: actorEmail || null,
+            payload: {
+              title: currentTaskData.title,
+              old_status: currentStatus,
+              new_status: newStatus,
+              priority: currentTaskData.priority,
+              due_date: currentTaskData.due_at
+            }
+          });
+        }
+      }
+      
+      return updatedTask;
+    });
+    
+    res.json(result);
   } catch (e) {
+    if (e.message === 'no fields to update') {
+      return res.status(400).json({ error: e.message });
+    }
+    if (e.message === 'task not found') {
+      return res.status(404).json({ error: e.message });
+    }
     res.status(500).json({ error: e.message });
   }
 });
@@ -171,34 +185,34 @@ router.post('/:taskId/comments', authenticate, async (req, res) => {
     // Convert author_id to UUID if provided
     const finalAuthorId = author_id ? deriveStableUUID(author_id) : (req.user?.id ?? null);
     
-    const r = await pool.query(
-      `INSERT INTO public.task_comments (task_id, author_id, body)
-       VALUES ($1, $2, $3)
-       RETURNING id, task_id, author_id, body, created_at, updated_at`,
-      [req.params.taskId, finalAuthorId, body]
-    );
+    const comment = await withTx(pool, async (tx) => {
+      const r = await tx.query(
+        `INSERT INTO public.task_comments (task_id, author_id, body)
+         VALUES ($1, $2, $3)
+         RETURNING id, task_id, author_id, body, created_at, updated_at`,
+        [req.params.taskId, finalAuthorId, body]
+      );
+      
+      const commentData = r.rows[0];
+      
+      // Insert notification within the same transaction
+      const { actorEmail } = actorFromHeaders(req);
+      await notify(tx, {
+        type: 'comment_added',
+        projectId: taskData.project_id,
+        taskId: taskData.id,
+        actorId: finalAuthorId,
+        actorEmail: actorEmail || null,
+        payload: {
+          task_title: taskData.title,
+          comment_preview: String(body || '').slice(0, 160)
+        }
+      });
+      
+      return commentData;
+    });
     
-    // Fire-and-forget notification event (type-stable)
-    (async () => {
-      try {
-        const { actorEmail } = actorFromHeaders(req);
-        await notify(pool, {
-          type: 'comment_added',
-          projectId: taskData.project_id,
-          taskId: taskData.id,
-          actorId: finalAuthorId,
-          actorEmail: actorEmail || null,
-          payload: {
-            task_title: taskData.title,
-            comment_preview: String(body || '').slice(0, 160)
-          }
-        });
-      } catch (e) {
-        console.warn('notify(comment_added) failed:', e.message);
-      }
-    })();
-    
-    res.status(201).json(r.rows[0]);
+    res.status(201).json(comment);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

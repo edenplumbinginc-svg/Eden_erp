@@ -1,0 +1,226 @@
+[Mode: Execution]
+
+Step: Make writes transactional (task change + notification insert in one DB transaction) for three flows: create task, change status, add comment.
+
+Why it matters: This fixes the architect’s #3 data-integrity risk—no more “task updated but event missing.” You keep the fire-and-forget email/sending async, but the event row itself becomes atomic with the write.
+
+Inputs needed:
+
+Backend repo
+
+Files: lib/notify.js, lib/tx.js (new), routes/tasks.js, routes/comments.js
+
+Command:
+
+Add a tiny transaction helper.
+
+// lib/tx.js
+async function withTx(pool, fn) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await fn(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch {}
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+module.exports = { withTx };
+
+
+Let notify accept a client (tx) as well as pool (no behavioral change needed—just pass the same query interface).
+
+// lib/notify.js
+-async function notify(pool, { type, projectId, taskId, actorId, actorEmail, payload }) {
++async function notify(db, { type, projectId, taskId, actorId, actorEmail, payload }) {
+   const sql = `
+     insert into notifications (type, project_id, task_id, actor_id, actor_email, payload)
+     values ($1, $2::uuid, $3::uuid, $4::uuid, $5, $6::jsonb)
+     returning id
+   `;
+-  const { rows } = await pool.query(sql, [type, projectId, taskId, actorId, actorEmail, payload]);
++  const { rows } = await db.query(sql, [type, projectId, taskId, actorId, actorEmail, payload]);
+   return rows[0].id;
+}
+ module.exports = { notify, actorFromHeaders };
+
+
+Make task create transactional.
+
+// routes/tasks.js (create under POST /api/projects/:projectId/tasks)
++const { withTx } = require('../lib/tx');
+ const { notify, actorFromHeaders } = require('../lib/notify');
+
+ router.post('/api/projects/:projectId/tasks', async (req, res, next) => {
+   try {
+     const { projectId } = req.params;
+     const { title, priority = 'normal', description = null } = req.body;
+     if (!title) return res.status(400).json({ error:{ code:'VALIDATION', message:'title required' } });
+
+-    const insertSql = `insert into tasks (project_id, title, priority, description)
+-      values ($1::uuid, $2, $3, $4) returning *`;
+-    const { rows } = await req.pool.query(insertSql, [projectId, title, priority, description]);
+-    const task = rows[0];
++    const task = await withTx(req.pool, async (tx) => {
++      const ins = await tx.query(
++        `insert into tasks (project_id, title, priority, description)
++         values ($1::uuid, $2, $3, $4) returning *`,
++        [projectId, title, priority, description]
++      );
++      const t = ins.rows[0];
++      const { actorEmail } = actorFromHeaders(req);
++      await notify(tx, {
++        type: 'task_created',
++        projectId,
++        taskId: t.id,
++        actorId: null,
++        actorEmail: actorEmail || null,
++        payload: { title, description, priority, status: 'todo' }
++      });
++      return t;
++    });
+
+     res.status(201).json(task);
+   } catch (err) { next(err); }
+ });
+
+
+Make status change transactional.
+
+// routes/tasks.js (PATCH /api/tasks/:taskId/status)
++const { withTx } = require('../lib/tx');
+ const { notify, actorFromHeaders } = require('../lib/notify');
+
+ router.patch('/api/tasks/:taskId/status', async (req, res, next) => {
+   try {
+     const { taskId } = req.params;
+     const { status } = req.body;
+
+-    const cur = await req.pool.query(`select id, project_id, title, status, priority, due_date from tasks where id=$1::uuid`, [taskId]);
++    const cur = await req.pool.query(
++      `select id, project_id, title, status, priority, due_date, assignee_id
++       from tasks where id=$1::uuid`, [taskId]);
+     if (!cur.rows.length) return res.status(404).json({ error:{code:'NOT_FOUND', message:'Task not found'} });
+     const oldStatus = cur.rows[0].status;
+
+-    const upd = await req.pool.query(
+-      `update tasks set status=$1 where id=$2::uuid returning *`, [status, taskId]);
+-    const task = upd.rows[0];
+-
+-    (async () => { /* fire-and-forget */ })();
++    const task = await withTx(req.pool, async (tx) => {
++      const upd = await tx.query(
++        `update tasks set status=$1 where id=$2::uuid returning *`, [status, taskId]);
++      const t = upd.rows[0];
++      const { actorEmail } = actorFromHeaders(req);
++      await notify(tx, {
++        type: 'status_changed',
++        projectId: t.project_id,
++        taskId: t.id,
++        actorId: t.assignee_id || null,
++        actorEmail: actorEmail || null,
++        payload: {
++          title: t.title, old_status: oldStatus, new_status: t.status,
++          priority: t.priority, due_date: t.due_date
++        }
++      });
++      return t;
++    });
+
+     res.json(task);
+   } catch (err) { next(err); }
+ });
+
+
+Make comment create transactional.
+
+// routes/comments.js (POST /api/tasks/:taskId/comments)
++const { withTx } = require('../lib/tx');
+ const { notify, actorFromHeaders } = require('../lib/notify');
+
+ router.post('/api/tasks/:taskId/comments', async (req, res, next) => {
+   try {
+     const { taskId } = req.params;
+     const { body } = req.body;
+     if (!body) return res.status(400).json({ error:{ code:'VALIDATION', message:'body required' } });
+
+-    const taskRows = await req.pool.query(`select id, project_id, title from tasks where id=$1::uuid`, [taskId]);
++    const taskRows = await req.pool.query(
++      `select id, project_id, title from tasks where id=$1::uuid`, [taskId]);
+     if (!taskRows.rows.length) return res.status(404).json({ error:{code:'NOT_FOUND', message:'Task not found'} });
+     const task = taskRows.rows[0];
+
+-    const insertSql = `insert into comments (task_id, body) values ($1::uuid, $2) returning *`;
+-    const { rows } = await req.pool.query(insertSql, [taskId, body]);
+-    const comment = rows[0];
+-
+-    (async () => { /* fire-and-forget */ })();
++    const comment = await withTx(req.pool, async (tx) => {
++      const ins = await tx.query(
++        `insert into comments (task_id, body) values ($1::uuid, $2) returning *`,
++        [taskId, body]
++      );
++      const c = ins.rows[0];
++      const { actorEmail } = actorFromHeaders(req);
++      await notify(tx, {
++        type: 'comment_added',
++        projectId: task.project_id,
++        taskId: task.id,
++        actorId: null,
++        actorEmail: actorEmail || null,
++        payload: {
++          task_title: task.title,
++          comment_preview: String(body).slice(0,160)
++        }
++      });
++      return c;
++    });
+
+     res.status(201).json(comment);
+   } catch (err) { next(err); }
+ });
+
+
+Quick smoke (same as before; now the three DB writes are atomic with their event rows).
+
+# Create -> Status -> Comment, then read recent
+PROJECT_ID="<uuid>"
+TASK_ID=$(curl -s -X POST "http://localhost:3000/api/projects/$PROJECT_ID/tasks" \
+  -H "Content-Type: application/json" -H "X-Dev-Email: admin@edenmep.ca" \
+  -d '{"title":"Txn Test","priority":"high"}' | jq -r '.id')
+
+curl -s -X PATCH "http://localhost:3000/api/tasks/$TASK_ID/status" \
+  -H "Content-Type: application/json" -H "X-Dev-Email: admin@edenmep.ca" \
+  -d '{"status":"in_progress"}' >/dev/null
+
+curl -s -X POST "http://localhost:3000/api/tasks/$TASK_ID/comments" \
+  -H "Content-Type: application/json" -H "X-Dev-Email: admin@edenmep.ca" \
+  -d '{"body":"Txn comment test"}' >/dev/null
+
+psql "$DATABASE_URL" -c "
+  select type, payload->>'title' as title,
+         payload->>'new_status' as new_status,
+         payload->>'comment_preview' as preview,
+         to_char(created_at,'HH24:MI:SS') as t
+  from notifications
+  where created_at > now() - interval '10 minutes'
+  order by id desc limit 10;
+"
+
+
+Success check:
+
+Each endpoint still returns 200/201.
+
+A matching notification row appears for each write.
+
+If any step throws inside the block, both the write and its event are rolled back together (no partial state).
+
+Next: wait for user
+
+—
+Notes for later (don’t do now): if you want bulletproof delivery to downstream workers (email), add a tiny outbox table written in the same transaction and a background job that reads → sends → marks sent. That’s the “enterprise” version of exactly what you’ve just implemented.

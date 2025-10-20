@@ -4,6 +4,7 @@ const router = express.Router();
 const { pool } = require('../services/database');
 const { authenticate, authorize } = require('../middleware/auth');
 const { notify, actorFromHeaders } = require('../lib/notify');
+const { withTx } = require('../lib/tx');
 
 // List projects
 router.get('/', authenticate, async (req, res) => {
@@ -105,62 +106,60 @@ router.post('/:projectId/tasks', authenticate, async (req, res) => {
     // Default status to 'todo' instead of 'open' for new convention
     const status = req.body.status || 'todo';
     
-    const q = `
-      INSERT INTO public.tasks
-        (project_id, title, description, status, priority, assignee_id, ball_in_court, due_at, tags, origin)
-      VALUES
-        ($1, $2, $3, $4, COALESCE($5,'normal'), $6, $7, $8, $9, $10)
-      RETURNING id, title, description, status, priority, assignee_id, ball_in_court, due_at, tags, origin, created_at, updated_at`;
-    const r = await pool.query(q, [
-      req.params.projectId,
-      title,
-      description ?? null,
-      status,
-      priority ?? null,
-      assignee_id ?? null,
-      ball_in_court ?? null,
-      due_at ?? null,
-      tags ?? [],
-      origin ?? null
-    ]);
+    const task = await withTx(pool, async (tx) => {
+      const q = `
+        INSERT INTO public.tasks
+          (project_id, title, description, status, priority, assignee_id, ball_in_court, due_at, tags, origin)
+        VALUES
+          ($1, $2, $3, $4, COALESCE($5,'normal'), $6, $7, $8, $9, $10)
+        RETURNING id, title, description, status, priority, assignee_id, ball_in_court, due_at, tags, origin, created_at, updated_at`;
+      const r = await tx.query(q, [
+        req.params.projectId,
+        title,
+        description ?? null,
+        status,
+        priority ?? null,
+        assignee_id ?? null,
+        ball_in_court ?? null,
+        due_at ?? null,
+        tags ?? [],
+        origin ?? null
+      ]);
+      
+      const taskData = r.rows[0];
+      
+      // Insert notification within the same transaction
+      const { actorEmail } = actorFromHeaders(req);
+      await notify(tx, {
+        type: 'task_created',
+        projectId: req.params.projectId,
+        taskId: taskData.id,
+        actorId: assignee_id || null,
+        actorEmail: actorEmail || null,
+        payload: {
+          title: taskData.title,
+          priority: taskData.priority,
+          due_at: taskData.due_at,
+          assignee_id: taskData.assignee_id,
+          tags: taskData.tags || [],
+          status: taskData.status,
+          origin: taskData.origin
+        },
+      });
+      
+      return taskData;
+    });
     
-    // Enqueue notification for task creation
+    // Enqueue notification for task creation (outside transaction)
     const { enqueueNotification } = require('../services/database');
     if (ball_in_court) {
-      await enqueueNotification(ball_in_court, r.rows[0].id, 'task_created', {
+      await enqueueNotification(ball_in_court, task.id, 'task_created', {
         title: title,
         project_id: req.params.projectId
       });
     }
     
-    // Fire-and-forget notification event capture (non-blocking)
-    const task = r.rows[0];
-    (async () => {
-      try {
-        const { actorEmail } = actorFromHeaders(req);
-        await notify(pool, {
-          type: 'task_created',
-          projectId: req.params.projectId,
-          taskId: task.id,
-          actorId: assignee_id || null,
-          actorEmail: actorEmail || null,
-          payload: {
-            title: task.title,
-            priority: task.priority,
-            due_at: task.due_at,
-            assignee_id: task.assignee_id,
-            tags: task.tags || [],
-            status: task.status,
-            origin: task.origin
-          },
-        });
-      } catch (e) {
-        // Keep the bus non-intrusive in v1
-        console.warn('notify(task_created) failed:', e.message);
-      }
-    })();
-    
-    res.status(201).json(r.rows[0]);
+    res.status(201).json(task);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
