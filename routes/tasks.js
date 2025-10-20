@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const { pool, enqueueNotification } = require('../services/database');
 const { authenticate, deriveStableUUID } = require('../middleware/auth');
+const { notify, actorFromHeaders } = require('../lib/notify');
 
 // Status flow validation
 const validStatusTransitions = {
@@ -54,7 +55,7 @@ router.patch('/:id', authenticate, async (req, res) => {
     
     // If status is being updated, validate the transition
     if (status !== undefined) {
-      const currentTask = await pool.query('SELECT status, ball_in_court FROM public.tasks WHERE id = $1', [req.params.id]);
+      const currentTask = await pool.query('SELECT status, ball_in_court, project_id, title, priority, due_at FROM public.tasks WHERE id = $1', [req.params.id]);
       if (currentTask.rowCount === 0) return res.status(404).json({ error: 'task not found' });
       
       let currentStatus = currentTask.rows[0].status;
@@ -66,12 +67,29 @@ router.patch('/:id', authenticate, async (req, res) => {
         });
       }
       
-      // Enqueue notification for status change
-      if (currentStatus !== newStatus && currentTask.rows[0].ball_in_court) {
-        await enqueueNotification(currentTask.rows[0].ball_in_court, req.params.id, 'status_changed', {
-          old_status: currentStatus,
-          new_status: newStatus
-        });
+      // Fire-and-forget notification event (type-stable)
+      if (currentStatus !== newStatus) {
+        (async () => {
+          try {
+            const { actorEmail } = actorFromHeaders(req);
+            await notify(pool, {
+              type: 'status_changed',
+              projectId: currentTask.rows[0].project_id,
+              taskId: req.params.id,
+              actorId: req.user?.id || null,
+              actorEmail: actorEmail || null,
+              payload: {
+                title: currentTask.rows[0].title,
+                old_status: currentStatus,
+                new_status: newStatus,
+                priority: currentTask.rows[0].priority,
+                due_date: currentTask.rows[0].due_at
+              }
+            });
+          } catch (e) {
+            console.warn('notify(status_changed) failed:', e.message);
+          }
+        })();
       }
     }
     
