@@ -57,6 +57,7 @@ app.use('/api/projects', require('./routes/projects'));
 app.use('/api/tasks', require('./routes/tasks'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/ops/notifications', require('./routes/notifications'));
+app.use('/api', require('./routes/attachments'));
 
 // --- Subtask routes need to be at /api level ---
 const { pool } = require('./services/database');

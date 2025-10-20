@@ -36,7 +36,10 @@ const devHeaders = {
     headers: { 'Content-Type': 'application/json', ...extraHeaders },
     body: JSON.stringify(body || {})
   });
-  const jdel = (url) => _fetch(url, { method: 'DELETE' });
+  const jdel = (url, extraHeaders={}) => _fetch(url, { 
+    method: 'DELETE',
+    headers: extraHeaders
+  });
 
   // 1) Health
   console.log('1️⃣  Testing health check...');
@@ -116,6 +119,37 @@ const devHeaders = {
   if (!res.ok) { console.log(`❌ ${res.status} ${await res.text()}`); console.log('❌ Ball handoff failed'); process.exit(1); }
   json = await res.json();
   console.log(`✅ Ball handed off to vendor: ${json.id}\n`);
+
+  // 10a) Attachment init
+  console.log('🔟a) Testing attachments...');
+  // Init
+  res = await jpost(`${base}/api/tasks/${tid}/attachments/init`, {}, devHeaders);
+  if (!res.ok) { console.log(`❌ ${res.status} ${await res.text()}`); console.log('❌ Attachment init failed'); process.exit(1); }
+  const { storage_key, upload_url } = await res.json();
+  console.log('  ✅ Attachment init successful');
+
+  // Complete
+  res = await jpost(`${base}/api/tasks/${tid}/attachments/complete`, {
+    storage_key,
+    filename: 'test.txt',
+    mime: 'text/plain',
+    size_bytes: 12
+  }, devHeaders);
+  if (!res.ok) { console.log(`❌ ${res.status} ${await res.text()}`); console.log('❌ Attachment complete failed'); process.exit(1); }
+  console.log('  ✅ Attachment upload completed');
+
+  // List
+  const attachments = await jget(`${base}/api/tasks/${tid}/attachments`);
+  if (!Array.isArray(attachments)) { console.log('❌ Attachment list failed'); process.exit(1); }
+  console.log(`  ✅ Listed ${attachments.length} attachment(s)`);
+
+  // Delete
+  if (attachments.length > 0) {
+    const attachmentId = attachments[0].id;
+    res = await jdel(`${base}/api/attachments/${attachmentId}`, devHeaders);
+    if (!res.ok) { console.log(`❌ ${res.status} ${await res.text()}`); console.log('❌ Attachment delete failed'); process.exit(1); }
+    console.log('  ✅ Attachment deleted\n');
+  }
 
   // 10) Notification runner
   console.log('🔟 Running notification queue...');

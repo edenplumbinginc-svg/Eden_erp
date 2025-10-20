@@ -91,15 +91,15 @@ async function bootstrapDatabase() {
       );
     `);
 
-    // Attachments (stub for now)
+    // Attachments - complete table structure with proper constraints
     await pool.query(`
       CREATE TABLE IF NOT EXISTS public.attachments (
         id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-        task_id uuid REFERENCES public.tasks(id) ON DELETE CASCADE,
+        task_id uuid NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
         filename text,
         mime text,
         size_bytes int,
-        storage_key text,
+        storage_key text NOT NULL,
         uploaded_by uuid,
         created_at timestamptz DEFAULT now()
       );
@@ -195,6 +195,8 @@ async function bootstrapDatabase() {
       CREATE INDEX IF NOT EXISTS idx_tasks_due_at ON public.tasks(due_at);
       CREATE INDEX IF NOT EXISTS idx_notifications_status ON public.notifications(status, COALESCE(scheduled_at, schedule_at));
       CREATE INDEX IF NOT EXISTS idx_activity_log_entity ON public.activity_log(entity_type, entity_id);
+      CREATE INDEX IF NOT EXISTS idx_attachments_task_id ON public.attachments(task_id);
+      CREATE INDEX IF NOT EXISTS idx_attachments_storage_key ON public.attachments(storage_key);
     `);
 
     console.log('✅ Database schema ensured');
