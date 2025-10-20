@@ -1,0 +1,100 @@
+[Mode: Execution]
+
+**Step:** Generate a minimal **UI vertical slice** (Projects → Tasks → Task Detail with Comments, Ball-in-Court, Attachments) wired to your green Phase-1 API.
+
+**Why it matters:** This turns the backend into a usable tool today and stress-tests the real flows end-to-end in the browser.
+
+**Inputs needed:**
+
+* Repo with `apps/coordination_ui` (Vite/React)
+* Backend running at `http://localhost:3000`
+
+**Command (paste into Replit Agent chat):**
+
+```
+We’re building a minimal UI vertical slice for the Eden Coordination module, wired to the already-green backend.
+
+### Scope (ship this now)
+1) Add a tiny API client:
+   - File: apps/coordination_ui/src/lib/api.ts
+   - Base URL from env: VITE_API_URL (default http://localhost:3000)
+   - Include dev auth headers on mutating requests:
+     X-Dev-User-Id: test-user-123
+     X-Dev-User-Role: Manager
+     X-Dev-User-Email: test@example.com
+   - Methods used in this slice:
+     GET  /api/projects
+     POST /api/projects
+     GET  /api/projects/:id/tasks
+     POST /api/projects/:id/tasks
+     PATCH /api/tasks/:id
+     GET  /api/tasks/:id/comments
+     POST /api/tasks/:id/comments
+     POST /api/tasks/:id/ball
+     POST /api/tasks/:id/attachments/init
+     POST /api/tasks/:id/attachments/complete
+     GET  /api/tasks/:id/attachments
+     DELETE /api/attachments/:attachmentId
+     GET  /api/reports/tasks/status
+
+2) Pages & components (TSX, functional components, Tailwind if available; else minimal CSS):
+   - src/pages/ProjectListPage.tsx
+     • Lists projects (name/code/created_at)
+     • New project inline form (name, code)
+     • Footer shows simple table for /api/reports/tasks/status
+   - src/pages/ProjectDetail.tsx
+     • Shows project title
+     • Lists tasks for the project (title, status, priority, ball owner email if returned)
+     • “New task” modal: title, priority, tags[] (comma-separated)
+     • Clicking a task opens TaskDetailDrawer
+   - src/components/TaskDetailDrawer.tsx
+     • Shows status buttons (todo → in_progress → review → done; block invalid backward transition)
+     • Inline BallHandoff: input for target user UUID (for now) and POST /api/tasks/:id/ball
+     • Comments thread: list + add (body only; author_id comes from dev headers server-side if present; otherwise include DEV_ID fallback if API requires)
+     • AttachmentsPanel: shows list, add (init→complete), delete
+   - src/components/AttachmentsPanel.tsx
+     • “Add file” → call init → then immediate complete using selected File’s name/mime/size
+     • List attachments; allow delete
+   - src/main.tsx + src/App.tsx
+     • Router + routes: / (ProjectListPage), /projects/:id (ProjectDetail)
+   - Create .env.local in the UI root:
+     VITE_API_URL=http://localhost:3000
+
+3) DX
+   - Add lightweight toasts (simple div or alert) for error/success
+   - Loading spinners (text placeholders ok)
+   - No external state libraries; use component state + simple fetch helpers
+
+### Deliverables
+A) Unified diffs for all new/changed files:
+   - apps/coordination_ui/src/lib/api.ts
+   - apps/coordination_ui/src/pages/ProjectListPage.tsx
+   - apps/coordination_ui/src/pages/ProjectDetail.tsx
+   - apps/coordination_ui/src/components/TaskDetailDrawer.tsx
+   - apps/coordination_ui/src/components/AttachmentsPanel.tsx
+   - apps/coordination_ui/src/App.tsx
+   - apps/coordination_ui/src/main.tsx
+   - apps/coordination_ui/.env.local
+
+B) Run the UI:
+   - `npm run -C apps/coordination_ui dev` and print the URL
+
+C) UI smoke steps (perform and paste console notes):
+   1) Create project “UI Smoke”
+   2) Create task “First task” (priority: high, tags: Coordination,Follow-up)
+   3) Set status to in_progress
+   4) Add a comment “Hello from UI”
+   5) Add a small text attachment, then delete it
+   6) Confirm status report table renders on ProjectListPage
+
+### Acceptance
+- Clicking a task opens the drawer with status buttons, comments, and attachments working.
+- Network calls match the backend endpoints above.
+- No TypeScript or runtime errors in console.
+```
+
+**Success check:**
+
+* Replit shows diffs, starts the UI, and you can: create a project, add a task, change status, comment, add/delete an attachment — all from the browser.
+
+**Next:** wait for user
