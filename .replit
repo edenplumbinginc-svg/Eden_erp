@@ -53,13 +53,13 @@ waitForPort = 3000
 name = "UI"
 author = "agent"
 
+[workflows.workflow.metadata]
+outputType = "webview"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd apps/coordination_ui && npm run dev"
 waitForPort = 5000
-
-[workflows.workflow.metadata]
-outputType = "webview"
 
 [[ports]]
 localPort = 3000
@@ -75,4 +75,8 @@ externalPort = 3003
 
 [[ports]]
 localPort = 33535
+externalPort = 80
+
+[[ports]]
+localPort = 5000
 externalPort = 80
