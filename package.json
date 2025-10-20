@@ -4,9 +4,11 @@
   "version": "0.1.0",
   "license": "UNLICENSED",
   "scripts": {
+    "prestart": "node scripts/verify-db.js",
     "start": "node server.js",
     "dev": "node server.js",
     "verify": "node -e \"console.log('ok')\"",
+    "verify:db": "node scripts/verify-db.js",
     "smoke": "node scripts/smoke.js",
     "job:idle": "NODE_TLS_REJECT_UNAUTHORIZED=0 node jobs/idleReminder.js",
     "db:generate": "drizzle-kit generate",
