@@ -17,9 +17,7 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Dev-User-Id, X-Dev-User-Role, X-Dev-User-Email');
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
 
@@ -32,14 +30,41 @@ bootstrapDatabase().catch(err => {
   process.exit(1);
 });
 
+// ⚙️ --- DEBUG ONLY (remove before prod) ---
+const { Pool } = require('pg');
+const { pool } = require('./services/database');
+
+app.get('/api/debug/dbinfo', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      select current_database() as db,
+             inet_server_addr() as db_ip,
+             version() as pg_version,
+             current_schema() as schema,
+             now() at time zone 'utc' as utc_now;
+    `);
+    const hostFromEnv = (() => {
+      try { return new URL(process.env.DATABASE_URL).host; } catch { return null; }
+    })();
+    res.json({
+      node_env: process.env.NODE_ENV,
+      expected_db_host: process.env.EXPECTED_DB_HOST || null,
+      env_db_host: hostFromEnv,
+      db_runtime: rows[0],
+    });
+  } catch (e) {
+    res.status(500).json({ error: { code: 'DBINFO_FAIL', message: e.message } });
+  }
+});
+// ⚙️ --- END DEBUG ---
+
 // --- Public health check endpoints ---
 app.get(['/health', '/api/health'], (_, res) => res.json({ status: 'ok' }));
 
 app.get('/db/ping', async (_, res) => {
   if (!process.env.DATABASE_URL)
     return res.status(200).json({ db: 'not_configured' });
-  
-  const { pool } = require('./services/database');
+
   try {
     const r = await pool.query('select 1 as ok');
     res.json({ db: 'ok', rows: r.rows });
@@ -54,7 +79,6 @@ app.use('/api', requireAuth);
 
 // --- Protected API endpoints ---
 app.get('/api/users', async (_, res) => {
-  const { pool } = require('./services/database');
   try {
     const r = await pool.query('select id, email, name from public.users order by email');
     res.json(r.rows);
@@ -71,8 +95,6 @@ app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api', require('./routes/attachments'));
 
 // --- Subtask routes need to be at /api level ---
-const { pool } = require('./services/database');
-
 app.patch('/api/subtasks/:id', async (req, res) => {
   try {
     const { title, done, order_index } = req.body ?? {};
@@ -85,17 +107,17 @@ app.patch('/api/subtasks/:id', async (req, res) => {
     if (order_index !== undefined) { updates.push(`order_index = $${idx++}`); values.push(order_index); }
 
     if (updates.length === 0) return res.status(400).json({ error: 'no fields to update' });
-    
+
     updates.push(`updated_at = now()`);
     values.push(req.params.id);
-    
+
     const r = await pool.query(
       `UPDATE public.subtasks SET ${updates.join(', ')} 
        WHERE id = $${idx} 
        RETURNING id, task_id, title, done, order_index, created_at, updated_at`,
       values
     );
-    
+
     if (r.rowCount === 0) return res.status(404).json({ error: 'subtask not found' });
     res.json(r.rows[0]);
   } catch (e) {
