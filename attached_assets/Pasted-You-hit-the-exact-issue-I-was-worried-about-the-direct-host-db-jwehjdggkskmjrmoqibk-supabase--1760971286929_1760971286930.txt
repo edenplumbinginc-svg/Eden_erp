@@ -1,0 +1,140 @@
+You hit the exact issue I was worried about: the **direct** host
+`db.jwehjdggkskmjrmoqibk.supabase.co` is often **IPv6-only**, and Replit can’t reach it. That’s why `psql` says “Cannot assign requested address”.
+
+The fix is simple: switch to the **Supabase pooler (IPv4)** endpoint and make sure the **username format is correct**.
+
+I’ll give you clean, copy-paste blocks. Do them in order.
+
+---
+
+# 1) Point everything to the Supabase **pooler** (IPv4)
+
+> Use the **session** pooler host (`aws-0-us-east-2.pooler.supabase.com`) on **port 5432** and the **pooled username format** `postgres.<PROJECT_REF>`.
+
+**Paste this into the Replit shell. Replace `YOUR_DB_PASSWORD` first.**
+
+```bash
+# --- Configure Supabase SESSION pooler (IPv4) ---
+PROJECT_REF="jwehjdggkskmjrmoqibk"
+DB_PASS="YOUR_DB_PASSWORD"
+
+SUPA_URL="postgresql://postgres.${PROJECT_REF}:${DB_PASS}@aws-0-us-east-2.pooler.supabase.com:5432/postgres"
+
+# Safety backup & write to .env
+cp .env .env.bak.$(date +%Y%m%d_%H%M%S) 2>/dev/null || true
+( grep -v '^DATABASE_URL=' .env 2>/dev/null; echo "DATABASE_URL=$SUPA_URL" ) > .env.tmp && mv .env.tmp .env
+
+# Export for this shell so psql and Node agree immediately
+export DATABASE_URL="$SUPA_URL"
+
+# Sanity: Both should show aws-0-us-east-2.pooler.supabase.com:5432
+echo "Node host:"
+node -e "require('dotenv').config({override:true}); console.log(new URL(process.env.DATABASE_URL).host)"
+echo "Shell host:"
+echo "$DATABASE_URL" | sed 's/.*@\([^/]*\).*/\1/'
+```
+
+You should see both lines show:
+
+```
+aws-0-us-east-2.pooler.supabase.com:5432
+```
+
+If yes, continue.
+
+---
+
+# 2) Restart backend and verify
+
+```bash
+export PSQL_PAGER=cat
+pkill -f "node server" 2>/dev/null || true
+sleep 1
+node server.js > /tmp/server.log 2>&1 & SERVER_PID=$!
+echo "PID: $SERVER_PID"
+sleep 3
+
+echo -e "\n🩺 Health:"
+curl -s http://localhost:3000/health | jq .
+
+echo -e "\n🧭 DB info (via API; dev auth):"
+curl -s http://localhost:3000/api/debug/dbinfo -H "X-Dev-Email: admin@edenmep.ca" | jq .
+
+echo -e "\n🧪 psql smoke:"
+psql "$DATABASE_URL" -X -P pager=off -c "select current_database(), inet_server_addr();"
+```
+
+Expected:
+
+* Health: `{ "status": "ok" }`
+* `/api/debug/dbinfo` returns JSON (no “UNAUTHENTICATED”)
+* `psql` shows a database name and an IPv4 address.
+
+---
+
+# 3) If you get **“tenant or user not found”** (auth error)
+
+Some orgs require the **alternative pooled auth** style (username `postgres`, with a URL option carrying the project). Try this variant:
+
+```bash
+# Alternative pooled URL style (username 'postgres' + options=project)
+PROJECT_REF="jwehjdggkskmjrmoqibk"
+DB_PASS="YOUR_DB_PASSWORD"
+
+SUPA_URL="postgresql://postgres:${DB_PASS}@aws-0-us-east-2.pooler.supabase.com:5432/postgres?options=project%3D${PROJECT_REF}"
+
+# Write & export
+( grep -v '^DATABASE_URL=' .env 2>/dev/null; echo "DATABASE_URL=$SUPA_URL" ) > .env.tmp && mv .env.tmp .env
+export DATABASE_URL="$SUPA_URL"
+
+# Verify host
+echo "Node host:"; node -e "require('dotenv').config({override:true}); console.log(new URL(process.env.DATABASE_URL).host)"
+echo "Shell host:"; echo "$DATABASE_URL" | sed 's/.*@\([^/]*\).*/\1/'
+
+# Quick psql test
+psql "$DATABASE_URL" -X -c "select current_database(), inet_server_addr();" 2>&1 | head -5
+```
+
+If that succeeds, restart the server again (same as step 2).
+
+---
+
+# 4) Final transactional smoke
+
+```bash
+# Create project if none
+PROJECT_ID=$(curl -s http://localhost:3000/api/projects -H "X-Dev-Email: admin@edenmep.ca" | jq -r '.[0].id // empty')
+if [ -z "$PROJECT_ID" ]; then
+  PROJ_JSON=$(curl -s -X POST http://localhost:3000/api/projects \
+    -H "Content-Type: application/json" -H "X-Dev-Email: admin@edenmep.ca" \
+    -d '{"name":"Supabase Pooler Test","code":"SP-001"}')
+  echo "$PROJ_JSON" | jq .
+  PROJECT_ID=$(echo "$PROJ_JSON" | jq -r '.id')
+fi
+echo "PROJECT_ID: $PROJECT_ID"
+
+# Create task
+TASK_JSON=$(curl -s -X POST "http://localhost:3000/api/projects/$PROJECT_ID/tasks" \
+  -H "Content-Type: application/json" -H "X-Dev-Email: admin@edenmep.ca" \
+  -d '{"title":"Pooler Tx Test","priority":"high"}')
+echo "$TASK_JSON" | jq .
+TASK_ID=$(echo "$TASK_JSON" | jq -r '.id')
+
+# Verify persistence
+echo -e "\n→ Task row:"
+psql "$DATABASE_URL" -X -P pager=off -c "select id,title,status from tasks where id='$TASK_ID';"
+echo -e "\n→ Notifications:"
+psql "$DATABASE_URL" -X -P pager=off -c "select type,payload->>'title' as title from notifications where task_id='$TASK_ID';"
+```
+
+You should see the task row and at least one notification row.
+
+---
+
+## Why this works
+
+* The **direct** `db.<ref>.supabase.co` host is often IPv6-only → Replit can’t reach it.
+* The **pooler** `aws-0-...pooler.supabase.com` is IPv4 and supports **session pooling** (keeps session state, normal COMMIT behavior).
+* Using the **correct pooled username style** avoids the “tenant or user not found” error.
+
+Once this is green, we’ll lock it in, purge any Neon leftovers, and you can stop bleeding credits on debugging. If something fails in steps 2 or 3, copy me the exact error text from the shell (no screenshots needed).
