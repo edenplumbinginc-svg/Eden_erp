@@ -1,0 +1,161 @@
+[Mode: Execution]
+
+Step: Capture **task_created** events by writing a notification row when a new task is created.
+
+Why it matters: This is the first brick of the Notification Event Bus. With `task_created` reliably logged, you unlock reminders, digests, and analytics without changing your existing APIs later.
+
+Inputs needed:
+
+* Your backend repo (Express) with an existing `POST /api/projects/:id/tasks` endpoint.
+* Access to your PG pool/DB helper (the same one used by Phase-1C).
+
+Command:
+
+1. Add a tiny notifier utility:
+
+```js
+// lib/notify.js
+// Minimal event writer for the Notification Event Bus
+
+/**
+ * Insert a notification event.
+ * @param {import('pg').Pool} pool
+ * @param {{
+ *   type: 'task_created' | 'status_changed' | 'comment_added',
+ *   projectId: string|number,
+ *   taskId?: string|number,
+ *   actorId?: string|number|null,
+ *   actorEmail?: string|null,
+ *   payload?: Record<string, any>
+ * }} evt
+ */
+async function notify(pool, evt) {
+  const {
+    type,
+    projectId,
+    taskId = null,
+    actorId = null,
+    actorEmail = null,
+    payload = {},
+  } = evt;
+
+  // assumes a table `notifications` exists with at least these columns:
+  // id (pk), type text, project_id, task_id, actor_id, actor_email, payload jsonb, created_at timestamptz default now()
+  const sql = `
+    insert into notifications (type, project_id, task_id, actor_id, actor_email, payload)
+    values ($1, $2, $3, $4, $5, $6)
+    returning id
+  `;
+  const params = [type, projectId, taskId, actorId, actorEmail, payload];
+  await pool.query(sql, params);
+}
+
+/** Extract dev identity from headers (header names are case-insensitive) */
+function actorFromHeaders(req) {
+  const h = req.headers;
+  // Adjust these keys only if your backend expects different header names
+  const email =
+    h['x-dev-email'] ||
+    h['x-dev-user'] ||
+    h['x-user-email'] ||
+    null;
+
+  const role =
+    h['x-dev-role'] ||
+    h['x-user-role'] ||
+    null;
+
+  return {
+    actorEmail: Array.isArray(email) ? email[0] : email || null,
+    actorRole: Array.isArray(role) ? role[0] : role || null,
+  };
+}
+
+module.exports = { notify, actorFromHeaders };
+```
+
+2. Wire it into **task creation** (no API contract change):
+
+```diff
+// routes/tasks.js  (or wherever your POST /api/projects/:id/tasks lives)
++const { notify, actorFromHeaders } = require('../lib/notify');
+
+router.post('/api/projects/:projectId/tasks', async (req, res, next) => {
+  try {
+    const { projectId } = req.params;
+    const { title, description = null, priority = 'medium', due_date = null, assignee_id = null, tags = [] } = req.body;
+
+    // create task (your existing insert)
+    const insertSql = `
+      insert into tasks (project_id, title, description, priority, due_date, assignee_id, tags)
+      values ($1, $2, $3, $4, $5, $6, $7)
+      returning id, project_id, title, priority, due_date, assignee_id, status, created_at
+    `;
+    const params = [projectId, title, description, priority, due_date, assignee_id, tags];
+    const { rows } = await req.pool.query(insertSql, params);
+    const task = rows[0];
+
++    // fire-and-forget notification (do not block the response if it fails)
++    (async () => {
++      try {
++        const { actorEmail } = actorFromHeaders(req);
++        await notify(req.pool, {
++          type: 'task_created',
++          projectId: task.project_id,
++          taskId: task.id,
++          actorId: assignee_id || null,
++          actorEmail: actorEmail || null,
++          payload: {
++            title: task.title,
++            priority: task.priority,
++            due_date: task.due_date,
++            assignee_id: task.assignee_id,
++            tags: tags || [],
++          },
++        });
++      } catch (e) {
++        // keep the bus non-intrusive in v1
++        console.warn('notify(task_created) failed:', e.message);
++      }
++    })();
+
+    return res.status(201).json(task);
+  } catch (err) {
+    next(err);
+  }
+});
+```
+
+3. (Optional safety) Ensure the `notifications` table has the needed columns:
+
+```sql
+-- run once if needed
+create table if not exists notifications (
+  id bigserial primary key,
+  type text not null,
+  project_id bigint not null,
+  task_id bigint,
+  actor_id bigint,
+  actor_email text,
+  payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_notifications_project on notifications(project_id, created_at desc);
+create index if not exists idx_notifications_task on notifications(task_id);
+```
+
+Success check:
+
+* Create a task from the UI (“+ New Task”).
+* Verify a row appears in `notifications`:
+
+  ```bash
+  psql "$DATABASE_URL" -c "select type, project_id, task_id, actor_email, payload, created_at from notifications order by id desc limit 3;"
+  ```
+* You should see `type = 'task_created'` with the new `task_id`, correct `project_id`, and `payload.title`.
+
+Next: wait for user
+
+—
+
+Mini training: start your event bus as a **write-ahead log**—append-only rows with `type` + `payload`. It’s boring, which is perfect. Later, consumers can read from this table (or mirror to a queue) to trigger emails, summaries, and escalations without touching your existing endpoints again. When you paste back your current `routes/tasks.js` create handler, I’ll align header extraction and column names exactly to your codebase.
