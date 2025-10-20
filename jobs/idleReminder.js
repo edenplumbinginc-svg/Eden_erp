@@ -1,5 +1,5 @@
 const { Client } = require("pg");
-require("dotenv").config({ override: true });
+require("dotenv").config();
 
 const DAYS = parseInt(process.env.REMIND_IDLE_AFTER_DAYS || "2", 10);
 

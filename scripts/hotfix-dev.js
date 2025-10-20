@@ -1,4 +1,4 @@
-require('dotenv').config({ override:true });
+require('dotenv').config();
 const { Pool } = require('pg');
 const crypto = require('crypto');
 

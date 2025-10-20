@@ -1,4 +1,4 @@
-require('dotenv').config({ override: true });
+require('dotenv').config();
 
 function die(msg) { console.error(`❌ ${msg}`); process.exit(1); }
 function warn(msg) { console.warn(`⚠️  ${msg}`); }

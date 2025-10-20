@@ -1,4 +1,4 @@
-require('dotenv').config({ override: true });
+require('dotenv').config();
 const base = `http://localhost:${process.env.PORT || 3000}`;
 
 // Use global fetch if available (Node >=18), otherwise lazily import node-fetch

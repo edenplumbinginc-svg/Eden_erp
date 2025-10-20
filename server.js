@@ -1,5 +1,5 @@
 // server.js - Lean main entry point
-require('dotenv').config({ override: true });
+require('dotenv').config();
 
 // Enforce single-database contract (fail fast on misconfiguration)
 const { assertSingleDatabaseUrl } = require('./lib/config-db');
