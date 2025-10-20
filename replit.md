@@ -81,7 +81,16 @@ The backend server provides the following endpoints:
 - **Verify setup**: `npm run verify`
 
 ## Recent Changes
-- **Oct 20, 2025 (Latest)**: Global Authentication Enforcement
+- **Oct 20, 2025 (Latest)**: Database Contract Enforcement & Configuration Safety
+  - **Single-Database Contract**: Added fail-fast validation to prevent dual-database issues
+  - **Boot-Time Validation**: Server validates DATABASE_URL host at startup before pool creation
+  - **Configuration Guard**: Optional EXPECTED_DB_HOST environment variable enforces strict host matching
+  - **Legacy Detection**: Warns about SUPABASE_* environment variables to prevent confusion
+  - **Clear Errors**: Exits immediately with detailed mismatch information if wrong database detected
+  - **File**: `lib/config-db.js` - Reusable database configuration validation utilities
+  - Prevents the Neon↔Supabase mix-up that caused uuid/bigint type errors
+  
+- **Oct 20, 2025**: Global Authentication Enforcement
   - **Security**: Enforced authentication on all /api/* routes
   - **Development Mode**: Dev headers (X-Dev-Email, X-Dev-User-Id) work in development
   - **Production Mode**: JWT Bearer token required (stub implementation, ready for Auth0/Clerk)
