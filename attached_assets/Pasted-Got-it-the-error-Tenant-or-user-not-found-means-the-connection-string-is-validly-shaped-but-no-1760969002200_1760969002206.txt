@@ -1,0 +1,127 @@
+Got it — the error `Tenant or user not found` means the **connection string is validly shaped but not recognized by Supabase**. The most common culprit: **wrong port** for the pooler. For Supabase’s **Session** pooler (the one we want), the port is **6543**, not 5432.
+
+Let’s fix it one step at a time (you can paste each block exactly as-is).
+
+# [Mode: Execution]
+
+**Step:** Point both Node and psql to the **Session pooler** (aws-0…, port **6543**) and verify.
+
+**Why it matters:** This removes the dual-DB problem and finally makes writes persist.
+
+**Inputs needed:** Your Supabase **project ref** and **database password**.
+
+**Command (paste block #1):**
+*Replace `<PROJECT_REF>` and `<DB_PASSWORD>` in the first line only, keep everything else unchanged.*
+
+```bash
+# --- BLOCK 1: Set SESSION pooler URL (aws-0, port 6543) ---
+SUPA_URL="postgresql://postgres.<PROJECT_REF>:<DB_PASSWORD>@aws-0-us-east-2.pooler.supabase.com:6543/postgres"
+
+# Safety backup + write to .env
+cp .env .env.bak.$(date +%Y%m%d_%H%M%S) 2>/dev/null || true
+( grep -v '^DATABASE_URL=' .env 2>/dev/null; echo "DATABASE_URL=$SUPA_URL" ) > .env.tmp && mv .env.tmp .env
+
+# Export to this shell so psql matches Node immediately
+export DATABASE_URL="$SUPA_URL"
+
+# Show both views — MUST match and include aws-0...:6543
+echo -e "\nNode host:"; node -e "require('dotenv').config({override:true}); console.log(new URL(process.env.DATABASE_URL).host)"
+echo "Shell host:";  echo "$DATABASE_URL" | sed 's/.*@\([^/]*\).*/\1/'
+```
+
+**Success check:**
+You should see both **Node host** and **Shell host** print:
+
+```
+aws-0-us-east-2.pooler.supabase.com:6543
+```
+
+**Command (paste block #2):** restart server + sanity checks
+
+```bash
+# --- BLOCK 2: Restart backend and verify both sides see the same DB ---
+export PSQL_PAGER=cat
+
+# Stop any prior server
+pkill -f "node server" 2>/dev/null || true
+sleep 1
+
+# Start server
+node server.js > /tmp/server.log 2>&1 & SERVER_PID=$!
+echo "PID: $SERVER_PID"
+sleep 3
+
+echo -e "\n🩺 Health:"
+curl -s http://localhost:3000/health | jq .
+
+echo -e "\n🧭 DB info (via API; dev auth):"
+curl -s http://localhost:3000/api/debug/dbinfo -H "X-Dev-Email: admin@edenmep.ca" | jq .
+
+echo -e "\n📁 Projects (API):"
+curl -s http://localhost:3000/api/projects -H "X-Dev-Email: admin@edenmep.ca" | jq 'length as $n | {count:$n, sample:(.[0:3]|map({id,name}))}'
+
+echo -e "\n📁 Projects (psql):"
+psql "$DATABASE_URL" -X -P pager=off -c "select id, name from projects order by created_at desc limit 3;"
+```
+
+**Success check:**
+
+* `/health` returns `{ "status": "ok" }`.
+* `/api/debug/dbinfo` returns JSON (not UNAUTHENTICATED).
+* The **Projects (API)** list and **Projects (psql)** list **match** (same names/IDs trend).
+
+**Command (paste block #3):** transactional smoke test (task + notifications)
+
+```bash
+# --- BLOCK 3: Transactional smoke test ---
+# Ensure there is a project; create one if needed
+PROJECT_ID=$(curl -s http://localhost:3000/api/projects -H "X-Dev-Email: admin@edenmep.ca" | jq -r '.[0].id // empty')
+if [ -z "$PROJECT_ID" ]; then
+  PROJ_JSON=$(curl -s -X POST http://localhost:3000/api/projects \
+    -H "Content-Type: application/json" -H "X-Dev-Email: admin@edenmep.ca" \
+    -d '{"name":"Supabase Session Test","code":"SS-001"}')
+  echo "$PROJ_JSON" | jq .
+  PROJECT_ID=$(echo "$PROJ_JSON" | jq -r '.id')
+fi
+echo "PROJECT_ID: $PROJECT_ID"
+
+# Create task (should capture task_created)
+TASK_JSON=$(curl -s -X POST "http://localhost:3000/api/projects/$PROJECT_ID/tasks" \
+  -H "Content-Type: application/json" -H "X-Dev-Email: admin@edenmep.ca" \
+  -d '{"title":"Session Pooler Tx Test","priority":"high","description":"Verifying persistence & events"}')
+echo "$TASK_JSON" | jq .
+TASK_ID=$(echo "$TASK_JSON" | jq -r '.id')
+
+# Update status (status_changed)
+curl -s -X PATCH "http://localhost:3000/api/tasks/$TASK_ID" \
+  -H "Content-Type: application/json" -H "X-Dev-Email: admin@edenmep.ca" \
+  -d '{"status":"in_progress"}' >/dev/null
+
+# Add comment (comment_added)
+curl -s -X POST "http://localhost:3000/api/tasks/$TASK_ID/comments" \
+  -H "Content-Type: application/json" -H "X-Dev-Email: admin@edenmep.ca" \
+  -d '{"body":"Final supabase session test"}' >/dev/null
+
+sleep 2
+
+echo -e "\n→ Task row:"
+psql "$DATABASE_URL" -X -P pager=off -c "select id, title, status, priority from tasks where id='$TASK_ID';"
+
+echo -e "\n→ Notifications for this task:"
+psql "$DATABASE_URL" -X -P pager=off -c "select type, payload->>'title' as title from notifications where task_id='$TASK_ID' order by created_at desc limit 5;"
+```
+
+**Success check (green lights):**
+
+* Task row exists with the exact `TASK_ID`.
+* At least one notification row (ideally 3: `task_created`, `status_changed`, `comment_added`).
+
+**Next:** wait for user.
+
+---
+
+### If something fails
+
+* If `/api/debug/dbinfo` says **UNAUTHENTICATED**, add the header: `-H "X-Dev-Email: admin@edenmep.ca"`.
+* If server dies on boot, run: `tail -60 /tmp/server.log` and paste the output — I’ll read the exact error and give the next single command.
+* If projects differ between API and psql, it means hosts don’t match: confirm both lines show `aws-0-us-east-2.pooler.supabase.com:6543`.
