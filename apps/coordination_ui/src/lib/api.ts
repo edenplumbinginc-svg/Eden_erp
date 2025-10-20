@@ -1,13 +1,17 @@
 // API Client for Eden Coordination Module
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 // Dev auth headers for testing
-const getDevHeaders = () => ({
-  'X-Dev-User-Id': 'test-user-123',
-  'X-Dev-User-Role': 'Manager',
-  'X-Dev-User-Email': 'test@example.com',
-  'Content-Type': 'application/json'
-});
+function devHeaders(): Record<string, string> {
+  return {
+    'X-Dev-User': import.meta.env.VITE_DEV_USER || 'test@example.com',
+    'X-Dev-Role': import.meta.env.VITE_DEV_ROLE || 'Manager',
+    'X-Dev-Email': import.meta.env.VITE_DEV_EMAIL || 'test@example.com',
+    'Content-Type': 'application/json'
+  };
+}
+
+const getDevHeaders = devHeaders;
 
 // Generic fetch wrapper with error handling
 async function apiCall<T = any>(
