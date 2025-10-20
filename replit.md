@@ -81,7 +81,17 @@ The backend server provides the following endpoints:
 - **Verify setup**: `npm run verify`
 
 ## Recent Changes
-- **Oct 20, 2025 (Latest)**: Database Contract Enforcement & Configuration Safety
+- **Oct 20, 2025 (Latest)**: Drizzle ORM Migration - Removed Boot-Time DDL
+  - **Schema Management**: Replaced ad-hoc CREATE/ALTER statements with Drizzle ORM
+  - **Introspection**: Successfully captured 17 tables, 111 columns, 22 foreign keys
+  - **Clean Startup**: Server no longer creates schema on boot (200+ lines of DDL removed)
+  - **Type Safety**: Generated TypeScript schema with full type definitions
+  - **NPM Scripts**: Added db:push, db:generate, db:introspect, db:studio commands
+  - **Files**: `drizzle/schema.ts`, `drizzle/relations.ts`, `drizzle.config.ts`
+  - **Approach**: Using schema-first (db:push) for now, migration-first recommended for production
+  - Addresses Architect's #2 critical issue (database lifecycle management)
+  
+- **Oct 20, 2025**: Database Contract Enforcement & Configuration Safety
   - **Single-Database Contract**: Added fail-fast validation to prevent dual-database issues
   - **Boot-Time Validation**: Server validates DATABASE_URL host at startup before pool creation
   - **Configuration Guard**: Optional EXPECTED_DB_HOST environment variable enforces strict host matching
