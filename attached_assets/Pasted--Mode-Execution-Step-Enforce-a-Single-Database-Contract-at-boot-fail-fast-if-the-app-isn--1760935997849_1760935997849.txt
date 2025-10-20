@@ -1,0 +1,107 @@
+[Mode: Execution]
+
+Step: Enforce a **Single-Database Contract** at boot (fail fast if the app isn’t pointed at the one true DB).
+
+Why it matters: This permanently prevents the Neon↔Supabase mix-up that caused the uuid/bigint chaos. It’s tiny, surgical, and raises reliability immediately.
+
+Inputs needed:
+
+* Backend repo access
+* Your intended DB host (pick one): e.g. `ep-jolly-shadow-...neon.tech` **or** `aws-1-us-east-2.pooler.supabase.com`
+
+Command:
+
+1. Add a tiny config guard
+
+```js
+// lib/config-db.js
+const url = require('url');
+
+const EXPECTED_DB_HOST = process.env.EXPECTED_DB_HOST?.trim(); // set this in env
+
+function parseHostFromDatabaseUrl(dbUrl) {
+  try {
+    const u = new url.URL(dbUrl);
+    return u.host; // includes host:port if present
+  } catch {
+    return null;
+  }
+}
+
+function assertSingleDatabaseUrl() {
+  const dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl) {
+    console.error('🚫 DATABASE_URL is missing.');
+    process.exit(1);
+  }
+
+  // OPTIONAL: refuse legacy vars that cause drift
+  const legacy = ['SUPABASE_URL','SUPABASE_ANON_KEY','SUPABASE_SERVICE_ROLE_KEY']
+    .filter(k => process.env[k]);
+  if (legacy.length) {
+    console.warn(`⚠️ Legacy envs present: ${legacy.join(', ')} — ensure they are not used for DB.`);
+  }
+
+  const host = parseHostFromDatabaseUrl(dbUrl);
+  if (!host) {
+    console.error('🚫 DATABASE_URL is invalid.');
+    process.exit(1);
+  }
+
+  if (EXPECTED_DB_HOST && host !== EXPECTED_DB_HOST) {
+    console.error(`🚫 DB host mismatch. Expected: ${EXPECTED_DB_HOST}, Actual: ${host}`);
+    process.exit(1);
+  }
+
+  console.log(`🗄️ DB host: ${host}`);
+}
+
+module.exports = { assertSingleDatabaseUrl };
+```
+
+2. Call the guard during server boot (before creating the pool)
+
+```diff
+// server.js
++ const { assertSingleDatabaseUrl } = require('./lib/config-db');
+
++ assertSingleDatabaseUrl(); // fail-fast if misconfigured
+
+// then create your pg pool as you do today
+```
+
+3. Pin the expected host in env (so mispoints fail loudly)
+
+* Add to `.env` (and to `.env.example`):
+
+```
+EXPECTED_DB_HOST=ep-jolly-shadow-ae27vjhf.c-2.us-east-2.aws.neon.tech
+# or: EXPECTED_DB_HOST=aws-1-us-east-2.pooler.supabase.com
+```
+
+4. (Optional but smart) Clean drift in `.env`
+
+* Ensure only **one** `DATABASE_URL=` entry.
+* Comment out/remove any competing DSNs.
+
+5. Smoke it
+
+```bash
+# Good path: should print the host and start
+node server.js
+
+# Bad path test: set a wrong host
+EXPECTED_DB_HOST=totally-wrong.example node server.js
+# => should exit with "DB host mismatch"
+```
+
+Success check:
+
+* On boot, server logs a single line: `🗄️ DB host: <your-host>`.
+* If you point the app to the wrong DB (or change EXPECTED_DB_HOST), the process exits immediately with a clear mismatch error.
+* UI/API still work; your event bus and auth remain green.
+
+Next: wait for user
+
+—
+This locks the front door on configuration drift. Once you confirm it’s in, we’ll tackle **migrations baseline** (Drizzle), which removes boot-time DDL and gives you clean, promotable schema across dev/stage/prod without surprises.
