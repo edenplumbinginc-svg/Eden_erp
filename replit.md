@@ -80,6 +80,32 @@ The backend server provides the following endpoints:
 - **Start server**: `npm run dev` (runs on port 3000)
 - **Verify setup**: `npm run verify`
 - **Run idle reminder job**: `npm run job:idle` (finds tasks with no activity for 2+ days)
+- **Run production smoke tests**: `npm run smoke:prod` (validates all endpoints)
+
+## Monitoring & Health Checks
+The system includes comprehensive production monitoring:
+
+### Health Check Endpoints
+- `GET /api/health/quick` - Quick health status (for load balancers)
+- `GET /api/health/detailed` - Comprehensive health with all subsystems
+- `GET /api/health/live` - Liveness probe (process is running)
+- `GET /api/health/ready` - Readiness probe (ready to accept traffic)
+- `GET /api/health/metrics` - Application performance metrics
+- `GET /api/health/status` - Combined health + metrics dashboard
+
+### Metrics Collected
+- **Request Metrics**: Total requests, rate, by method, by status, top paths
+- **Response Time**: Avg, min, max, P50, P95, P99 percentiles
+- **Error Tracking**: Total errors, error rate, by type, recent samples
+- **Database**: Query count, errors, avg query time, connection pool status
+- **System**: Memory usage, CPU usage, uptime, process info
+
+### Structured Logging
+- JSON-formatted logs with severity levels (DEBUG, INFO, WARN, ERROR, CRITICAL)
+- Configurable via `LOG_LEVEL` environment variable
+- Specialized logging for HTTP requests, database queries, auth events, security events
+
+See `MONITORING_GUIDE.md` for complete documentation.
 
 ## Automation Jobs
 - **`jobs/idleReminder.js`** - Automated idle task reminder system
@@ -116,8 +142,53 @@ The system enforces database identity as a first-class contract with validation 
 - ✅ Warns about legacy SUPABASE_* environment variables
 - ✅ Provides detailed runtime database fingerprint via debug endpoint
 
+## Production Monitoring & Observability
+Comprehensive production monitoring system with health checks, metrics, logging, and deployment verification tools.
+
+### Documentation
+- **`MONITORING_GUIDE.md`** - Complete monitoring and health check documentation
+- **`POST_DEPLOY_CHECKLIST.md`** - Post-deployment verification procedures and manual checks
+- **`PRODUCTION.md`** - Production runbook with troubleshooting, incident response, and maintenance procedures
+
+### Health Check System
+- **Comprehensive health checks** covering database, schema, API, system resources, and environment
+- **Multiple probe types**: quick, detailed, liveness, readiness
+- **Graceful degradation**: service continues in degraded mode if database unavailable
+- **Status reporting**: healthy, degraded, unhealthy states with detailed diagnostics
+
+### Metrics Collection
+- **Request tracking**: count, rate, by method, by status, top paths
+- **Response time analysis**: average, min, max, percentiles (P50, P95, P99)
+- **Error monitoring**: total, rate, by type, recent error samples
+- **Database metrics**: query count, errors, avg query time, connection pool status
+- **System metrics**: memory usage, CPU usage, process uptime
+
+### Structured Logging
+- **JSON format** with timestamp, level, message, metadata
+- **Severity levels**: DEBUG, INFO, WARN, ERROR, CRITICAL
+- **Specialized loggers**: HTTP requests, database queries, auth events, security events
+- **Configurable**: via LOG_LEVEL environment variable
+
+### Production Smoke Tests
+- **Automated test suite** (`scripts/prod-smoke-test.js`) validates all critical endpoints
+- **Tests**: health checks, database, authentication, projects, tasks, reports
+- **Configurable**: via TEST_BASE_URL environment variable
+- **CI/CD ready**: returns exit code 0 on success, 1 on failure
+
 ## Recent Changes
-- **Oct 20, 2025 (Latest)**: Database Configuration Safety & Validation Framework
+- **Oct 20, 2025 (Latest)**: Production Monitoring & Observability System
+  - **Health Check System**: Comprehensive health checks for database, schema, API, system, environment
+  - **Health Endpoints**: `/api/health/quick`, `/detailed`, `/live`, `/ready`, `/metrics`, `/status`
+  - **Metrics Collection**: Real-time request, response time, error, database, and system metrics
+  - **Percentile Tracking**: P50, P95, P99 response time percentiles
+  - **Structured Logging**: JSON-formatted logs with severity levels (DEBUG, INFO, WARN, ERROR, CRITICAL)
+  - **Production Smoke Tests**: Automated test suite (`npm run smoke:prod`) for post-deploy verification
+  - **Documentation**: `MONITORING_GUIDE.md`, `POST_DEPLOY_CHECKLIST.md`, `PRODUCTION.md`
+  - **Graceful Degradation**: Service continues in degraded mode if database unavailable
+  - **Connection Pool Monitoring**: Track active, idle, and waiting database connections
+  - **Error Tracking**: Recent error samples with stack traces for debugging
+  
+- **Oct 20, 2025**: Database Configuration Safety & Validation Framework
   - **Multi-Layer Validation**: Four-layer validation system (prestart, boot, runtime, script)
   - **Script**: `scripts/verify-db.js` validates DATABASE_URL host and project ref
   - **Enhanced Config**: `lib/config-db.js` now validates pooler type and project ref

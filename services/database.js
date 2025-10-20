@@ -1,15 +1,19 @@
 // services/database.js
 const { Pool } = require('pg');
+const { instrumentPool } = require('../lib/db-wrapper');
 
 // Toggle secure → permissive SSL via environment flag
 // Set DB_SSL_REJECT_UNAUTHORIZED=false to allow self-signed certs (for Replit/Supabase)
 const allowInsecure = String(process.env.DB_SSL_REJECT_UNAUTHORIZED || '').toLowerCase() === 'false';
 const ssl = allowInsecure ? { rejectUnauthorized: false } : { rejectUnauthorized: true };
 
-const pool = new Pool({
+const rawPool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl
 });
+
+// Wrap pool with metrics and logging instrumentation
+const pool = instrumentPool(rawPool);
 
 /**
  * Bootstrap database connection and ensure required extensions
@@ -27,12 +31,15 @@ async function bootstrapDatabase() {
     
     if (tableCount === 0) {
       console.warn('⚠️  No tables found in database. Run `npm run db:push` to create schema.');
+      return { connected: true, tableCount: 0, degraded: true };
     } else {
       console.log(`✅ Database connected (${tableCount} tables found)`);
+      return { connected: true, tableCount, degraded: false };
     }
   } catch (e) {
     console.error('⚠️ Database connection failed:', e.message);
-    throw e;
+    console.warn('⚠️ Application will start in degraded mode. Database operations will fail.');
+    return { connected: false, error: e.message, degraded: true };
   }
 }
 

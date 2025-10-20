@@ -8,9 +8,14 @@ assertSingleDatabaseUrl();
 const express = require('express');
 const { bootstrapDatabase, refreshPoolMetadata } = require('./services/database');
 const { logActivity } = require('./middleware/audit');
+const { metricsMiddleware } = require('./lib/metrics');
+const logger = require('./lib/logger');
 
 const app = express();
 app.use(express.json());
+
+// Apply metrics collection middleware
+app.use(metricsMiddleware);
 
 // Enable CORS for frontend development
 app.use((req, res, next) => {
@@ -25,16 +30,27 @@ app.use((req, res, next) => {
 app.use(logActivity);
 
 // Bootstrap database on startup (verify connection and extensions)
-bootstrapDatabase().catch(err => {
-  console.error('Failed to connect to database:', err);
-  process.exit(1);
-});
+bootstrapDatabase()
+  .then((result) => {
+    if (result.connected && !result.degraded) {
+      logger.info('Database bootstrap successful', { tableCount: result.tableCount });
+    } else if (result.connected && result.degraded) {
+      logger.warn('Database connected but degraded', { tableCount: result.tableCount });
+    } else {
+      logger.error('Database bootstrap failed, running in degraded mode', { error: result.error });
+    }
+  })
+  .catch(err => {
+    logger.critical('Unexpected error during bootstrap', { error: err.message });
+  });
 
-// ⚙️ --- DEBUG ONLY (remove before prod) ---
+// ⚙️ --- DEBUG ONLY (disabled in production) ---
 const { Pool } = require('pg');
 const { pool } = require('./services/database');
 
-app.get('/api/debug/dbinfo', async (req, res) => {
+// Only enable debug endpoint in development
+if (process.env.NODE_ENV !== 'production') {
+  app.get('/api/debug/dbinfo', async (req, res) => {
   try {
     const { rows } = await pool.query(`
       select current_database() as db,
@@ -69,11 +85,20 @@ app.get('/api/debug/dbinfo', async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: { code: 'DBINFO_FAIL', message: e.message } });
   }
-});
+  });
+} else {
+  // Return 404 in production
+  app.get('/api/debug/dbinfo', (req, res) => {
+    res.status(404).json({ error: 'Debug endpoints disabled in production' });
+  });
+}
 // ⚙️ --- END DEBUG ---
 
-// --- Public health check endpoints ---
+// --- Public health check endpoints (legacy) ---
 app.get(['/health', '/api/health'], (_, res) => res.json({ status: 'ok' }));
+
+// --- Mount comprehensive health check routes ---
+app.use('/api/health', require('./routes/health'));
 
 app.get('/db/ping', async (_, res) => {
   if (!process.env.DATABASE_URL)
@@ -163,6 +188,14 @@ app.get('/routes', (_, res) => {
   res.json(routes);
 });
 
+// --- Error handling (must be last) ---
+const { notFoundHandler, errorHandler } = require('./middleware/error-handler');
+app.use(notFoundHandler);
+app.use(errorHandler);
+
 // --- Start server ---
 const port = process.env.PORT || 3000;
-app.listen(port, () => console.log(`API server running on port :${port}`));
+app.listen(port, () => {
+  logger.info('API server started', { port, env: process.env.NODE_ENV || 'development' });
+  console.log(`API server running on port :${port}`);
+});

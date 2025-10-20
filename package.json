@@ -10,6 +10,7 @@
     "verify": "node -e \"console.log('ok')\"",
     "verify:db": "node scripts/verify-db.js",
     "smoke": "node scripts/smoke.js",
+    "smoke:prod": "node scripts/prod-smoke-test.js",
     "job:idle": "NODE_TLS_REJECT_UNAUTHORIZED=0 node jobs/idleReminder.js",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
