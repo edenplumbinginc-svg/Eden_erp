@@ -7,7 +7,7 @@ pkill -f "node server" 2>/dev/null || true
 sleep 1
 
 echo "🚀 Starting API..."
-node server.js > /tmp/server.log 2>&1 & SERVER_PID=$!
+DB_SSL_REJECT_UNAUTHORIZED=false node server.js > /tmp/server.log 2>&1 & SERVER_PID=$!
 echo "PID: $SERVER_PID"
 sleep 3
 
