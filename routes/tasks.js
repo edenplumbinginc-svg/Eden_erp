@@ -351,4 +351,21 @@ router.delete('/:id/dependencies/:blocksId', authenticate, async (req, res) => {
   }
 });
 
+// Soft delete endpoint
+router.delete('/:id/soft', authenticate, async (req, res) => {
+  try {
+    const r = await pool.query(
+      `UPDATE public.tasks
+       SET deleted_at = now(), updated_at = now()
+       WHERE id = $1
+       RETURNING id`,
+      [req.params.id]
+    );
+    if (r.rowCount === 0) return res.status(404).json({ error: 'task not found' });
+    res.json({ deleted: true, id: r.rows[0].id });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 module.exports = router;

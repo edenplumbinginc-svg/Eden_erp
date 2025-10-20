@@ -138,8 +138,10 @@ const devHeaders = {
 
   // 13) Soft delete task
   console.log('1️⃣3️⃣ Cleaning up - soft deleting task...');
-  res = await jpatch(`${base}/api/tasks/${tid}`, { deleted_at: new Date().toISOString() });
+  res = await jdel(`${base}/api/tasks/${tid}/soft`);
   if (!res.ok) { console.log('❌ Soft delete failed'); process.exit(1); }
+  const delJson = await res.json();
+  if (!delJson?.deleted) { console.log('❌ Soft delete response malformed'); process.exit(1); }
   console.log('✅ Task soft deleted\n');
 
   // 14) Project delete

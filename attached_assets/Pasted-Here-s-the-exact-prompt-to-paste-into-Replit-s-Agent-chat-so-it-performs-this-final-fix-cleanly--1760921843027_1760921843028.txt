@@ -1,0 +1,84 @@
+Here’s the exact prompt to paste into **Replit’s Agent chat** so it performs this final fix cleanly:
+
+---
+
+````
+We’ve completed Phase 1A + 1B of the Eden ERP backend. 
+All smoke tests pass except the soft-delete step (step 13), which currently PATCHes `deleted_at`. 
+I need you to finalize this phase by standardizing soft delete.
+
+### Objective
+Implement a dedicated soft-delete route and update the smoke test to match.
+
+### Required Changes
+1️⃣ **Backend route**
+Create a new endpoint:
+`DELETE /api/tasks/:id/soft`
+
+Behavior:
+- Marks the task as soft-deleted (`deleted_at = now(), updated_at = now()`).
+- Returns JSON `{ deleted: true, id }`.
+- Responds `404` if task not found.
+- Does *not* physically delete the row.
+
+If we use modular routing (`routes/tasks.js`), implement it there as:
+```js
+router.delete('/api/tasks/:id/soft', async (req, res) => {
+  try {
+    const r = await pool.query(
+      `update public.tasks
+         set deleted_at = now(), updated_at = now()
+       where id = $1
+       returning id`,
+      [req.params.id]
+    );
+    if (r.rowCount === 0) return res.status(404).json({ error: 'task not found' });
+    res.json({ deleted: true, id: r.rows[0].id });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+````
+
+If we’re still single-file, use `app.delete(...)` instead—same body.
+
+2️⃣ **Smoke test update**
+Open `scripts/smoke.js`, find step 13 (`Soft delete task`), and replace it so it uses the new route:
+
+```js
+// 13) Soft delete task
+console.log('1️⃣3️⃣ Cleaning up - soft deleting task...');
+res = await jdel(`${base}/api/tasks/${tid}/soft`);
+if (!res.ok) { console.log('❌ Soft delete failed'); process.exit(1); }
+const delJson = await res.json();
+if (!delJson?.deleted) { console.log('❌ Soft delete response malformed'); process.exit(1); }
+console.log('✅ Task soft deleted\n');
+```
+
+3️⃣ **Verification**
+Restart the backend and run:
+
+```bash
+npm run start & sleep 2
+npm run smoke
+```
+
+Expected output:
+
+* “✅ Task soft deleted”
+* “✨ Smoke tests completed!”
+
+### Acceptance
+
+✅ `/api/tasks/:id/soft` appears in `/routes`.
+✅ Smoke passes all steps (14/14 green).
+✅ Response shape: `{ deleted: true, id }`.
+
+After confirming, tag the repo as `v0.1-phase1B-final`.
+
+```
+
+---
+
+This tells the Replit agent *exactly* what to code, test, and verify—no ambiguity, one clean commit to lock Phase 1B as fully green.
+```
