@@ -1,0 +1,63 @@
+[Mode: Execution]
+
+**Step:** Lock the database identity in every environment using strict env guards (`EXPECTED_DB_HOST`, `EXPECTED_DB_PROJECT_REF`) so the app **fails fast** on any mismatch.
+
+**Why it matters:** This prevents the dual-database regression from ever resurfacing—startup will abort if the DB isn’t exactly the one we expect.
+
+**Inputs needed:**
+
+* Your current `DATABASE_URL`
+* Supabase project ref (looks like `jwehjdggkskmjrmoqibk`)
+* Access to set env vars in Replit and your deploy target (Render/Railway)
+
+**Command (copy–paste):**
+
+*Local dev (.env):*
+
+```bash
+# Extract host + confirm ref from DATABASE_URL
+node -e "require('dotenv').config({override:true}); const u=new URL(process.env.DATABASE_URL); console.log('HOST:',u.host,'REF:',u.username.replace(/^postgres\./,''))"
+
+# Set strict guards (use your exact values):
+echo 'EXPECTED_DB_HOST=aws-0-us-east-2.pooler.supabase.com:5432' >> .env
+echo 'EXPECTED_DB_PROJECT_REF=jwehjdggkskmjrmoqibk' >> .env
+
+# Verify guard works then start
+npm run verify:db && npm start
+```
+
+*Replit secrets (GUI or Shell):*
+
+```bash
+# Replit shell variant; GUI is fine too
+export EXPECTED_DB_HOST="aws-0-us-east-2.pooler.supabase.com:5432"
+export EXPECTED_DB_PROJECT_REF="jwehjdggkskmjrmoqibk"
+# Persist via Replit Secrets panel as well.
+```
+
+*Render/Railway (dashboard env vars):*
+
+* Add `EXPECTED_DB_HOST=aws-0-us-east-2.pooler.supabase.com:5432`
+* Add `EXPECTED_DB_PROJECT_REF=jwehjdggkskmjrmoqibk`
+* Redeploy
+
+*Test the guard + fingerprint (any env):*
+
+```bash
+npm run verify:db
+curl -s http://localhost:3000/api/debug/dbinfo | jq .
+```
+
+**Success check:**
+
+* `npm run verify:db` **passes** with those EXPECTED_* values.
+* App boots; `/api/debug/dbinfo` shows:
+
+  * `pooler_type: "session"` (aws-0)
+  * `project_ref: "jwehjdggkskmjrmoqibk"`
+  * No “wrong host/ref” errors.
+* Starting with **wrong** EXPECTED_* causes startup to **fail** (by design).
+
+**Next:** wait for user
+
+*Quick suggestion for later*: once you confirm green locally, flip your `DATABASE_URL` to **aws-0 session pooler** in prod too and run the one-shot smoke script you already have. That pairs the env guards with a live transactional test for maximum safety.
