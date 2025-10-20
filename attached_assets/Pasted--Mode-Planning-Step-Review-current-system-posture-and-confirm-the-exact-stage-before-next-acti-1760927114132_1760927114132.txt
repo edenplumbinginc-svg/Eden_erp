@@ -1,0 +1,49 @@
+[Mode: Planning]
+
+Step: Review current system posture and confirm the exact stage before next action.
+
+Why it matters: You’ve just crossed a crucial reliability milestone. This checkpoint defines our new “green baseline” before we start automation logic and notifications.
+
+Inputs needed: none (using your logs + current environment data).
+
+---
+
+### 🔹 Current Stage: **Phase 2 – Automation Prep (Post-UI Integration)**
+
+The Eden Coordination module has now completed these technical foundations:
+
+| Layer                    | Status            | Notes                                                                                                   |
+| ------------------------ | ----------------- | ------------------------------------------------------------------------------------------------------- |
+| **Backend**              | ✅ Stable          | 40 endpoints live, validated Neon PostgreSQL, schema matches Phase 1C design                            |
+| **Frontend (UI)**        | ✅ Operational     | Vertical slice fully functional (projects → tasks → task detail + comments, ball-in-court, attachments) |
+| **Environment Config**   | ✅ Locked          | .env.example + runtime guards prevent config drift                                                      |
+| **Sync Health**          | ✅ Verified        | GitHub ↔ Replit ↔ Neon all in sync                                                                      |
+| **Smoke Tests**          | ✅ 18/18           | All green                                                                                               |
+| **Deployment Readiness** | 🟢 Pre-deployment | Everything test-ready for staging or production deploy                                                  |
+
+---
+
+### 🔹 Checkpoint Summary vs Notion Checklist
+
+**Phase 1 (Coordination Module)**
+✔ Database schema & API
+✔ Core UI vertical slice
+⏳ Notification & email triggers
+⏳ Reporting extensions (owner, overdue, activity)
+⏳ Voice upload + transcription
+
+**Phase 2 (Automation & Reinforcement)**
+🔸 *Now entering this phase.*
+Next focus: automation hooks + notifications + task auto-status updates.
+
+---
+
+### 🔹 Immediate Next Target (recommended)
+
+**Task:** Implement the **Notification Event Bus**
+Goal: capture task_created, status_changed, comment_added in a `notifications` table or message queue.
+Why: this unlocks reminders, summaries, escalation, and analytic dashboards later without reworking endpoints.
+
+When you confirm, we’ll switch to [Mode: Execution] and I’ll give you the exact single step—table schema, event hook, and UI stub—to start the Notification Bus.
+
+Next: wait for user
