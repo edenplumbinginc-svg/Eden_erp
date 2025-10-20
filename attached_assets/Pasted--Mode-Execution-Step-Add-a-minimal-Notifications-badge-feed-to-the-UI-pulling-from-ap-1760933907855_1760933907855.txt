@@ -1,0 +1,180 @@
+[Mode: Execution]
+
+Step: Add a minimal **Notifications badge + feed** to the UI, pulling from `/api/notifications/recent`.
+
+Why it matters: You’ve proven the event bus works (task_created, status_changed, comment_added). Surfacing it in the app gives immediate team value and validates end-to-end.
+
+Inputs needed:
+
+* UI repo (`apps/coordination_ui`)
+* Backend route `/api/notifications/recent` (use the one you added; if not present, tell me and I’ll supply it again)
+
+Command:
+
+1. Create `src/components/NotificationsBadge.tsx`
+
+```tsx
+import { useEffect, useState } from 'react';
+import { api } from '../lib/api';
+
+type Noti = {
+  id: string;
+  type: 'task_created' | 'status_changed' | 'comment_added';
+  project_id: string;
+  task_id: string;
+  actor_email: string | null;
+  payload: any;
+  created_at: string;
+};
+
+export function NotificationsBadge() {
+  const [count, setCount] = useState<number>(0);
+
+  useEffect(() => {
+    let stop = false;
+    async function load() {
+      try {
+        const since = new Date(Date.now() - 60 * 60 * 1000).toISOString(); // last 60m
+        const rows = await api.get<Noti[]>(
+          `/api/notifications/recent?limit=50&since=${encodeURIComponent(since)}`
+        );
+        if (!stop) setCount(rows.length);
+      } catch {
+        if (!stop) setCount(0);
+      }
+    }
+    load();
+    const id = setInterval(load, 15_000);
+    return () => { stop = true; clearInterval(id); };
+  }, []);
+
+  return (
+    <a href="/notifications" style={{
+      display: 'inline-flex', alignItems:'center', gap:8,
+      padding:'6px 10px', border:'1px solid #ddd', borderRadius:12, textDecoration:'none'
+    }}>
+      <span>Notifications</span>
+      <span style={{
+        minWidth:18, height:18, borderRadius:9, display:'inline-grid', placeItems:'center',
+        fontSize:12, padding:'0 6px', background:'#111', color:'#fff'
+      }}>{count}</span>
+    </a>
+  );
+}
+```
+
+2. Create `src/pages/NotificationsPage.tsx`
+
+```tsx
+import { useEffect, useState } from 'react';
+import { api } from '../lib/api';
+
+type Noti = {
+  id: string;
+  type: string;
+  project_id: string;
+  task_id: string;
+  actor_email: string | null;
+  payload: any;
+  created_at: string;
+};
+
+function fmt(n: Noti) {
+  const t = new Date(n.created_at).toLocaleString();
+  if (n.type === 'task_created') {
+    return { title: `Task created: ${n.payload?.title ?? '(no title)'}`, detail: n.actor_email ?? 'system', time: t };
+  }
+  if (n.type === 'status_changed') {
+    return { title: `Status: ${n.payload?.old_status} → ${n.payload?.new_status}`, detail: n.payload?.title ?? '', time: t };
+  }
+  if (n.type === 'comment_added') {
+    return { title: `New comment`, detail: n.payload?.comment_preview ?? '', time: t };
+  }
+  return { title: n.type, detail: '', time: t };
+}
+
+export default function NotificationsPage() {
+  const [rows, setRows] = useState<Noti[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let stop = false;
+    async function load() {
+      try {
+        const data = await api.get<Noti[]>(`/api/notifications/recent?limit=100`);
+        if (!stop) setRows(data);
+      } finally {
+        if (!stop) setLoading(false);
+      }
+    }
+    load();
+    const id = setInterval(load, 20_000);
+    return () => { stop = true; clearInterval(id); };
+  }, []);
+
+  if (loading) return <div style={{ padding:16 }}>Loading notifications…</div>;
+
+  return (
+    <div style={{ padding:16 }}>
+      <h1>Notifications</h1>
+      <div style={{ marginTop:12, display:'grid', gap:8 }}>
+        {rows.map(n => {
+          const m = fmt(n);
+          return (
+            <a key={n.id} href={`/projects/${n.project_id}`} style={{
+              border:'1px solid #eee', borderRadius:12, padding:12, textDecoration:'none', color:'inherit'
+            }}>
+              <div style={{ fontWeight:600 }}>{m.title}</div>
+              {m.detail && <div style={{ opacity:0.8 }}>{m.detail}</div>}
+              <div style={{ fontSize:12, opacity:0.7 }}>{m.time}</div>
+            </a>
+          );
+        })}
+        {rows.length === 0 && <div>No recent notifications.</div>}
+      </div>
+    </div>
+  );
+}
+```
+
+3. Add badge to your header and route to the app:
+
+* `src/App.tsx` (or wherever your routes are)
+
+```diff
++ import NotificationsPage from './pages/NotificationsPage';
++ import { NotificationsBadge } from './components/NotificationsBadge';
+  // inside your layout/header:
+  // <NotificationsBadge />
+
+  // routes:
+  // React Router example:
+  // <Route path="/notifications" element={<NotificationsPage />} />
+```
+
+4. Optional: add a tiny link in ProjectListPage header
+
+```diff
+// near your page title
++ <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
++   <h1>Projects</h1>
++   <NotificationsBadge />
++ </div>
+```
+
+5. Run UI
+
+```bash
+npm run -C apps/coordination_ui dev
+```
+
+Success check:
+
+* A “Notifications” badge appears (header or Projects page) showing a non-zero count after recent activity.
+* Visiting `/notifications` lists latest `task_created`, `status_changed`, and `comment_added` with timestamps.
+* Clicking a row takes you to the related project.
+
+Next: wait for user
+
+—
+Micro-lesson: you now have **producers** (endpoints), a **persistence log** (notifications), a **reader API** (`/api/notifications/recent`), and a **consumer UI** (badge + feed). That’s the whole event-driven loop. When this is green, we’ll add a daily digest cron to email managers—one job file, one SQL, done.
