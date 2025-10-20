@@ -1,11 +1,14 @@
 // services/database.js
 const { Pool } = require('pg');
 
+// Toggle secure → permissive SSL via environment flag
+// Set DB_SSL_REJECT_UNAUTHORIZED=false to allow self-signed certs (for Replit/Supabase)
+const allowInsecure = String(process.env.DB_SSL_REJECT_UNAUTHORIZED || '').toLowerCase() === 'false';
+const ssl = allowInsecure ? { rejectUnauthorized: false } : { rejectUnauthorized: true };
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL && process.env.DATABASE_URL.includes('supabase.com') 
-    ? { rejectUnauthorized: false } 
-    : false
+  ssl
 });
 
 /**
