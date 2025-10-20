@@ -91,8 +91,43 @@ The backend server provides the following endpoints:
   - Run manually: `npm run job:idle`
   - Ready for cron scheduling in production
 
+## Database Configuration Safety
+The system enforces database identity as a first-class contract with validation at multiple layers:
+
+### Environment Variables (Optional but Recommended)
+- `EXPECTED_DB_HOST` - Expected database host:port (e.g., `aws-0-us-east-2.pooler.supabase.com:5432`)
+- `EXPECTED_DB_PROJECT_REF` - Expected Supabase project reference (e.g., `jwehjdggkskmjrmoqibk`)
+
+### Validation Layers
+1. **Prestart Validation** - `npm run verify:db` runs before server starts (when using `npm start`)
+2. **Boot-Time Validation** - `lib/config-db.js` validates configuration on every server boot
+3. **Runtime Monitoring** - `/api/debug/dbinfo` endpoint shows current database configuration
+4. **Script Validation** - `scripts/verify-db.js` can be run manually or in CI/CD
+
+### Current Configuration Status
+- **Pooler Type**: Transaction pooler (aws-1)
+- **Recommended**: Session pooler (aws-0) for better Replit compatibility
+- **Note**: To switch poolers, update DATABASE_URL to use `aws-0-us-east-2.pooler.supabase.com`
+
+### Validation Features
+- ✅ Detects database host mismatches (prevents dual-database issues)
+- ✅ Validates Supabase project reference
+- ✅ Identifies pooler type (session vs transaction)
+- ✅ Warns about legacy SUPABASE_* environment variables
+- ✅ Provides detailed runtime database fingerprint via debug endpoint
+
 ## Recent Changes
-- **Oct 20, 2025 (Latest)**: Idle Task Reminder Automation
+- **Oct 20, 2025 (Latest)**: Database Configuration Safety & Validation Framework
+  - **Multi-Layer Validation**: Four-layer validation system (prestart, boot, runtime, script)
+  - **Script**: `scripts/verify-db.js` validates DATABASE_URL host and project ref
+  - **Enhanced Config**: `lib/config-db.js` now validates pooler type and project ref
+  - **Debug Endpoint**: `/api/debug/dbinfo` shows complete database fingerprint
+  - **Fail-Fast**: Server refuses to start with misconfigured database
+  - **Warnings**: Alerts when using transaction pooler instead of session pooler
+  - **Testing**: All validation scenarios tested (correct config, wrong host, wrong ref)
+  - **Documentation**: Complete runbook for database configuration management
+
+- **Oct 20, 2025**: Idle Task Reminder Automation
   - **Feature**: Automated job to remind about stalled tasks with no recent activity
   - **Database**: Added `last_activity_at` column to tasks table with auto-update trigger
   - **Trigger**: activity_log inserts automatically bump task.last_activity_at
