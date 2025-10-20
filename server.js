@@ -50,10 +50,9 @@ bootstrapDatabase().then(async () => {
   }
 });
 
-// --- Health check ---
-app.get('/health', (_, res) => res.json({ ok: true }));
+// --- Public health check endpoints ---
+app.get(['/health', '/api/health'], (_, res) => res.json({ status: 'ok' }));
 
-// --- DB ping ---
 app.get('/db/ping', async (_, res) => {
   if (!process.env.DATABASE_URL)
     return res.status(200).json({ db: 'not_configured' });
@@ -67,17 +66,11 @@ app.get('/db/ping', async (_, res) => {
   }
 });
 
-// --- Users list (legacy routes) ---
-app.get('/db/users', async (_, res) => {
-  const { pool } = require('./services/database');
-  try {
-    const r = await pool.query('select id, email, name from public.users order by email');
-    res.json(r.rows);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
+// --- Enforce authentication on all /api/* routes ---
+const { requireAuth } = require('./middleware/auth');
+app.use('/api', requireAuth);
 
+// --- Protected API endpoints ---
 app.get('/api/users', async (_, res) => {
   const { pool } = require('./services/database');
   try {
@@ -97,9 +90,8 @@ app.use('/api', require('./routes/attachments'));
 
 // --- Subtask routes need to be at /api level ---
 const { pool } = require('./services/database');
-const { authenticate } = require('./middleware/auth');
 
-app.patch('/api/subtasks/:id', authenticate, async (req, res) => {
+app.patch('/api/subtasks/:id', async (req, res) => {
   try {
     const { title, done, order_index } = req.body ?? {};
     const updates = [];
@@ -129,7 +121,7 @@ app.patch('/api/subtasks/:id', authenticate, async (req, res) => {
   }
 });
 
-app.delete('/api/subtasks/:id', authenticate, async (req, res) => {
+app.delete('/api/subtasks/:id', async (req, res) => {
   try {
     const r = await pool.query('DELETE FROM public.subtasks WHERE id = $1 RETURNING id', [req.params.id]);
     if (r.rowCount === 0) return res.status(404).json({ error: 'subtask not found' });
