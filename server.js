@@ -10,7 +10,7 @@ if (missing.length) {
 }
 
 const express = require('express');
-const { bootstrapDatabase } = require('./services/database');
+const { bootstrapDatabase, refreshPoolMetadata } = require('./services/database');
 const { logActivity } = require('./middleware/audit');
 
 const app = express();
@@ -31,7 +31,10 @@ app.use((req, res, next) => {
 app.use(logActivity);
 
 // Bootstrap database on startup
-bootstrapDatabase();
+bootstrapDatabase().then(() => {
+  // Refresh metadata after schema changes to clear cached prepared statements
+  refreshPoolMetadata();
+});
 
 // --- Health check ---
 app.get('/health', (_, res) => res.json({ ok: true }));

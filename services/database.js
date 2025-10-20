@@ -149,6 +149,18 @@ async function bootstrapDatabase() {
         ADD COLUMN IF NOT EXISTS schedule_at timestamptz;
     `);
 
+    // Add event bus columns to notifications
+    await pool.query(`
+      ALTER TABLE public.notifications
+        ADD COLUMN IF NOT EXISTS project_id uuid,
+        ADD COLUMN IF NOT EXISTS actor_id uuid,
+        ADD COLUMN IF NOT EXISTS actor_email text,
+        ADD COLUMN IF NOT EXISTS event_code text,
+        ADD COLUMN IF NOT EXISTS channel text DEFAULT 'system',
+        ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now(),
+        ADD COLUMN IF NOT EXISTS read_at timestamptz;
+    `);
+
     // Activity log
     await pool.query(`
       CREATE TABLE IF NOT EXISTS public.activity_log (
@@ -218,4 +230,27 @@ async function enqueueNotification(userId, taskId, type, payload = {}) {
   }
 }
 
-module.exports = { pool, bootstrapDatabase, enqueueNotification };
+// Helper function to refresh pool connections to clear cached metadata
+async function refreshPoolMetadata() {
+  try {
+    // Get the pool size (total connections)
+    const poolSize = pool.totalCount || 10;
+    
+    // DISCARD ALL on multiple connections to clear cached prepared statements
+    const promises = [];
+    for (let i = 0; i < Math.min(poolSize, 5); i++) {
+      promises.push(
+        pool.connect().then(client => {
+          return client.query('DISCARD ALL').finally(() => client.release());
+        })
+      );
+    }
+    
+    await Promise.all(promises);
+    console.log('✅ Pool metadata refreshed');
+  } catch (e) {
+    console.error('Failed to refresh pool metadata:', e.message);
+  }
+}
+
+module.exports = { pool, bootstrapDatabase, enqueueNotification, refreshPoolMetadata };
