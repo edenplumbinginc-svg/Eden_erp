@@ -163,6 +163,11 @@ router.post('/:taskId/comments', authenticate, async (req, res) => {
     const { body, author_id } = req.body ?? {};
     if (!body) return res.status(400).json({ error: 'body required' });
     
+    // Fetch task to get project_id and context for event bus
+    const task = await pool.query('SELECT id, project_id, title FROM public.tasks WHERE id = $1', [req.params.taskId]);
+    if (task.rowCount === 0) return res.status(404).json({ error: 'task not found' });
+    const taskData = task.rows[0];
+    
     // Convert author_id to UUID if provided
     const finalAuthorId = author_id ? deriveStableUUID(author_id) : (req.user?.id ?? null);
     
@@ -173,13 +178,25 @@ router.post('/:taskId/comments', authenticate, async (req, res) => {
       [req.params.taskId, finalAuthorId, body]
     );
     
-    // Enqueue notification for comment
-    const task = await pool.query('SELECT ball_in_court FROM public.tasks WHERE id = $1', [req.params.taskId]);
-    if (task.rows[0]?.ball_in_court) {
-      await enqueueNotification(task.rows[0].ball_in_court, req.params.taskId, 'comment_added', {
-        comment_snippet: body.substring(0, 100)
-      });
-    }
+    // Fire-and-forget notification event (type-stable)
+    (async () => {
+      try {
+        const { actorEmail } = actorFromHeaders(req);
+        await notify(pool, {
+          type: 'comment_added',
+          projectId: taskData.project_id,
+          taskId: taskData.id,
+          actorId: finalAuthorId,
+          actorEmail: actorEmail || null,
+          payload: {
+            task_title: taskData.title,
+            comment_preview: String(body || '').slice(0, 160)
+          }
+        });
+      } catch (e) {
+        console.warn('notify(comment_added) failed:', e.message);
+      }
+    })();
     
     res.status(201).json(r.rows[0]);
   } catch (e) {
