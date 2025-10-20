@@ -159,10 +159,12 @@ export const tasks = pgTable("tasks", {
         tags: text().array().default([""]),
         origin: text(),
         deletedAt: timestamp("deleted_at", { withTimezone: true, mode: 'string' }),
+        lastActivityAt: timestamp("last_activity_at", { withTimezone: true, mode: 'string' }),
 }, (table) => [
         index("idx_tasks_ball").using("btree", table.ballInCourt.asc().nullsLast().op("uuid_ops")),
         index("idx_tasks_project").using("btree", table.projectId.asc().nullsLast().op("uuid_ops")),
         index("idx_tasks_status").using("btree", table.status.asc().nullsLast().op("text_ops")),
+        index("idx_tasks_last_activity").using("btree", table.lastActivityAt.asc().nullsLast().op("timestamptz_ops")),
         foreignKey({
                         columns: [table.projectId],
                         foreignColumns: [projects.id],
