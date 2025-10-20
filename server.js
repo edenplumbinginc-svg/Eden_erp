@@ -92,7 +92,7 @@ app.get('/api/users', async (_, res) => {
 app.use('/api/projects', require('./routes/projects'));
 app.use('/api/tasks', require('./routes/tasks'));
 app.use('/api/reports', require('./routes/reports'));
-app.use('/ops/notifications', require('./routes/notifications'));
+app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api', require('./routes/attachments'));
 
 // --- Subtask routes need to be at /api level ---

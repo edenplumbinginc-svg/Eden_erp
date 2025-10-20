@@ -12,7 +12,7 @@ const { authenticate, authorize } = require('../middleware/auth');
  *   type?: 'task_created' | 'status_changed' | 'comment_added'
  *   since?: ISO timestamp (filters created_at >= since)
  */
-router.get('/api/notifications/recent', async (req, res, next) => {
+router.get('/recent', async (req, res, next) => {
   try {
     const { projectId, type, since } = req.query;
     let { limit } = req.query;
