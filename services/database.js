@@ -6,214 +6,28 @@ const pool = new Pool({
   ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false
 });
 
+/**
+ * Bootstrap database connection and ensure required extensions
+ * Schema management is now handled by Drizzle (see drizzle/schema.ts)
+ * Use `npm run db:push` to sync schema changes to the database
+ */
 async function bootstrapDatabase() {
   try {
-    // UUIDs for gen_random_uuid()
+    // Ensure PostgreSQL extensions are enabled
     await pool.query(`CREATE EXTENSION IF NOT EXISTS pgcrypto;`);
-
-    // Projects
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS public.projects (
-        id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-        name text NOT NULL,
-        code text,
-        status text DEFAULT 'active',
-        created_at timestamptz DEFAULT now()
-      );
-    `);
-
-    // Users table (ensure it exists for foreign keys)
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS public.users (
-        id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-        email text UNIQUE NOT NULL,
-        name text,
-        created_at timestamptz DEFAULT now()
-      );
-    `);
-
-    // Extend users table with role and department
-    await pool.query(`
-      ALTER TABLE public.users 
-        ADD COLUMN IF NOT EXISTS role text DEFAULT 'User';
-      ALTER TABLE public.users 
-        ADD COLUMN IF NOT EXISTS department text;
-    `);
-
-    // Tasks (ensure table, then ensure all columns exist)
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS public.tasks (
-        id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-        project_id uuid REFERENCES public.projects(id) ON DELETE CASCADE,
-        title text NOT NULL,
-        description text,
-        status text DEFAULT 'open',
-        priority text DEFAULT 'normal',
-        assignee_id uuid,
-        ball_in_court uuid,
-        due_at timestamptz,
-        created_at timestamptz DEFAULT now(),
-        updated_at timestamptz DEFAULT now()
-      );
-    `);
-
-    // Add new columns to tasks
-    await pool.query(`
-      ALTER TABLE public.tasks
-        ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
-      ALTER TABLE public.tasks
-        ADD COLUMN IF NOT EXISTS tags text[] DEFAULT '{}';
-      ALTER TABLE public.tasks
-        ADD COLUMN IF NOT EXISTS origin text;
-      ALTER TABLE public.tasks
-        ADD COLUMN IF NOT EXISTS deleted_at timestamptz;
-    `);
-
-    // Subtasks
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS public.subtasks (
-        id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-        task_id uuid REFERENCES public.tasks(id) ON DELETE CASCADE,
-        title text NOT NULL,
-        done boolean DEFAULT false,
-        order_index int DEFAULT 0,
-        created_at timestamptz DEFAULT now(),
-        updated_at timestamptz DEFAULT now()
-      );
-    `);
-
-    // Task dependencies
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS public.task_dependencies (
-        task_id uuid REFERENCES public.tasks(id) ON DELETE CASCADE,
-        blocks_task_id uuid REFERENCES public.tasks(id) ON DELETE CASCADE,
-        PRIMARY KEY (task_id, blocks_task_id)
-      );
-    `);
-
-    // Attachments - complete table structure with proper constraints
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS public.attachments (
-        id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-        task_id uuid NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
-        filename text,
-        mime text,
-        size_bytes int,
-        storage_key text NOT NULL,
-        uploaded_by uuid,
-        created_at timestamptz DEFAULT now()
-      );
-    `);
-
-    // Task comments
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS public.task_comments (
-        id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-        task_id uuid REFERENCES public.tasks(id) ON DELETE CASCADE,
-        author_id uuid,
-        body text NOT NULL,
-        created_at timestamptz DEFAULT now(),
-        updated_at timestamptz DEFAULT now()
-      );
-    `);
-
-    // Ball history
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS public.ball_history (
-        id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-        task_id uuid NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
-        from_user_id uuid,
-        to_user_id uuid,
-        note text,
-        changed_at timestamptz NOT NULL DEFAULT now()
-      );
-    `);
-
-    // Notifications
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS public.notifications (
-        id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-        user_id uuid,
-        task_id uuid REFERENCES public.tasks(id) ON DELETE CASCADE,
-        type text,
-        payload jsonb DEFAULT '{}'::jsonb,
-        status text DEFAULT 'queued',
-        scheduled_at timestamptz DEFAULT now(),
-        sent_at timestamptz
-      );
-    `);
-
-    // Add backward compatibility for schedule_at column (legacy alias)
-    await pool.query(`
-      ALTER TABLE public.notifications
-        ADD COLUMN IF NOT EXISTS schedule_at timestamptz;
-    `);
-
-    // Add event bus columns to notifications
-    await pool.query(`
-      ALTER TABLE public.notifications
-        ADD COLUMN IF NOT EXISTS project_id uuid,
-        ADD COLUMN IF NOT EXISTS actor_id uuid,
-        ADD COLUMN IF NOT EXISTS actor_email text,
-        ADD COLUMN IF NOT EXISTS event_code text,
-        ADD COLUMN IF NOT EXISTS channel text DEFAULT 'system',
-        ADD COLUMN IF NOT EXISTS created_at timestamptz DEFAULT now(),
-        ADD COLUMN IF NOT EXISTS read_at timestamptz;
-    `);
-
-    // Activity log
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS public.activity_log (
-        id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-        actor_id uuid,
-        entity_type text,
-        entity_id uuid,
-        action text,
-        meta jsonb DEFAULT '{}'::jsonb,
-        created_at timestamptz DEFAULT now(),
-        ip text
-      );
-    `);
-
-    // Performance metrics
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS public.performance (
-        id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-        task_id uuid REFERENCES public.tasks(id) ON DELETE CASCADE UNIQUE,
-        complexity int DEFAULT 1,
-        speed int DEFAULT 0,
-        collaboration int DEFAULT 0,
-        quality int DEFAULT 0,
-        updated_at timestamptz DEFAULT now()
-      );
-    `);
-
-    // Permissions matrix
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS public.permissions_matrix (
-        id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-        role text,
-        can_view boolean DEFAULT true,
-        can_edit boolean DEFAULT false,
-        can_close boolean DEFAULT false
-      );
-    `);
-
-    // Create indexes
-    await pool.query(`
-      CREATE INDEX IF NOT EXISTS idx_tasks_status ON public.tasks(status);
-      CREATE INDEX IF NOT EXISTS idx_tasks_ball_in_court ON public.tasks(ball_in_court);
-      CREATE INDEX IF NOT EXISTS idx_tasks_tags ON public.tasks USING GIN(tags);
-      CREATE INDEX IF NOT EXISTS idx_tasks_due_at ON public.tasks(due_at);
-      CREATE INDEX IF NOT EXISTS idx_notifications_status ON public.notifications(status, COALESCE(scheduled_at, schedule_at));
-      CREATE INDEX IF NOT EXISTS idx_activity_log_entity ON public.activity_log(entity_type, entity_id);
-      CREATE INDEX IF NOT EXISTS idx_attachments_task_id ON public.attachments(task_id);
-      CREATE INDEX IF NOT EXISTS idx_attachments_storage_key ON public.attachments(storage_key);
-    `);
-
-    console.log('✅ Database schema ensured');
+    
+    // Verify database connection with a simple query
+    const result = await pool.query(`SELECT COUNT(*) as table_count FROM information_schema.tables WHERE table_schema = 'public'`);
+    const tableCount = parseInt(result.rows[0].table_count, 10);
+    
+    if (tableCount === 0) {
+      console.warn('⚠️  No tables found in database. Run `npm run db:push` to create schema.');
+    } else {
+      console.log(`✅ Database connected (${tableCount} tables found)`);
+    }
   } catch (e) {
-    console.error('⚠️ Database bootstrap failed:', e.message);
+    console.error('⚠️ Database connection failed:', e.message);
+    throw e;
   }
 }
 
@@ -230,27 +44,10 @@ async function enqueueNotification(userId, taskId, type, payload = {}) {
   }
 }
 
-// Helper function to refresh pool connections to clear cached metadata
+// Helper function to refresh pool connections (no longer needed with Drizzle)
+// Kept for backward compatibility
 async function refreshPoolMetadata() {
-  try {
-    // Get the pool size (total connections)
-    const poolSize = pool.totalCount || 10;
-    
-    // DISCARD ALL on multiple connections to clear cached prepared statements
-    const promises = [];
-    for (let i = 0; i < Math.min(poolSize, 5); i++) {
-      promises.push(
-        pool.connect().then(client => {
-          return client.query('DISCARD ALL').finally(() => client.release());
-        })
-      );
-    }
-    
-    await Promise.all(promises);
-    console.log('✅ Pool metadata refreshed');
-  } catch (e) {
-    console.error('Failed to refresh pool metadata:', e.message);
-  }
+  console.log('✅ Skipping pool metadata refresh (no longer needed with Drizzle schema management)');
 }
 
 module.exports = { pool, bootstrapDatabase, enqueueNotification, refreshPoolMetadata };

@@ -26,24 +26,10 @@ app.use((req, res, next) => {
 // Apply audit logging middleware globally
 app.use(logActivity);
 
-// Bootstrap database on startup
-bootstrapDatabase().then(async () => {
-  // Refresh metadata after schema changes to clear cached prepared statements
-  await refreshPoolMetadata();
-  
-  // Force clearing of all pool connections to reset metadata cache
-  const { pool } = require('./services/database');
-  
-  // Execute DISCARD ALL on a fresh connection to ensure metadata refresh
-  try {
-    const client = await pool.connect();
-    await client.query('DISCARD ALL');
-    await client.query('DEALLOCATE ALL');
-    client.release();
-    console.log('✅ Pool connections reset');
-  } catch (e) {
-    console.error('Failed to reset connections:', e.message);
-  }
+// Bootstrap database on startup (verify connection and extensions)
+bootstrapDatabase().catch(err => {
+  console.error('Failed to connect to database:', err);
+  process.exit(1);
 });
 
 // --- Public health check endpoints ---
