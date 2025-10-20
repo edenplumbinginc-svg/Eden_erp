@@ -1,0 +1,109 @@
+[Mode: Execution]
+
+Step: Enforce authentication on all API routes (including /api/notifications/recent) and allow dev headers only in development.
+
+Why it matters: This closes the biggest production risk with the smallest code change, and it doesn’t break your current dev flow.
+
+Inputs needed:
+
+Backend repo (Express)
+
+Your JWT secret/provider (temporary stub allowed)
+
+Command:
+
+Add middleware/auth.js
+
+// middleware/auth.js
+const DEV = process.env.NODE_ENV !== 'production';
+
+function devIdentity(req) {
+  return {
+    email: req.headers['x-dev-email'] || req.headers['x-user-email'] || null,
+    role:  req.headers['x-dev-role']  || req.headers['x-user-role']  || 'User',
+    id:    req.headers['x-dev-user-id'] || null,
+  };
+}
+
+// TODO: replace with real JWT verification
+function verifyJwt(req) {
+  const auth = req.headers.authorization || '';
+  const [type, token] = auth.split(' ');
+  if (type !== 'Bearer' || !token) return null;
+  // Minimal stub: accept any non-empty token and attach a fake user.
+  // Integrate Clerk/Auth0/Supabase later.
+  return { email: 'user@edenmep.ca', role: 'User', id: null, token };
+}
+
+function requireAuth(req, res, next) {
+  let user = null;
+
+  if (DEV) {
+    const dev = devIdentity(req);
+    if (dev.email) user = { email: dev.email, role: dev.role, id: dev.id, dev: true };
+  } else {
+    user = verifyJwt(req);
+  }
+
+  if (!user) return res.status(401).json({ error: { code: 'UNAUTHENTICATED', message: 'Sign in required' } });
+
+  req.user = user;
+  next();
+}
+
+function requireRole(...roles) {
+  return (req, res, next) => {
+    const role = (req.user?.role || '').toLowerCase();
+    const ok = roles.map(r => r.toLowerCase()).includes(role);
+    if (!ok) return res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Insufficient role' } });
+    next();
+  };
+}
+
+module.exports = { requireAuth, requireRole };
+
+
+Mount auth globally (after CORS/body-parser), then selectively relax for public health:
+
+// server.js
++const { requireAuth } = require('./middleware/auth');
+
+ // health endpoints can remain public
+ app.get(['/health','/api/health'], (req,res)=>res.json({status:'ok'}));
+
++// everything below requires auth
++app.use('/api', requireAuth);
+
+ // your existing routes…
+ app.use(require('./routes/projects'));
+ app.use(require('./routes/tasks'));
+ app.use(require('./routes/comments'));
+ app.use(require('./routes/notifications')); // /api/notifications/recent now protected
+
+
+Keep dev headers working locally:
+
+In UI .env.local, you already send X-Dev-Email etc.
+
+In production, send a real Authorization: Bearer <JWT>; we’ll wire proper JWT next.
+
+Quick smoke:
+
+# Unauthenticated should now fail:
+curl -s http://localhost:3000/api/notifications/recent | jq .
+# => { "error": { "code": "UNAUTHENTICATED", ... } }
+
+# Dev headers should pass in development:
+curl -s "http://localhost:3000/api/notifications/recent" \
+  -H "X-Dev-Email: admin@edenmep.ca" | jq '.[0:3]'
+
+
+Success check:
+
+All /api/* routes return 401 without headers in dev.
+
+With dev headers, everything works as before.
+
+Your UI continues to function since it already sends dev headers.
+
+Next: wait for user

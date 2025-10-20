@@ -3,6 +3,8 @@
 
 const crypto = require('crypto');
 
+const DEV = process.env.NODE_ENV !== 'production';
+
 // Derive a stable UUID from any string for dev mode
 function deriveStableUUID(str) {
   // Check if already a valid UUID
@@ -24,86 +26,119 @@ function deriveStableUUID(str) {
   ].join('-');
 }
 
-// Simple dev mode authentication when JWT_SECRET not set
-function authenticate(req, res, next) {
-  // If JWT_SECRET not set, allow dev passthrough
-  if (!process.env.JWT_SECRET) {
-    // Check for X-Dev-User-* headers first (new style)
-    const devUserId = req.headers['x-dev-user-id'];
-    const devUserEmail = req.headers['x-dev-user-email'];
-    const devUserRole = req.headers['x-dev-user-role'];
-    const devUserDepartment = req.headers['x-dev-user-department'];
-    
-    // Fall back to X-User-* headers (existing style)
-    const userId = devUserId || req.headers['x-user-id'];
-    const userEmail = devUserEmail || req.headers['x-user-email'];
-    const userRole = devUserRole || req.headers['x-user-role'] || 'User';
-    const userDepartment = devUserDepartment || req.headers['x-user-department'];
-    
-    if (userId) {
-      // Convert non-UUID user IDs to stable UUIDs
-      const stableUserId = deriveStableUUID(userId);
-      
-      req.user = {
-        id: stableUserId,
-        email: userEmail || 'dev@example.com',
-        role: userRole,
-        department: userDepartment,
-        originalId: userId // Keep original for reference
-      };
-    }
-    return next();
-  }
-
-  // JWT validation would go here
-  // For now, just parse Authorization header for basic JWT structure
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Missing or invalid authorization header' });
-  }
-
-  // In production, would validate JWT here
-  // For stub, just extract basic info if provided
-  try {
-    // This is a stub - in production you'd use jsonwebtoken library
-    const token = authHeader.substring(7);
-    // Decode token (stub implementation)
-    const userId = req.headers['x-user-id'] || 'stub-user-id';
-    const stableUserId = deriveStableUUID(userId);
-    
-    req.user = {
-      id: stableUserId,
-      email: req.headers['x-user-email'] || 'user@example.com',
-      role: req.headers['x-user-role'] || 'User',
-      department: req.headers['x-user-department'],
-      originalId: userId // Keep original for reference
-    };
-    next();
-  } catch (error) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
+// Extract identity from dev headers (development only)
+function devIdentity(req) {
+  // Check for X-Dev-* headers first (preferred)
+  const devEmail = req.headers['x-dev-email'] || req.headers['x-dev-user-email'];
+  const devRole = req.headers['x-dev-role'] || req.headers['x-dev-user-role'];
+  const devId = req.headers['x-dev-user-id'];
+  
+  // Fall back to X-User-* headers (legacy)
+  const email = devEmail || req.headers['x-user-email'];
+  const role = devRole || req.headers['x-user-role'] || 'User';
+  const userId = devId || req.headers['x-user-id'];
+  
+  return {
+    email: email || null,
+    role: role,
+    id: userId ? deriveStableUUID(userId) : null,
+    originalId: userId
+  };
 }
 
-// Role-based authorization
-function authorize(roles) {
+// TODO: Replace with real JWT verification (Clerk/Auth0/Supabase)
+function verifyJwt(req) {
+  const auth = req.headers.authorization || '';
+  const [type, token] = auth.split(' ');
+  
+  if (type !== 'Bearer' || !token) {
+    return null;
+  }
+  
+  // Minimal stub: accept any non-empty token and attach a fake user
+  // In production, use jsonwebtoken.verify() with your JWT_SECRET
+  // Example:
+  // const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  // return { email: decoded.email, role: decoded.role, id: decoded.sub };
+  
+  return {
+    email: 'user@edenmep.ca',
+    role: 'User',
+    id: null,
+    token: token
+  };
+}
+
+// Require authentication on all routes
+function requireAuth(req, res, next) {
+  let user = null;
+
+  if (DEV) {
+    // Development mode: accept dev headers
+    const dev = devIdentity(req);
+    if (dev.email) {
+      user = {
+        email: dev.email,
+        role: dev.role,
+        id: dev.id,
+        originalId: dev.originalId,
+        dev: true
+      };
+    }
+  } else {
+    // Production mode: require JWT
+    user = verifyJwt(req);
+  }
+
+  if (!user) {
+    return res.status(401).json({
+      error: {
+        code: 'UNAUTHENTICATED',
+        message: 'Sign in required'
+      }
+    });
+  }
+
+  req.user = user;
+  next();
+}
+
+// Require specific role(s)
+function requireRole(...roles) {
   return (req, res, next) => {
-    // In dev mode without JWT, allow all
-    if (!process.env.JWT_SECRET) {
-      return next();
+    const userRole = (req.user?.role || '').toLowerCase();
+    const allowedRoles = roles.map(r => r.toLowerCase());
+    const hasRole = allowedRoles.includes(userRole);
+    
+    if (!hasRole) {
+      return res.status(403).json({
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Insufficient role'
+        }
+      });
     }
-
-    // Check if user is authenticated
-    if (!req.user) {
-      return res.status(401).json({ error: 'Not authenticated' });
-    }
-
-    // Check if user has required role
-    if (roles && roles.length > 0 && !roles.includes(req.user.role)) {
-      return res.status(403).json({ error: 'Insufficient permissions' });
-    }
-
+    
     next();
   };
 }
 
-module.exports = { authenticate, authorize, deriveStableUUID };
+// Legacy authenticate function (kept for backward compatibility)
+// Use requireAuth instead for new code
+function authenticate(req, res, next) {
+  return requireAuth(req, res, next);
+}
+
+// Legacy authorize function (kept for backward compatibility)
+// Use requireRole instead for new code
+function authorize(roles) {
+  return requireRole(...roles);
+}
+
+module.exports = {
+  requireAuth,
+  requireRole,
+  authenticate,  // legacy - use requireAuth
+  authorize,     // legacy - use requireRole
+  deriveStableUUID
+};
