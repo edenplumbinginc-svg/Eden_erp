@@ -1,0 +1,68 @@
+[Mode: Execution]
+
+Step: Make the notification insert **type-stable** by casting IDs in SQL (prevents any pool/metadata weirdness) and then verify with one create-task.
+
+Why it matters: Explicit casts (`::uuid`) remove ambiguity about `project_id`/`task_id` types, so the event bus works reliably without depending on connection-pool refreshes.
+
+Inputs needed:
+
+* Your backend repo
+* File: `lib/notify.js`
+* Your DB has `notifications(project_id uuid, task_id uuid, …)`
+
+Command:
+
+1. Edit `lib/notify.js` insert to cast IDs:
+
+```diff
+-  const sql = `
+-    insert into notifications (type, project_id, task_id, actor_id, actor_email, payload)
+-    values ($1, $2, $3, $4, $5, $6)
+-    returning id
+-  `;
++  const sql = `
++    insert into notifications (type, project_id, task_id, actor_id, actor_email, payload)
++    values (
++      $1,
++      $2::uuid,   -- project_id
++      $3::uuid,   -- task_id
++      $4::uuid,   -- actor_id (use NULL if you don't have a uuid here)
++      $5,
++      $6::jsonb
++    )
++    returning id
++  `;
+```
+
+If your `actor_id` is **not** a uuid, change `$4::uuid` to the correct type (e.g., `$4::bigint`) or pass `null`.
+
+2. Restart API and run one E2E check:
+
+```bash
+pkill -f "node server" 2>/dev/null || true
+NODE_ENV=development node server.js > /tmp/server.log 2>&1 &
+
+# Create a quick task from UI or via cURL (replace PROJECT_ID with a real one)
+curl -s -X POST http://localhost:3000/api/projects/<PROJECT_ID>/tasks \
+  -H "Content-Type: application/json" \
+  -H "X-User-Email: test@example.com" \
+  -d '{"title":"Cast Test","priority":"normal"}' >/dev/null
+
+# Verify the notification row landed
+psql "$DATABASE_URL" -c "
+  select type, project_id, task_id, actor_email, payload->>'title' as title, created_at
+  from notifications
+  order by id desc
+  limit 3;
+"
+```
+
+Success check:
+
+* The `psql` query shows a fresh row with `type = task_created` and the `title = Cast Test`.
+* No “notify(...) failed” warnings in `/tmp/server.log`.
+
+Next: wait for user
+
+—
+Tiny lesson: SQL casting is a scalpel. By telling Postgres exactly what each parameter is (`::uuid`, `::jsonb`), you sidestep driver heuristics and any stale type inference that a warm pool might cling to. Once this is green, we’ll add `status_changed` and `comment_added` emitters in the same pattern (one-liners).
