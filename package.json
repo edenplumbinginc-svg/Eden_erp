@@ -8,6 +8,7 @@
     "dev": "node server.js",
     "verify": "node -e \"console.log('ok')\"",
     "smoke": "node scripts/smoke.js",
+    "job:idle": "node jobs/idleReminder.js",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
