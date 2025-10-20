@@ -1,13 +1,9 @@
 // server.js - Lean main entry point
 require('dotenv').config({ override: true });
 
-// env-guard (fail fast on missing critical vars)
-const required = ['DATABASE_URL'];
-const missing = required.filter(k => !process.env[k] || String(process.env[k]).trim() === '');
-if (missing.length) {
-  console.error(`Missing required env: ${missing.join(', ')}`);
-  process.exit(1);
-}
+// Enforce single-database contract (fail fast on misconfiguration)
+const { assertSingleDatabaseUrl } = require('./lib/config-db');
+assertSingleDatabaseUrl();
 
 const express = require('express');
 const { bootstrapDatabase, refreshPoolMetadata } = require('./services/database');
