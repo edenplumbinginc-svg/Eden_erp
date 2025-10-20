@@ -4,6 +4,57 @@ const router = express.Router();
 const { pool } = require('../services/database');
 const { authenticate, authorize } = require('../middleware/auth');
 
+/**
+ * GET /api/notifications/recent
+ * Query params:
+ *   limit?: number (default 50, max 200)
+ *   projectId?: uuid
+ *   type?: 'task_created' | 'status_changed' | 'comment_added'
+ *   since?: ISO timestamp (filters created_at >= since)
+ */
+router.get('/api/notifications/recent', async (req, res, next) => {
+  try {
+    const { projectId, type, since } = req.query;
+    let { limit } = req.query;
+
+    // Constrain limit
+    limit = Math.min(Math.max(parseInt(limit || '50', 10), 1), 200);
+
+    const clauses = [];
+    const params = [];
+    let idx = 1;
+
+    if (projectId) {
+      clauses.push(`project_id = $${idx++}::uuid`);
+      params.push(projectId);
+    }
+    if (type) {
+      clauses.push(`type = $${idx++}`);
+      params.push(type);
+    }
+    if (since) {
+      clauses.push(`created_at >= $${idx++}::timestamptz`);
+      params.push(since);
+    }
+
+    const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+
+    const sql = `
+      SELECT id, type, project_id, task_id, actor_email, payload,
+             created_at
+      FROM notifications
+      ${where}
+      ORDER BY id DESC
+      LIMIT ${limit}
+    `;
+
+    const { rows } = await pool.query(sql, params);
+    res.json(rows);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Run notification queue (stub - just console.log)
 router.post('/run', authenticate, authorize(['Admin', 'System']), async (req, res) => {
   try {

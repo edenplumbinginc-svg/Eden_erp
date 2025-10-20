@@ -1,0 +1,109 @@
+[Mode: Execution]
+
+Step: Add a read-only endpoint `GET /api/notifications/recent` to fetch the latest events (so we can surface them in the UI next).
+
+Why it matters: You’ve got producers (`task_created`, `status_changed`, `comment_added`) working. This endpoint is the one, small consumer we need to prove the pipeline end-to-end and unlock a header badge + feed.
+
+Inputs needed:
+
+* Backend repo access (Express)
+* PostgreSQL pool already wired
+
+Command:
+
+1. Create a route (e.g., `routes/notifications.js`):
+
+```js
+// routes/notifications.js
+const express = require('express');
+const router = express.Router();
+
+/**
+ * GET /api/notifications/recent
+ * Query params:
+ *   limit?: number (default 50, max 200)
+ *   projectId?: uuid
+ *   type?: 'task_created' | 'status_changed' | 'comment_added'
+ *   since?: ISO timestamp (filters created_at >= since)
+ */
+router.get('/api/notifications/recent', async (req, res, next) => {
+  try {
+    const { projectId, type, since } = req.query;
+    let { limit } = req.query;
+
+    // constrain limit
+    limit = Math.min(Math.max(parseInt(limit || '50', 10), 1), 200);
+
+    const clauses = [];
+    const params = [];
+    let idx = 1;
+
+    if (projectId) {
+      clauses.push(`project_id = $${idx++}::uuid`);
+      params.push(projectId);
+    }
+    if (type) {
+      clauses.push(`type = $${idx++}`);
+      params.push(type);
+    }
+    if (since) {
+      clauses.push(`created_at >= $${idx++}::timestamptz`);
+      params.push(since);
+    }
+
+    const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+
+    const sql = `
+      SELECT id, type, project_id, task_id, actor_email, payload,
+             created_at
+      FROM notifications
+      ${where}
+      ORDER BY id DESC
+      LIMIT ${limit}
+    `;
+
+    const { rows } = await req.pool.query(sql, params);
+    res.json(rows);
+  } catch (err) {
+    next(err);
+  }
+});
+
+module.exports = router;
+```
+
+2. Register the route in your server (e.g., in `server.js`):
+
+```js
+// after you set up app, pool, and other routes:
+app.use((req, res, next) => { req.pool = pool; next(); });
+
+app.use(require('./routes/notifications')); // <- add this line
+```
+
+3. Smoke test from shell (replace a real project UUID if you want to filter):
+
+```bash
+# All recent (default limit 50)
+curl -s "http://localhost:3000/api/notifications/recent" | jq '.[0:5]'
+
+# Filter by project
+curl -s "http://localhost:3000/api/notifications/recent?projectId=<PROJECT_UUID>" | jq '.[0:5]'
+
+# Filter by type
+curl -s "http://localhost:3000/api/notifications/recent?type=comment_added" | jq '.[0:5]'
+
+# Since last 15 minutes
+curl -s "http://localhost:3000/api/notifications/recent?since=$(date -u -d '-15 minutes' +%FT%TZ)" | jq '.[0:5]'
+```
+
+Success check:
+
+* Each call returns JSON rows with `type`, `project_id`, `task_id`, `actor_email`, `payload`, `created_at`.
+* When you create a new task / change status / add comment, a fresh row appears at the top.
+* No SQL/type errors in server logs.
+
+Next: wait for user
+
+—
+Training nugget: now that producers write facts, make **small, composable readers**. This endpoint is your “read model” for notifications; the UI badge and feed are trivial once the contract is clean. After this is green, we’ll add a tiny header badge + “Notifications” page pulling from this route.
