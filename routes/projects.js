@@ -111,8 +111,9 @@ router.post('/:projectId/tasks', authenticate, async (req, res) => {
         INSERT INTO public.tasks
           (project_id, title, description, status, priority, assignee_id, ball_in_court, due_at, tags, origin)
         VALUES
-          ($1, $2, $3, $4, COALESCE($5,'normal'), $6, $7, $8, $9, $10)
+          ($1::uuid, $2, $3, $4, COALESCE($5,'normal'), $6::uuid, $7::uuid, $8, $9, $10)
         RETURNING id, title, description, status, priority, assignee_id, ball_in_court, due_at, tags, origin, created_at, updated_at`;
+      
       const r = await tx.query(q, [
         req.params.projectId,
         title,
@@ -147,17 +148,17 @@ router.post('/:projectId/tasks', authenticate, async (req, res) => {
         },
       });
       
+      // Enqueue user-specific notification within the same transaction
+      const { enqueueNotification } = require('../services/database');
+      if (ball_in_court) {
+        await enqueueNotification(tx, ball_in_court, taskData.id, 'task_created', {
+          title: title,
+          project_id: req.params.projectId
+        });
+      }
+      
       return taskData;
     });
-    
-    // Enqueue notification for task creation (outside transaction)
-    const { enqueueNotification } = require('../services/database');
-    if (ball_in_court) {
-      await enqueueNotification(ball_in_court, task.id, 'task_created', {
-        title: title,
-        project_id: req.params.projectId
-      });
-    }
     
     res.status(201).json(task);
   } catch (e) {

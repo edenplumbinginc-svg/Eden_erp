@@ -32,16 +32,14 @@ async function bootstrapDatabase() {
 }
 
 // Helper function to enqueue notification
-async function enqueueNotification(userId, taskId, type, payload = {}) {
-  try {
-    await pool.query(
-      `INSERT INTO public.notifications (user_id, task_id, type, payload, status, scheduled_at)
-       VALUES ($1, $2, $3, $4, 'queued', now())`,
-      [userId, taskId, type, JSON.stringify(payload)]
-    );
-  } catch (e) {
-    console.error('Failed to enqueue notification:', e.message);
-  }
+// Accepts db (pool or transaction client) for transactional writes
+async function enqueueNotification(db, userId, taskId, type, payload = {}) {
+  // Removed try-catch to allow errors to propagate and rollback transactions
+  await db.query(
+    `INSERT INTO public.notifications (user_id, task_id, type, payload, channel, event_code, schedule_at)
+     VALUES ($1::uuid, $2::uuid, $3, $4::jsonb, $5, $6, now())`,
+    [userId, taskId, type, payload, 'email', type.toUpperCase()]
+  );
 }
 
 // Helper function to refresh pool connections (no longer needed with Drizzle)
