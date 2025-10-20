@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../services/database');
 const { authenticate, authorize } = require('../middleware/auth');
+const { notify, actorFromHeaders } = require('../lib/notify');
 
 // List projects
 router.get('/', authenticate, async (req, res) => {
@@ -131,6 +132,33 @@ router.post('/:projectId/tasks', authenticate, async (req, res) => {
         project_id: req.params.projectId
       });
     }
+    
+    // Fire-and-forget notification event capture (non-blocking)
+    const task = r.rows[0];
+    (async () => {
+      try {
+        const { actorEmail } = actorFromHeaders(req);
+        await notify(pool, {
+          type: 'task_created',
+          projectId: req.params.projectId,
+          taskId: task.id,
+          actorId: assignee_id || null,
+          actorEmail: actorEmail || null,
+          payload: {
+            title: task.title,
+            priority: task.priority,
+            due_at: task.due_at,
+            assignee_id: task.assignee_id,
+            tags: task.tags || [],
+            status: task.status,
+            origin: task.origin
+          },
+        });
+      } catch (e) {
+        // Keep the bus non-intrusive in v1
+        console.warn('notify(task_created) failed:', e.message);
+      }
+    })();
     
     res.status(201).json(r.rows[0]);
   } catch (e) {
