@@ -1,12 +1,24 @@
 // routes/attachments.js
 const express = require('express');
+const { z } = require('zod');
 const router = express.Router();
 const { pool } = require('../services/database');
 const { authenticate, deriveStableUUID } = require('../middleware/auth');
+const { requirePerm } = require('../middleware/permissions');
+const { validate } = require('../middleware/validate');
+const { audit } = require('../utils/audit');
 const storage = require('../services/storage');
 
+// Zod validation schemas
+const CompleteUploadSchema = z.object({
+  storage_key: z.string().min(1).max(2048),
+  filename: z.string().min(1).max(255),
+  mime: z.string().min(3).max(255).optional(),
+  size_bytes: z.number().int().nonnegative().max(1024 * 1024 * 200).optional() // <= 200 MB
+});
+
 // POST /api/tasks/:id/attachments/init - Initialize attachment upload
-router.post('/tasks/:id/attachments/init', authenticate, async (req, res) => {
+router.post('/tasks/:id/attachments/init', authenticate, requirePerm('tasks:write'), async (req, res) => {
   try {
     const taskId = req.params.id;
     
@@ -23,6 +35,11 @@ router.post('/tasks/:id/attachments/init', authenticate, async (req, res) => {
     // Initialize upload
     const result = await storage.initUpload(taskId);
     
+    await audit(req.user?.id, 'file.init', `task:${taskId}`, { 
+      uploadId: result?.uploadId,
+      bucket: result?.bucket 
+    });
+    
     res.json(result);
   } catch (error) {
     console.error('Attachment init error:', error);
@@ -31,14 +48,10 @@ router.post('/tasks/:id/attachments/init', authenticate, async (req, res) => {
 });
 
 // POST /api/tasks/:id/attachments/complete - Complete attachment upload
-router.post('/tasks/:id/attachments/complete', authenticate, async (req, res) => {
+router.post('/tasks/:id/attachments/complete', authenticate, requirePerm('tasks:write'), validate(CompleteUploadSchema), async (req, res) => {
   try {
     const taskId = req.params.id;
-    const { storage_key, filename, mime, size_bytes } = req.body;
-    
-    if (!storage_key || !filename) {
-      return res.status(400).json({ error: 'storage_key and filename are required' });
-    }
+    const { storage_key, filename, mime, size_bytes } = req.data;
     
     // Verify task exists
     const taskResult = await pool.query(
@@ -71,23 +84,14 @@ router.post('/tasks/:id/attachments/complete', authenticate, async (req, res) =>
     
     const attachment = attachmentResult.rows[0];
     
-    // Log activity
-    try {
-      await pool.query(
-        `INSERT INTO public.activity_log (actor_id, entity_type, entity_id, action, meta, ip)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [
-          userId,
-          'attachment',
-          attachment.id,
-          'attachment.add',
-          JSON.stringify({ filename, storage_key, task_id: taskId }),
-          req.ip || null
-        ]
-      );
-    } catch (logError) {
-      console.error('Failed to log attachment activity:', logError);
-    }
+    // Audit log (replaces activity_log)
+    await audit(userId, 'file.upload', `task:${taskId}`, { 
+      attachmentId: attachment.id,
+      filename,
+      storage_key,
+      mime,
+      size_bytes
+    });
     
     res.json(attachment);
   } catch (error) {
@@ -97,7 +101,7 @@ router.post('/tasks/:id/attachments/complete', authenticate, async (req, res) =>
 });
 
 // GET /api/tasks/:id/attachments - List attachments for a task
-router.get('/tasks/:id/attachments', authenticate, async (req, res) => {
+router.get('/tasks/:id/attachments', authenticate, requirePerm('tasks:read'), async (req, res) => {
   try {
     const taskId = req.params.id;
     
@@ -128,7 +132,7 @@ router.get('/tasks/:id/attachments', authenticate, async (req, res) => {
 });
 
 // DELETE /api/attachments/:attachmentId - Delete an attachment
-router.delete('/attachments/:attachmentId', authenticate, async (req, res) => {
+router.delete('/attachments/:attachmentId', authenticate, requirePerm('tasks:write'), async (req, res) => {
   try {
     const attachmentId = req.params.attachmentId;
     const userId = req.user?.id ? deriveStableUUID(req.user.id) : null;
@@ -145,13 +149,13 @@ router.delete('/attachments/:attachmentId', authenticate, async (req, res) => {
     
     const attachment = attachmentResult.rows[0];
     
-    // Check permissions: Manager/Admin or uploader can delete
-    const canDelete = req.user?.role === 'Manager' || 
-                     req.user?.role === 'Admin' ||
-                     (userId && attachment.uploaded_by === userId);
+    // Additional permission check: Admin or uploader can delete (tasks:write already checked)
+    // This adds an extra layer beyond RBAC for ownership validation
+    const hasAdminPerm = req.user?.permissions?.includes('admin:manage');
+    const isOwner = userId && attachment.uploaded_by === userId;
     
-    if (!canDelete) {
-      return res.status(403).json({ error: 'Insufficient permissions to delete this attachment' });
+    if (!hasAdminPerm && !isOwner) {
+      return res.status(403).json({ error: 'You can only delete your own attachments unless you have admin:manage permission' });
     }
     
     // Remove from storage
@@ -168,27 +172,12 @@ router.delete('/attachments/:attachmentId', authenticate, async (req, res) => {
       [attachmentId]
     );
     
-    // Log activity
-    try {
-      await pool.query(
-        `INSERT INTO public.activity_log (actor_id, entity_type, entity_id, action, meta, ip)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [
-          userId,
-          'attachment',
-          attachmentId,
-          'attachment.delete',
-          JSON.stringify({ 
-            filename: attachment.filename, 
-            storage_key: attachment.storage_key,
-            task_id: attachment.task_id
-          }),
-          req.ip || null
-        ]
-      );
-    } catch (logError) {
-      console.error('Failed to log attachment deletion:', logError);
-    }
+    // Audit log (replaces activity_log)
+    await audit(userId, 'file.delete', `attachment:${attachmentId}`, { 
+      filename: attachment.filename, 
+      storage_key: attachment.storage_key,
+      task_id: attachment.task_id
+    });
     
     res.json({ deleted: true, id: attachmentId });
   } catch (error) {

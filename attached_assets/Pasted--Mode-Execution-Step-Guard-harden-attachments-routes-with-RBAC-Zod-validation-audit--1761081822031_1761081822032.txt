@@ -1,0 +1,164 @@
+[Mode: Execution]
+
+Step: Guard & harden **attachments** routes with RBAC + Zod validation + audit (additive only).
+
+Why it matters: Files are the sharp edge—uploads get abused first. This locks down who can upload/delete, validates payloads, and logs every file action for Coordination audits.
+
+Inputs needed:
+
+* Path to attachments router (assume `src/routes/attachments.js`)
+* Paths to your helpers:
+
+  * `authenticate` middleware
+  * `requirePerm` from `middleware/permissions`
+  * `validate` from `middleware/validate`
+  * `audit` from `utils/audit`
+
+Command (paste; adjust imports/paths if yours differ):
+
+```js
+// src/routes/attachments.js
+import { Router } from "express";
+import { z } from "zod";
+import { authenticate } from "../middleware/authenticate.js";
+import { requirePerm } from "../middleware/permissions.js";
+import { validate } from "../middleware/validate.js";
+import { audit } from "../utils/audit.js";
+// import your existing storage helpers if you have them
+// import { createSignedUploadUrl, finalizeUpload, listTaskFiles, deleteFile } from "../services/storage.js";
+
+export const attachmentsRouter = Router();
+
+// ——— Zod schemas
+const InitUploadSchema = z.object({
+  taskId: z.string().uuid(),
+  fileName: z.string().min(1).max(255),
+  mime: z.string().min(3).max(255),
+  sizeBytes: z.number().int().positive().max(1024 * 1024 * 200), // <= 200 MB
+});
+
+const CompleteUploadSchema = z.object({
+  taskId: z.string().uuid(),
+  bucket: z.string().min(1).max(120),
+  path: z.string().min(1).max(2048), // storage object key
+  mime: z.string().min(3).max(255).optional(),
+  sizeBytes: z.number().int().positive().optional(),
+  transcript: z.string().max(20000).optional(), // optional voice note transcript
+});
+
+const TaskIdSchema = z.object({
+  taskId: z.string().uuid(),
+});
+
+const DeleteSchema = z.object({
+  attachmentId: z.string().uuid(),
+});
+
+// ——— LIST (read)
+attachmentsRouter.get(
+  "/tasks/:taskId/attachments",
+  authenticate,
+  requirePerm("tasks:read"),
+  async (req, res, next) => {
+    try {
+      const { taskId } = req.params;
+      // existing list logic (replace with your helper)
+      const files = await listTaskFiles(taskId); // <- your existing function
+      return res.json({ taskId, files });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ——— INIT UPLOAD (write) — optional: idempotency for safety
+attachmentsRouter.post(
+  "/tasks/:taskId/attachments/init",
+  authenticate,
+  requirePerm("tasks:write"),
+  validate(InitUploadSchema.pick({ fileName: true, mime: true, sizeBytes: true }).extend({
+    taskId: z.string().uuid().default((val, ctx) => ctx?.req?.params?.taskId ?? val)
+  })),
+  // requireIdem("attachment.init"), // enable later if you want idempotency here
+  async (req, res, next) => {
+    try {
+      const userId = req.user?.id;
+      const { taskId, fileName, mime, sizeBytes } = req.data;
+
+      // your existing “create signed URL” or init logic:
+      const init = await createSignedUploadUrl({ taskId, fileName, mime, sizeBytes });
+
+      await audit(userId, "file.init", `task:${taskId}`, { fileName, mime, sizeBytes, uploadId: init?.uploadId });
+      return res.status(201).json(init);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ——— COMPLETE UPLOAD (write)
+attachmentsRouter.post(
+  "/tasks/:taskId/attachments/complete",
+  authenticate,
+  requirePerm("tasks:write"),
+  validate(CompleteUploadSchema),
+  async (req, res, next) => {
+    try {
+      const userId = req.user?.id;
+      const { taskId, bucket, path, mime, sizeBytes, transcript } = req.data;
+
+      // your existing finalize logic:
+      const attachment = await finalizeUpload({ taskId, bucket, path, mime, sizeBytes, transcript });
+
+      await audit(userId, "file.upload", `task:${taskId}`, { attachmentId: attachment.id, bucket, path, mime, sizeBytes, hasTranscript: !!transcript });
+      return res.status(201).json(attachment);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ——— DELETE (write)
+attachmentsRouter.delete(
+  "/attachments/:attachmentId",
+  authenticate,
+  requirePerm("tasks:write"),
+  validate(DeleteSchema),
+  async (req, res, next) => {
+    try {
+      const userId = req.user?.id;
+      const { attachmentId } = req.data;
+
+      // your existing delete logic:
+      const deleted = await deleteFile(attachmentId); // should also remove DB row
+
+      await audit(userId, "file.delete", `attachment:${attachmentId}`, { deleted: !!deleted });
+      return res.status(204).end();
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+```
+
+If you don’t already mount this router, ensure your server does:
+
+```js
+// in server entry
+import { attachmentsRouter } from "./routes/attachments.js";
+app.use("/api", attachmentsRouter);
+```
+
+Success check:
+
+* `GET /api/tasks/:taskId/attachments`
+
+  * Without auth → 401; with user lacking `tasks:read` → 403; with `tasks:read` → 200 JSON list.
+* `POST /api/tasks/:taskId/attachments/init` with bad payload → 400 (Zod issues).
+  With valid payload and `tasks:write` → 201 and an `audit_logs` row `file.init`.
+* `POST /api/tasks/:taskId/attachments/complete` → 201, DB row created in your `coord_task_attachments` (or existing) table, `audit_logs` row `file.upload`.
+* `DELETE /api/attachments/:attachmentId` → 204 and `audit_logs` row `file.delete`.
+
+Next: wait for user
+
+If you paste your current `routes/attachments.js`, I’ll produce a minimal diff so we don’t disturb any existing storage code (Supabase Storage, S3, etc.). After this, we can do a lightning pass to add `projects:write` guards on your project write routes and call Phase-1 Coordination “locked.”
