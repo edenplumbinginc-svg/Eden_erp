@@ -6,6 +6,7 @@ const { authenticate, authorize } = require('../middleware/auth');
 const { requirePerm } = require('../middleware/permissions');
 const { notify, actorFromHeaders } = require('../lib/notify');
 const { withTx } = require('../lib/tx');
+const { audit } = require('../utils/audit');
 
 // List projects - RBAC protected with projects:read permission
 router.get('/', authenticate, requirePerm('projects:read'), async (req, res) => {
@@ -30,7 +31,9 @@ router.post('/', authenticate, async (req, res) => {
        RETURNING id, name, code, status, created_at`,
       [name, code ?? null]
     );
-    res.status(201).json(r.rows[0]);
+    const project = r.rows[0];
+    await audit(req.user?.id, 'project.create', `project:${project.id}`, { name, code });
+    res.status(201).json(project);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -58,7 +61,9 @@ router.patch('/:id', authenticate, async (req, res) => {
       values
     );
     if (r.rowCount === 0) return res.status(404).json({ error: 'project not found' });
-    res.json(r.rows[0]);
+    const project = r.rows[0];
+    await audit(req.user?.id, 'project.update', `project:${project.id}`, { name, code, status });
+    res.json(project);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -69,7 +74,9 @@ router.delete('/:id', authenticate, authorize(['Admin', 'Manager']), async (req,
   try {
     const r = await pool.query('DELETE FROM public.projects WHERE id = $1 RETURNING id', [req.params.id]);
     if (r.rowCount === 0) return res.status(404).json({ error: 'project not found' });
-    res.json({ deleted: true, id: r.rows[0].id });
+    const projectId = r.rows[0].id;
+    await audit(req.user?.id, 'project.delete', `project:${projectId}`, {});
+    res.json({ deleted: true, id: projectId });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

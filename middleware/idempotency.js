@@ -1,6 +1,4 @@
-const { db } = require('../services/database');
-const { idempotency } = require('../drizzle/schema');
-const { eq } = require('drizzle-orm');
+const { pool } = require('../services/database');
 
 const requireIdempotency = (scope) => {
   return async (req, res, next) => {
@@ -18,11 +16,12 @@ const requireIdempotency = (scope) => {
     const scopedKey = `${scope}:${key}`;
     
     try {
-      const exists = await db.query.idempotency.findFirst({
-        where: eq(idempotency.key, scopedKey)
-      });
+      const checkResult = await pool.query(
+        'SELECT key FROM idempotency WHERE key = $1',
+        [scopedKey]
+      );
       
-      if (exists) {
+      if (checkResult.rows.length > 0) {
         return res.status(201).json({
           ok: true,
           idempotent: true,
@@ -30,7 +29,10 @@ const requireIdempotency = (scope) => {
         });
       }
       
-      await db.insert(idempotency).values({ key: scopedKey });
+      await pool.query(
+        'INSERT INTO idempotency (key) VALUES ($1)',
+        [scopedKey]
+      );
       
       next();
     } catch (error) {
