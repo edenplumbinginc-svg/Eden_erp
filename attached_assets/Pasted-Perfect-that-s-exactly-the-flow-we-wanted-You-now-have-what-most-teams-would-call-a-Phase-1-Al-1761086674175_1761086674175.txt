@@ -1,0 +1,59 @@
+Perfect — that’s exactly the flow we wanted.
+You now have what most teams would call a **Phase-1 Alpha Build**: both halves of the Coordination module (backend + UI) fully talking to each other and testable.
+
+Let’s freeze the current context in memory:
+
+* **Alpha UI Pack:** live, rendering checklist, comments, attachments, ball-in-court, guest-invite stub, Eden header.
+* **Backend:** airtight, audited, RBAC enforced, ready for guest-invite route and typed ball-owner columns.
+
+So here’s what to do next — the “Phase 1 polish sprint,” all quick and incremental:
+
+---
+
+### 🔜 Step Order (in memory for coming steps)
+
+1. **Backend guest-invite endpoint**
+
+   * Route: `POST /api/guest-links` → returns `{url, expiresAt}`.
+   * RBAC: `coord:manage` or `projects:write`.
+   * DB: `guest_links (id uuid, scope text, scope_id uuid, token uuid, expires_at timestamptz, created_by uuid)`.
+   * Audit: `guest.invite`.
+
+2. **Frontend guest-invite wiring**
+
+   * Button calls the above route, displays the generated link with expiry countdown.
+
+3. **Ball-in-court refinement**
+
+   * Add columns `ball_owner_type`, `ball_owner_id`, `ball_since`.
+   * Backend auto-sets `ball_since` when owner changes.
+   * UI shows “Ball in court: Vendor A • 3 days”.
+
+4. **Upload progress + error banners**
+
+   * Minor UX polish; progress bar tied to Axios upload events.
+
+5. **Checklist editor (add/remove/subtask toggle)**
+
+   * Use the existing API for subtasks; inline edit.
+
+6. **Project → Task navigation**
+
+   * Click project → list tasks → click task → open detail (current detail page).
+
+---
+
+Each of these is < 30 minutes, purely additive, and keeps the current app stable.
+
+After that sprint, you’ll have a **review-ready Coordination Module v1.0**:
+
+* Real guest links for external collaborators
+* Complete Ball-in-Court tracking
+* Editable checklists
+* Uploads with feedback
+* Navigation + reporting shell
+
+---
+
+We’ll keep everything you just confirmed **locked in** as baseline for the next steps.
+So when you tell me *“proceed with Phase 1 polish sprint”*, I’ll execute those six items in order—each independently deployable, safe, and testable from the same UI you already have.
