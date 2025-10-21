@@ -16,6 +16,24 @@ if (process.env.SENTRY_DSN && process.env.SENTRY_DSN.startsWith('https://')) {
       ],
       tracesSampleRate: 0.2,
       profilesSampleRate: 0.2,
+      beforeSend(event) {
+        const scrub = (obj) => {
+          if (!obj || typeof obj !== 'object') return obj;
+          return JSON.parse(JSON.stringify(obj, (key, value) => {
+            if (typeof value === 'string' && 
+                /password|token|secret|api|ssn|sin|email|authorization|cookie/i.test(key)) {
+              return '[REDACTED]';
+            }
+            return value;
+          }));
+        };
+        
+        if (event.request) event.request = scrub(event.request);
+        if (event.user) event.user = scrub(event.user);
+        if (event.extra) event.extra = scrub(event.extra);
+        
+        return event;
+      }
     });
     sentryEnabled = true;
   } catch (err) {
@@ -28,6 +46,7 @@ const { assertSingleDatabaseUrl } = require('./lib/config-db');
 assertSingleDatabaseUrl();
 
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const { bootstrapDatabase, refreshPoolMetadata } = require('./services/database');
 const { logActivity } = require('./middleware/audit');
 const { metricsMiddleware } = require('./lib/metrics');
@@ -35,6 +54,18 @@ const logger = require('./lib/logger');
 
 const app = express();
 app.use(express.json());
+
+const authRateLimiter = rateLimit({
+  windowMs: 60000,
+  max: 20,
+  message: { error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Too many auth requests, please try again later' } }
+});
+
+const webhookRateLimiter = rateLimit({
+  windowMs: 60000,
+  max: 60,
+  message: { error: { code: 'RATE_LIMIT_EXCEEDED', message: 'Too many webhook requests' } }
+});
 
 // Sentry request handler and tracing (must be after express.json, before routes)
 if (sentryEnabled) {
