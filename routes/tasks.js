@@ -18,6 +18,8 @@ const UpdateTaskSchema = z.object({
   priority: z.string().optional(),
   assignee_id: z.string().uuid().nullable().optional(),
   ball_in_court: z.string().uuid().nullable().optional(),
+  ballOwnerType: z.enum(['user', 'vendor', 'dept', 'system']).nullable().optional(),
+  ballOwnerId: z.string().uuid().nullable().optional(),
   due_at: z.string().datetime().nullable().optional(),
   tags: z.array(z.string().min(1).max(64)).max(50).optional(),
   origin: z.string().optional()
@@ -79,7 +81,8 @@ router.get('/:id', authenticate, requirePerm('tasks:read'), async (req, res) => 
   try {
     const q = `
       SELECT t.id, t.title, t.description, t.status, t.priority,
-             t.assignee_id, t.ball_in_court, t.due_at, t.created_at, t.updated_at,
+             t.assignee_id, t.ball_in_court, t.ball_owner_type, t.ball_owner_id, t.ball_since,
+             t.due_at, t.created_at, t.updated_at,
              t.tags, t.origin, t.project_id,
              CASE 
                WHEN t.status IN ('todo', 'open') AND t.ball_in_court IS NOT NULL 
@@ -100,23 +103,46 @@ router.get('/:id', authenticate, requirePerm('tasks:read'), async (req, res) => 
 // Update task
 router.patch('/:id', authenticate, requirePerm('tasks:write'), validate(UpdateTaskSchema), async (req, res) => {
   try {
-    const { title, description, status, priority, assignee_id, ball_in_court, due_at, tags, origin } = req.data;
+    const { title, description, status, priority, assignee_id, ball_in_court, ballOwnerType, ballOwnerId, due_at, tags, origin } = req.data;
     
-    // Capture old status before transaction (if status is being updated)
+    // Fetch current task data if needed
     let currentStatus = null;
     let currentTaskData = null;
-    if (status !== undefined) {
-      const currentTask = await pool.query('SELECT status, ball_in_court, project_id, title, priority, due_at FROM public.tasks WHERE id = $1', [req.params.id]);
+    let currentTask = null;
+    
+    if (status !== undefined || ballOwnerType !== undefined || ballOwnerId !== undefined) {
+      currentTask = await pool.query(
+        'SELECT status, ball_in_court, ball_owner_type, ball_owner_id, ball_since, project_id, title, priority, due_at FROM public.tasks WHERE id = $1', 
+        [req.params.id]
+      );
       if (currentTask.rowCount === 0) return res.status(404).json({ error: 'task not found' });
-      
-      currentStatus = currentTask.rows[0].status;
       currentTaskData = currentTask.rows[0];
-      let newStatus = status === 'open' ? 'todo' : status; // Map open to todo
+      currentStatus = currentTaskData.status;
       
-      if (!isValidStatusTransition(currentStatus, newStatus)) {
-        return res.status(400).json({ 
-          error: `Invalid status transition from '${currentStatus}' to '${newStatus}'` 
-        });
+      // Validate status transition if status is being updated
+      if (status !== undefined) {
+        let newStatus = status === 'open' ? 'todo' : status;
+        if (!isValidStatusTransition(currentStatus, newStatus)) {
+          return res.status(400).json({ 
+            error: `Invalid status transition from '${currentStatus}' to '${newStatus}'` 
+          });
+        }
+      }
+    }
+    
+    // Detect ball owner change
+    let setBallSince = false;
+    let finalBallOwnerType = ballOwnerType;
+    let finalBallOwnerId = ballOwnerId;
+    
+    if (currentTaskData && (ballOwnerType !== undefined || ballOwnerId !== undefined)) {
+      const typeChanged = ballOwnerType !== undefined && ballOwnerType !== currentTaskData.ball_owner_type;
+      const idChanged = ballOwnerId !== undefined && ballOwnerId !== currentTaskData.ball_owner_id;
+      
+      if (typeChanged || idChanged) {
+        setBallSince = true;
+        finalBallOwnerType = ballOwnerType ?? currentTaskData.ball_owner_type ?? null;
+        finalBallOwnerId = ballOwnerId ?? currentTaskData.ball_owner_id ?? null;
       }
     }
     
@@ -135,6 +161,9 @@ router.patch('/:id', authenticate, requirePerm('tasks:write'), validate(UpdateTa
       if (priority !== undefined) { updates.push(`priority = $${idx++}`); values.push(priority); }
       if (assignee_id !== undefined) { updates.push(`assignee_id = $${idx++}`); values.push(assignee_id); }
       if (ball_in_court !== undefined) { updates.push(`ball_in_court = $${idx++}`); values.push(ball_in_court); }
+      if (ballOwnerType !== undefined) { updates.push(`ball_owner_type = $${idx++}`); values.push(finalBallOwnerType); }
+      if (ballOwnerId !== undefined) { updates.push(`ball_owner_id = $${idx++}`); values.push(finalBallOwnerId); }
+      if (setBallSince) { updates.push(`ball_since = $${idx++}`); values.push(new Date().toISOString()); }
       if (due_at !== undefined) { updates.push(`due_at = $${idx++}`); values.push(due_at); }
       if (tags !== undefined) { updates.push(`tags = $${idx++}`); values.push(tags); }
       if (origin !== undefined) { updates.push(`origin = $${idx++}`); values.push(origin); }
@@ -146,7 +175,9 @@ router.patch('/:id', authenticate, requirePerm('tasks:write'), validate(UpdateTa
       const r = await tx.query(
         `UPDATE public.tasks SET ${updates.join(', ')} 
          WHERE id = $${idx} 
-         RETURNING id, title, description, status, priority, assignee_id, ball_in_court, due_at, tags, origin, created_at, updated_at, project_id`,
+         RETURNING id, title, description, status, priority, assignee_id, ball_in_court, 
+                   ball_owner_type, ball_owner_id, ball_since, due_at, tags, origin, 
+                   created_at, updated_at, project_id`,
         values
       );
       if (r.rowCount === 0) throw new Error('task not found');
@@ -179,8 +210,17 @@ router.patch('/:id', authenticate, requirePerm('tasks:write'), validate(UpdateTa
     });
     
     await audit(req.user?.id, 'task.update', `task:${req.params.id}`, { 
-      title, description, status, priority, assignee_id, ball_in_court, due_at, tags, origin 
+      title, description, status, priority, assignee_id, ball_in_court, ballOwnerType, ballOwnerId, due_at, tags, origin 
     });
+    
+    // Audit ball owner change
+    if (setBallSince) {
+      await audit(req.user?.id, 'ball.owner_set', `task:${req.params.id}`, {
+        type: finalBallOwnerType,
+        id: finalBallOwnerId,
+        since: result.ball_since
+      });
+    }
     
     res.json(result);
   } catch (e) {

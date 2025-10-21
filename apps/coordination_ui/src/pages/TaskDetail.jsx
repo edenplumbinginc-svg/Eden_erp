@@ -4,16 +4,25 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiService } from "../services/api";
 import Countdown from "../components/Countdown";
 
-function Badge({ children, title }) {
-  return <span title={title} className="text-xs px-2 py-0.5 rounded bg-gray-100 border">{children}</span>;
+function daysSince(ts) {
+  if (!ts) return null;
+  const ms = Date.now() - new Date(ts).getTime();
+  return Math.max(0, Math.floor(ms / (1000*60*60*24)));
 }
 
 function BallInCourt({ task }) {
-  const label = task?.ball_in_court ?? (task?.ballOwnerType ? `${task.ballOwnerType}:${task.ballOwnerId}` : "—");
+  const type = task?.ball_owner_type || (task?.ballOwnerType ?? null);
+  const id   = task?.ball_owner_id   || (task?.ballOwnerId   ?? null);
+  const since= task?.ball_since      || (task?.ballSince     ?? null);
+  const label = type && id ? `${type}:${id.substring(0, 8)}` : (task?.ball_in_court ? `user:${task.ball_in_court.substring(0, 8)}` : "—");
+  const d = daysSince(since);
+  
   return (
     <div className="flex items-center gap-2">
       <span className="text-sm font-medium">Ball in Court:</span>
-      <Badge title="Active owner separate from assignee">{label}</Badge>
+      <span className="text-xs px-2 py-0.5 rounded bg-amber-50 border border-amber-300">
+        {label}{d !== null ? ` • ${d} day${d===1?"":"s"}` : ""}
+      </span>
     </div>
   );
 }
