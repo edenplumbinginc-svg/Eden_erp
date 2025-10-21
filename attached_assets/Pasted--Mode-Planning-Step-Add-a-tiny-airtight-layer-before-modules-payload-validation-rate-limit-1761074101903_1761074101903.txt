@@ -1,0 +1,145 @@
+[Mode: Planning]
+
+Step: Add a tiny “airtight” layer before modules: payload validation, rate-limits, audit log, idempotency, background jobs, and PII scrubbing. Each is <1 hour and future-proofs Procurement, Finance, CompanyCam, Ops, Timesheets/GPS, and automation.
+
+Why it matters: These guardrails prevent double-POs, webhook replays, tax mistakes, and noisy errors once modules and automations go live.
+
+Inputs needed:
+
+* Express entry file
+* Existing auth attach point (req.user)
+* Your current logging util (if any)
+* DB access via Drizzle
+
+Command:
+
+1. **Payload validation (Zod) – required for every POST/PATCH**
+
+```ts
+// src/http/validate.ts
+import { ZodSchema } from "zod";
+export const validate = <T>(schema: ZodSchema<T>) => (req, res, next) => {
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error:"bad_request", issues: parsed.error.flatten() });
+  (req as any).data = parsed.data;
+  next();
+};
+```
+
+Use in routes:
+
+```ts
+import { z } from "zod"; import { validate } from "../http/validate";
+const CreatePO = z.object({ vendorId:z.string().uuid(), lines:z.array(z.object({sku:z.string(), qty:z.number().positive()})), currency:z.string().default("CAD") });
+router.post("/api/procurement/po", authenticate, requirePerm("procurement:write"), validate(CreatePO), handler);
+```
+
+2. **Rate limiting (protect auth/public + webhooks)**
+
+```ts
+import rateLimit from "express-rate-limit";
+app.use("/api/auth", rateLimit({ windowMs: 60_000, max: 20 }));
+app.use("/webhooks", rateLimit({ windowMs: 60_000, max: 60 }));
+```
+
+3. **Audit log table (who did what)**
+
+```ts
+// src/db/schema/audit.ts
+import { pgTable, uuid, text, jsonb, timestamp } from "drizzle-orm/pg-core"; import { sql } from "drizzle-orm";
+export const auditLogs = pgTable("audit_logs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id"),
+  action: text("action").notNull(),        // e.g. "po.create", "timesheet.approve"
+  entity: text("entity").notNull(),        // e.g. "po:1234"
+  meta: jsonb("meta"),
+  createdAt: timestamp("created_at").default(sql`now()`).notNull(),
+});
+```
+
+Helper:
+
+```ts
+export const audit = (userId:string|undefined, action:string, entity:string, meta:any={}) =>
+  db.insert(auditLogs).values({ userId: userId ?? null, action, entity, meta });
+```
+
+4. **Idempotency keys (avoid double-creates from retries, esp. webhooks)**
+
+```ts
+// src/middleware/idempotency.ts
+import { pgTable, text, timestamp } from "drizzle-orm/pg-core"; import { sql } from "drizzle-orm";
+export const idempotency = pgTable("idempotency", {
+  key: text("key").primaryKey(),
+  createdAt: timestamp("created_at").default(sql`now()`).notNull(),
+});
+
+// middleware
+export const requireIdem = (scope:string) => async (req,res,next)=>{
+  const key = req.header("Idempotency-Key");
+  if(!key) return res.status(409).json({error:"missing_idempotency_key"});
+  const scoped = `${scope}:${key}`;
+  const exists = await db.query.idempotency.findFirst({ where: (t,{eq})=>eq(t.key, scoped) });
+  if(exists) return res.status(201).json({ ok:true, idempotent:true }); // or replay cached result
+  await db.insert(idempotency).values({ key: scoped });
+  next();
+};
+```
+
+Use on create endpoints & webhooks:
+
+```ts
+router.post("/api/procurement/po", authenticate, requirePerm("procurement:write"), requireIdem("po.create"), validate(CreatePO), handler);
+```
+
+5. **Background job scaffold (for automations, webhooks, retries)**
+
+* Add a minimal queue interface now; plug a real queue later.
+
+```ts
+// src/jobs/queue.ts
+type Job = { name:string; payload:any }; const q: Job[] = [];
+export const enqueue = (name:string, payload:any)=> q.push({name,payload});
+setInterval(async ()=> { const job = q.shift(); if(!job) return; try { /* dispatch by name */ } catch(e){ /* log & requeue if needed */ } }, 1000);
+```
+
+Use it for: PO email dispatch, CompanyCam sync, timesheet rollups, nightly finance exports. Swap to BullMQ/Redis later with same API.
+
+6. **PII & secrets scrubbing (Sentry + logs)**
+
+```ts
+// before Sentry.init:
+Sentry.init({ /* ... */, beforeSend(event){
+  const scrub = (o:any)=> JSON.parse(JSON.stringify(o, (k,v)=>{
+    if(typeof v==="string" && /password|token|secret|api|ssn|sin|email/i.test(k)) return "[redacted]";
+    return v;
+  }));
+  if (event.request) event.request = scrub(event.request);
+  if (event.user) event.user = scrub(event.user);
+  return event;
+}});
+```
+
+And ensure logs never print raw `req.headers.authorization`, `Authorization`, `Cookie`.
+
+Success check:
+
+* Invalid POST payloads return 400 with Zod issues.
+* Bursty hits to `/webhooks` are limited (429 on abuse).
+* Writes create an `audit_logs` row with `action` + `entity`.
+* Double POST with same `Idempotency-Key` does not create duplicates.
+* You can `enqueue("companycam.sync", {photoId})` from controllers.
+* Sentry events and logs contain no secrets.
+
+Next: wait for user
+
+— What this buys for each module —
+
+* **Procurement:** no duplicate POs, clean audit trail (`po.create`, `po.approve`), reliable vendor email dispatch via queue.
+* **Finance:** input validation stops bad tax totals; audit logs for invoice changes; idempotent exports to QB later.
+* **CompanyCam:** webhook verification + idempotency eliminates duplicate photo imports; queue handles retries.
+* **Operations:** rate limits on public endpoints; audit for schedule changes.
+* **Timesheets & GPS:** audited approvals; validation on hours; privacy by scrubbing; future geo-consent gate.
+* **Automation:** job queue is the spine; move long tasks off request thread safely.
+
+If you want me to apply these now, I’ll switch to Execution Mode and give you one step at a time, starting with adding `audit_logs` and wiring the tiny `audit()` helper into your existing POST handlers.
