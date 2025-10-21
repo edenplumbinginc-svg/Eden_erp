@@ -17,6 +17,8 @@
     "db:studio": "drizzle-kit studio",
     "db:introspect": "drizzle-kit introspect",
     "postdeploy": "node scripts/postdeploy.mjs",
+    "uptime": "node scripts/ping-healthz.js",
+    "sentry:test": "node -e \"require('@sentry/node').captureMessage('SENTRY_SCRIPT_OK')\"",
     "health:strict": "curl -sS http://localhost:3000/healthz | jq \".status, .db, .tls, .latency_ms\" || curl -sS http://localhost:3000/healthz",
     "health:relaxed": "HEALTH_TLS_RELAX=1 node . & sleep 1 && curl -sS http://localhost:3000/healthz && killall node || true",
     "diag:db": "curl -sS http://localhost:3000/diag/db | node -e \"const data = require('fs').readFileSync(0, 'utf8'); try { console.log(JSON.stringify(JSON.parse(data), null, 2)); } catch(e) { console.log(data); }\"",

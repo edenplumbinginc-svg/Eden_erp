@@ -17,7 +17,7 @@ The current focus is on backend development. A `ui/` directory is present for fu
 - **Runtime**: Node.js 20.
 - **Schema Management**: Drizzle ORM for database schema definition, introspection, and type safety, moving away from ad-hoc DDL on boot.
 - **Authentication**: Global authentication enforced on all `/api/*` routes, supporting development headers and JWT bearer tokens (stubbed for future integration with Auth0/Clerk).
-- **Monitoring**: Comprehensive production monitoring system with health checks (quick, detailed, liveness, readiness, metrics), structured JSON logging with severity levels, and automated smoke tests.
+- **Monitoring**: Comprehensive production monitoring system with health checks (quick, detailed, liveness, readiness, metrics), structured JSON logging with severity levels, and automated smoke tests. Integrated with Sentry for error tracking and performance monitoring (traces at 20%, profiling at 20%). Includes uptime monitoring script (60-second health pings) and automated post-deploy gates to prevent bad deployments.
 - **Database Configuration Safety**: Multi-layered validation framework ensures the application connects to the correct database instance, preventing mismatches and providing detailed diagnostic information.
 - **Database Diagnostics**: Full diagnostic infrastructure with retry/backoff logic, DNS resolution, comprehensive `/diag/db` endpoint, and fail-fast startup behavior. Reduces MTTR (Mean Time To Repair) from days to minutes by providing instant visibility into connection, TLS, DNS, and latency issues.
 - **Automation**: Includes an automated job for sending idle task reminders, leveraging `last_activity_at` timestamps.

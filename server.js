@@ -1,6 +1,28 @@
 // server.js - Lean main entry point
 require('dotenv').config();
 
+// Sentry initialization (must be first)
+const Sentry = require('@sentry/node');
+const { nodeProfilingIntegration } = require('@sentry/profiling-node');
+
+let sentryEnabled = false;
+if (process.env.SENTRY_DSN && process.env.SENTRY_DSN.startsWith('https://')) {
+  try {
+    Sentry.init({
+      dsn: process.env.SENTRY_DSN,
+      environment: process.env.NODE_ENV || 'development',
+      integrations: [
+        nodeProfilingIntegration()
+      ],
+      tracesSampleRate: 0.2,
+      profilesSampleRate: 0.2,
+    });
+    sentryEnabled = true;
+  } catch (err) {
+    console.error('Failed to initialize Sentry:', err.message);
+  }
+}
+
 // Enforce single-database contract (fail fast on misconfiguration)
 const { assertSingleDatabaseUrl } = require('./lib/config-db');
 assertSingleDatabaseUrl();
@@ -13,6 +35,12 @@ const logger = require('./lib/logger');
 
 const app = express();
 app.use(express.json());
+
+// Sentry request handler and tracing (must be after express.json, before routes)
+if (sentryEnabled) {
+  app.use(Sentry.Handlers.requestHandler());
+  app.use(Sentry.Handlers.tracingHandler());
+}
 
 // Apply metrics collection middleware
 app.use(metricsMiddleware);
@@ -38,6 +66,12 @@ bootstrapDatabase()
       logger.warn('Database connected but degraded', { tableCount: result.tableCount });
     } else {
       logger.error('Database bootstrap failed, running in degraded mode', { error: result.error });
+    }
+    
+    // Send Sentry boot signal if configured
+    if (sentryEnabled) {
+      Sentry.captureMessage('SENTRY_INIT_OK');
+      logger.info('Sentry monitoring active');
     }
   })
   .catch(err => {
@@ -210,6 +244,18 @@ app.get('/routes', (_, res) => {
   }
   res.json(routes);
 });
+
+// --- Sentry test route (development only) ---
+if (process.env.NODE_ENV !== 'production') {
+  app.get('/boom', (req, res) => {
+    throw new Error('Sentry test error');
+  });
+}
+
+// --- Sentry error handler (must be after routes, before other error handlers) ---
+if (sentryEnabled) {
+  app.use(Sentry.Handlers.errorHandler());
+}
 
 // --- Error handling (must be last) ---
 const { notFoundHandler, errorHandler } = require('./middleware/error-handler');
