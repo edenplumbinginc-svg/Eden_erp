@@ -1,7 +1,7 @@
 modules = ["nodejs-20", "postgresql-16", "python-3.11"]
 [agent]
 expertMode = true
-integrations = ["github:1.0.0"]
+integrations = ["github:1.0.0", "notion:1.0.0"]
 
 [nix]
 channel = "stable-25_05"
@@ -65,3 +65,11 @@ outputType = "webview"
 [[ports]]
 localPort = 3000
 externalPort = 3000
+
+[[ports]]
+localPort = 5002
+externalPort = 3003
+
+[[ports]]
+localPort = 43301
+externalPort = 80

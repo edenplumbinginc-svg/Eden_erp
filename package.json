@@ -25,6 +25,10 @@
   "keywords": [],
   "author": "",
   "dependencies": {
+    "@notionhq/client": "^5.3.0",
+    "@octokit/rest": "^22.0.0",
+    "@sentry/node": "^10.20.0",
+    "@sentry/profiling-node": "^10.20.0",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.44.6",
     "express": "^5.1.0",

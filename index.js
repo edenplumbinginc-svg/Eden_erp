@@ -2,6 +2,8 @@ const express = require('express');
 const { healthz } = require('./routes/healthz.cjs');
 
 const app = express();
+const { initSentry } = require("./monitoring/sentry.cjs");
+initSentry(app);
 
 // Mount health check
 app.get('/healthz', healthz);
