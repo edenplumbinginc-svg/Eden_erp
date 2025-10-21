@@ -100,6 +100,10 @@ app.get(['/health', '/api/health'], (_, res) => res.json({ status: 'ok' }));
 // --- Mount comprehensive health check routes ---
 app.use('/api/health', require('./routes/health'));
 
+// --- Self-contained health check with TLS configuration ---
+const { healthz } = require('./routes/healthz');
+app.get('/healthz', healthz);
+
 app.get('/db/ping', async (_, res) => {
   if (!process.env.DATABASE_URL)
     return res.status(200).json({ db: 'not_configured' });

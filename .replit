@@ -46,7 +46,7 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "export DB_SSL_REJECT_UNAUTHORIZED=false && npm run dev"
+args = "export HEALTH_TLS_RELAX=1 && export DB_SSL_REJECT_UNAUTHORIZED=false && npm run dev"
 waitForPort = 3000
 
 [[workflows.workflow]]
@@ -64,11 +64,3 @@ outputType = "webview"
 [[ports]]
 localPort = 3000
 externalPort = 3000
-
-[[ports]]
-localPort = 5002
-externalPort = 3003
-
-[[ports]]
-localPort = 34021
-externalPort = 3001
