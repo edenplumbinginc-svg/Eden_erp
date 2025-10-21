@@ -1,0 +1,212 @@
+[Mode: Planning]
+
+Step: Stand up the “Monitoring Layer” (Sentry + Uptime) as a thin, separate concern on top of the existing backend.
+
+Why it matters: Monitoring is a new layer—observability that sits beside your app code, not inside your business logic—so you can detect failures fast without slowing feature work.
+
+Inputs needed:
+
+* Your `server` entry file path (e.g., `src/server.ts` or `index.js`)
+* Package manager (npm or pnpm)
+* The exact `/healthz` URL (public if available; otherwise local)
+* Your Sentry project DSN (store as `SENTRY_DSN` secret)
+
+Command:
+
+* Conceptual framing:
+
+  * **App layer**: routes, DB, business logic.
+  * **Monitoring layer**: error tracking (Sentry), uptime pings (60s), deploy gate (`npm run postdeploy`).
+  * **Glue**: env vars + a few lines of middleware + one small script.
+
+Success check:
+
+* Sentry receives a test event from your app.
+* Uptime script logs 200s from `/healthz` every 60s (and logs errors if it dips).
+* `npm run postdeploy` is automatically invoked by your deploy routine.
+
+Next: wait for user
+
+---
+
+Here’s the crisp plan you asked for (no time estimates; just effort sizing so you can choose focus):
+
+* **1) Sentry integration (Express)** — **S (low effort, high leverage)**
+
+  * Add SDK, initialize with DSN, wire request + error handlers, send a test event.
+* **2) Uptime monitor (internal script)** — **S**
+
+  * Tiny Node script that hits `/healthz` every 60s; logs status and latency; non-blocking.
+  * (Optional later: swap to an external uptime service for alerts & dashboards.)
+* **3) Post-deploy gate automation** — **S → M** (depends on your deploy target)
+
+  * Ensure `npm run postdeploy` runs automatically on deploy.
+  * If your platform exposes a “deploy hook,” wire that; else use a wrapper `deploy` script.
+
+**Priority advice:** Do monitoring first. It’s a small lift with outsized benefits and doesn’t slow app work. Once green, you can safely focus on the task app without flying blind.
+
+Mini lesson: Observability = **logs** (what happened), **metrics** (how often/how slow), **traces** (where time went). Sentry gives errors + traces quickly; your `/healthz` ping is your first metric.
+
+---
+
+[Mode: Execution]
+
+Step: Verify Sentry DSN & wire minimal Express integration.
+
+Why it matters: This gives you immediate visibility into runtime errors and a reliable deploy sanity check.
+
+Inputs needed:
+
+* Your Sentry DSN (put into env/secret as `SENTRY_DSN`)
+* Your Express entry file path
+* Node version ≥ 18
+
+Command:
+
+1. Install & set env:
+
+```bash
+npm i @sentry/node @sentry/profiling-node
+# set secret in your environment (example)
+# export SENTRY_DSN="https://<key>@o<org>.ingest.sentry.io/<project>"
+```
+
+2. Patch your Express bootstrap (paste into your server entry before routes):
+
+```js
+// sentry-init.js (or at top of your server entry)
+import * as Sentry from "@sentry/node";
+import { nodeProfilingIntegration } from "@sentry/profiling-node";
+
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  environment: process.env.NODE_ENV || "development",
+  integrations: [nodeProfilingIntegration()],
+  tracesSampleRate: 0.2,     // adjust later
+  profilesSampleRate: 0.2,   // adjust later
+});
+
+// In Express:
+app.use(Sentry.Handlers.requestHandler());
+app.use(Sentry.Handlers.tracingHandler());
+```
+
+3. Keep your routes… then add Sentry error handler **before** your final fallback:
+
+```js
+// after routes:
+app.use(Sentry.Handlers.errorHandler());
+
+// Optional: your own error responder
+app.use((err, req, res, next) => {
+  const status = err.status || 500;
+  res.status(status).json({ error: "internal_error", status });
+});
+```
+
+4. Send a test event once on boot (temporary):
+
+```js
+if (process.env.SENTRY_DSN) {
+  Sentry.captureMessage("SENTRY_INIT_OK");
+}
+```
+
+5. Create the 60s uptime ping script:
+
+```bash
+mkdir -p scripts
+```
+
+```js
+// scripts/ping-healthz.mjs
+import { setTimeout as wait } from "node:timers/promises";
+const URL = process.env.HEALTHZ_URL || "http://localhost:3000/healthz";
+const INTERVAL_MS = Number(process.env.HEALTHZ_INTERVAL_MS || 60000);
+
+const fetchFn = globalThis.fetch ?? (await import("node-fetch")).default;
+
+async function ping() {
+  const t0 = Date.now();
+  try {
+    const res = await fetchFn(URL, { cache: "no-store" });
+    const body = await res.text().catch(() => "");
+    const dt = Date.now() - t0;
+    if (res.ok) {
+      console.log(`[UP] ${URL} ${res.status} latency=${dt}ms`);
+    } else {
+      console.error(`[DOWN] ${URL} ${res.status} latency=${dt}ms body=${body.slice(0,200)}`);
+    }
+  } catch (e) {
+    const dt = Date.now() - t0;
+    console.error(`[ERR] ${URL} latency=${dt}ms err=${e?.message || e}`);
+  }
+}
+
+(async () => {
+  // immediate first ping
+  await ping();
+  while (true) {
+    await wait(INTERVAL_MS);
+    await ping();
+  }
+})();
+```
+
+6. Wire npm scripts:
+
+```json
+{
+  "scripts": {
+    "dev": "node ./index.js",
+    "postdeploy": "node ./scripts/postdeploy-gate.mjs || true",
+    "uptime": "node ./scripts/ping-healthz.mjs",
+    "deploy": "npm run build && npm run postdeploy"
+  }
+}
+```
+
+7. Make the post-deploy gate (if you don’t already have it), calling `/healthz` and exiting non-zero on failure:
+
+```js
+// scripts/postdeploy-gate.mjs
+const url = process.env.HEALTHZ_URL || "http://localhost:3000/healthz";
+const fetchFn = globalThis.fetch ?? (await import("node-fetch")).default;
+
+try {
+  const r = await fetchFn(url, { cache: "no-store" });
+  const ok = r.ok;
+  const text = await r.text().catch(() => "");
+  console.log("🩺 /healthz:", r.status, text.slice(0, 200));
+  if (!ok) process.exit(1);
+  console.log("🚀 POST-DEPLOY GATE PASSED.");
+} catch (e) {
+  console.error("❌ POST-DEPLOY GATE FAILED:", e?.message || e);
+  process.exit(1);
+}
+```
+
+8. `.replit` (example) so a manual “Deploy” runs the gate after your build:
+
+```
+run = "npm run dev"
+deploy = "npm run deploy"
+```
+
+Success check:
+
+* You see `SENTRY_INIT_OK` in Sentry events after starting the app.
+* Running `npm run uptime` prints `[UP] ...` every 60s.
+* Running your deploy flow triggers `npm run postdeploy` and prints `🚀 POST-DEPLOY GATE PASSED.`
+
+Next: wait for user
+
+---
+
+Decision guidance (your question: backend vs apps)
+
+* **Monitoring layer**: small, high leverage, and once it’s in, you can sprint on app features with confidence.
+* **“Better backend”** work (refactors, stricter TLS, repo structure, migrations) tends to be **M-sized**. Do it incrementally in parallel with app work (guided by what Sentry reveals).
+* **Task app features**: proceed after monitoring; use Sentry issues to drive fixes first, then ship features.
+
+To continue fast, paste your current **server entry file** and `package.json`. I’ll patch them in-place so everything above fits your exact project structure.
