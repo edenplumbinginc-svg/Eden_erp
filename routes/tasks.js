@@ -1,11 +1,58 @@
 // routes/tasks.js
 const express = require('express');
+const { z } = require('zod');
 const router = express.Router();
 const { pool, enqueueNotification } = require('../services/database');
 const { authenticate, deriveStableUUID } = require('../middleware/auth');
 const { requirePerm } = require('../middleware/permissions');
+const { validate } = require('../middleware/validate');
 const { notify, actorFromHeaders } = require('../lib/notify');
 const { withTx } = require('../lib/tx');
+const { audit } = require('../utils/audit');
+
+// Zod validation schemas
+const UpdateTaskSchema = z.object({
+  title: z.string().min(1).max(200).optional(),
+  description: z.string().max(20000).optional(),
+  status: z.enum(['open', 'todo', 'in_progress', 'review', 'done']).optional(),
+  priority: z.string().optional(),
+  assignee_id: z.string().uuid().nullable().optional(),
+  ball_in_court: z.string().uuid().nullable().optional(),
+  due_at: z.string().datetime().nullable().optional(),
+  tags: z.array(z.string().min(1).max(64)).max(50).optional(),
+  origin: z.string().optional()
+}).refine(data => Object.keys(data).length > 0, {
+  message: "At least one field must be provided"
+});
+
+const CreateCommentSchema = z.object({
+  body: z.string().min(1).max(20000),
+  author_id: z.string().optional()
+});
+
+const CreateSubtaskSchema = z.object({
+  title: z.string().min(1).max(200),
+  done: z.boolean().optional(),
+  order_index: z.number().int().optional()
+});
+
+const UpdateSubtaskSchema = z.object({
+  title: z.string().min(1).max(200).optional(),
+  done: z.boolean().optional(),
+  order_index: z.number().int().optional()
+}).refine(data => Object.keys(data).length > 0, {
+  message: "At least one field must be provided"
+});
+
+const BallHandoffSchema = z.object({
+  to_user_id: z.string().min(1),
+  from_user_id: z.string().optional(),
+  note: z.string().max(1000).optional()
+});
+
+const CreateDependencySchema = z.object({
+  blocks_task_id: z.string().uuid()
+});
 
 // Status flow validation
 const validStatusTransitions = {
@@ -51,9 +98,9 @@ router.get('/:id', authenticate, requirePerm('tasks:read'), async (req, res) => 
 });
 
 // Update task
-router.patch('/:id', authenticate, requirePerm('tasks:write'), async (req, res) => {
+router.patch('/:id', authenticate, requirePerm('tasks:write'), validate(UpdateTaskSchema), async (req, res) => {
   try {
-    const { title, description, status, priority, assignee_id, ball_in_court, due_at, tags, origin } = req.body ?? {};
+    const { title, description, status, priority, assignee_id, ball_in_court, due_at, tags, origin } = req.data;
     
     // Capture old status before transaction (if status is being updated)
     let currentStatus = null;
@@ -131,6 +178,10 @@ router.patch('/:id', authenticate, requirePerm('tasks:write'), async (req, res) 
       return updatedTask;
     });
     
+    await audit(req.user?.id, 'task.update', `task:${req.params.id}`, { 
+      title, description, status, priority, assignee_id, ball_in_court, due_at, tags, origin 
+    });
+    
     res.json(result);
   } catch (e) {
     if (e.message === 'no fields to update') {
@@ -151,6 +202,9 @@ router.delete('/:id', authenticate, requirePerm('tasks:write'), async (req, res)
       [req.params.id]
     );
     if (r.rowCount === 0) return res.status(404).json({ error: 'task not found' });
+    
+    await audit(req.user?.id, 'task.delete', `task:${req.params.id}`, {});
+    
     res.json({ deleted: true, id: r.rows[0].id });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -173,10 +227,9 @@ router.get('/:taskId/comments', authenticate, requirePerm('tasks:read'), async (
   }
 });
 
-router.post('/:taskId/comments', authenticate, requirePerm('tasks:write'), async (req, res) => {
+router.post('/:taskId/comments', authenticate, requirePerm('tasks:write'), validate(CreateCommentSchema), async (req, res) => {
   try {
-    const { body, author_id } = req.body ?? {};
-    if (!body) return res.status(400).json({ error: 'body required' });
+    const { body, author_id } = req.data;
     
     // Fetch task to get project_id and context for event bus
     const task = await pool.query('SELECT id, project_id, title FROM public.tasks WHERE id = $1', [req.params.taskId]);
@@ -213,6 +266,11 @@ router.post('/:taskId/comments', authenticate, requirePerm('tasks:write'), async
       return commentData;
     });
     
+    await audit(req.user?.id, 'comment.create', `task:${req.params.taskId}`, { 
+      commentId: comment.id, 
+      bodyLength: body.length 
+    });
+    
     res.status(201).json(comment);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -220,10 +278,9 @@ router.post('/:taskId/comments', authenticate, requirePerm('tasks:write'), async
 });
 
 // Ball handoff
-router.post('/:taskId/ball', authenticate, requirePerm('tasks:write'), async (req, res) => {
+router.post('/:taskId/ball', authenticate, requirePerm('tasks:write'), validate(BallHandoffSchema), async (req, res) => {
   try {
-    const { to_user_id, from_user_id, note } = req.body ?? {};
-    if (!to_user_id) return res.status(400).json({ error: 'to_user_id required' });
+    const { to_user_id, from_user_id, note } = req.data;
 
     // Convert user IDs to UUIDs
     const finalToUserId = deriveStableUUID(to_user_id);
@@ -243,6 +300,11 @@ router.post('/:taskId/ball', authenticate, requirePerm('tasks:write'), async (re
        VALUES ($1,$2,$3,$4)`,
       [req.params.taskId, finalFromUserId, finalToUserId, note ?? null]
     );
+
+    await audit(req.user?.id, 'ball.handoff', `task:${req.params.taskId}`, { 
+      from_user_id: finalFromUserId, 
+      to_user_id: finalToUserId 
+    });
 
     res.json(up.rows[0]);
   } catch (e) {
@@ -281,10 +343,9 @@ router.get('/:id/subtasks', authenticate, requirePerm('tasks:read'), async (req,
   }
 });
 
-router.post('/:id/subtasks', authenticate, requirePerm('tasks:write'), async (req, res) => {
+router.post('/:id/subtasks', authenticate, requirePerm('tasks:write'), validate(CreateSubtaskSchema), async (req, res) => {
   try {
-    const { title, done, order_index } = req.body ?? {};
-    if (!title) return res.status(400).json({ error: 'title required' });
+    const { title, done, order_index } = req.data;
     
     const r = await pool.query(
       `INSERT INTO public.subtasks (task_id, title, done, order_index)
@@ -292,6 +353,12 @@ router.post('/:id/subtasks', authenticate, requirePerm('tasks:write'), async (re
        RETURNING id, task_id, title, done, order_index, created_at, updated_at`,
       [req.params.id, title, done ?? false, order_index ?? 0]
     );
+    
+    await audit(req.user?.id, 'subtask.create', `task:${req.params.id}`, { 
+      subtaskId: r.rows[0].id, 
+      title 
+    });
+    
     res.status(201).json(r.rows[0]);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -299,9 +366,9 @@ router.post('/:id/subtasks', authenticate, requirePerm('tasks:write'), async (re
 });
 
 // Subtask operations (by subtask ID)
-router.patch('/subtasks/:id', authenticate, requirePerm('tasks:write'), async (req, res) => {
+router.patch('/subtasks/:id', authenticate, requirePerm('tasks:write'), validate(UpdateSubtaskSchema), async (req, res) => {
   try {
-    const { title, done, order_index } = req.body ?? {};
+    const { title, done, order_index } = req.data;
     const updates = [];
     const values = [];
     let idx = 1;
@@ -321,6 +388,9 @@ router.patch('/subtasks/:id', authenticate, requirePerm('tasks:write'), async (r
       values
     );
     if (r.rowCount === 0) return res.status(404).json({ error: 'subtask not found' });
+    
+    await audit(req.user?.id, 'subtask.update', `subtask:${req.params.id}`, { title, done, order_index });
+    
     res.json(r.rows[0]);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -331,6 +401,9 @@ router.delete('/subtasks/:id', authenticate, requirePerm('tasks:write'), async (
   try {
     const r = await pool.query('DELETE FROM public.subtasks WHERE id = $1 RETURNING id', [req.params.id]);
     if (r.rowCount === 0) return res.status(404).json({ error: 'subtask not found' });
+    
+    await audit(req.user?.id, 'subtask.delete', `subtask:${req.params.id}`, {});
+    
     res.json({ deleted: true, id: r.rows[0].id });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -354,10 +427,9 @@ router.get('/:id/dependencies', authenticate, requirePerm('tasks:read'), async (
   }
 });
 
-router.post('/:id/dependencies', authenticate, requirePerm('tasks:write'), async (req, res) => {
+router.post('/:id/dependencies', authenticate, requirePerm('tasks:write'), validate(CreateDependencySchema), async (req, res) => {
   try {
-    const { blocks_task_id } = req.body ?? {};
-    if (!blocks_task_id) return res.status(400).json({ error: 'blocks_task_id required' });
+    const { blocks_task_id } = req.data;
     
     // Check for circular dependency
     const circular = await pool.query(
@@ -380,6 +452,9 @@ router.post('/:id/dependencies', authenticate, requirePerm('tasks:write'), async
     if (r.rowCount === 0) {
       return res.status(409).json({ error: 'Dependency already exists' });
     }
+    
+    await audit(req.user?.id, 'dependency.create', `task:${req.params.id}`, { blocks_task_id });
+    
     res.status(201).json(r.rows[0]);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -395,6 +470,11 @@ router.delete('/:id/dependencies/:blocksId', authenticate, requirePerm('tasks:wr
       [req.params.id, req.params.blocksId]
     );
     if (r.rowCount === 0) return res.status(404).json({ error: 'dependency not found' });
+    
+    await audit(req.user?.id, 'dependency.delete', `task:${req.params.id}`, { 
+      blocks_task_id: req.params.blocksId 
+    });
+    
     res.json({ deleted: true, ...r.rows[0] });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -412,6 +492,9 @@ router.delete('/:id/soft', authenticate, requirePerm('tasks:write'), async (req,
       [req.params.id]
     );
     if (r.rowCount === 0) return res.status(404).json({ error: 'task not found' });
+    
+    await audit(req.user?.id, 'task.soft_delete', `task:${req.params.id}`, {});
+    
     res.json({ deleted: true, id: r.rows[0].id });
   } catch (e) {
     res.status(500).json({ error: e.message });

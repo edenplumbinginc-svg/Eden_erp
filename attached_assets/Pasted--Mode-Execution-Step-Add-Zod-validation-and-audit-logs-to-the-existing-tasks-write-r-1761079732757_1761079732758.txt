@@ -1,0 +1,152 @@
+[Mode: Execution]
+
+Step: Add **Zod validation** and **audit logs** to the existing `tasks` write routes (keep handlers intact).
+
+Why it matters: Bad payloads get rejected up front (400), and every change is traceable (“who did what to which task”), which is essential for Coordination and later automation.
+
+Inputs needed:
+
+* File path to your tasks router (assume `src/routes/tasks.js`)
+* Your `audit` helper path (assume `../utils/audit.js`)
+* Your auth attach point (assume `req.user.id`)
+
+Command (copy–paste; adjust paths if yours differ):
+
+```js
+// src/routes/tasks.js
+import { z } from "zod";
+import { validate } from "../middleware/validate.js";      // already created in airtight layer
+import { audit } from "../utils/audit.js";                 // airtight helper
+import { authenticate } from "../middleware/authenticate.js";
+import { requirePerm } from "../middleware/permissions.js";
+
+// === Zod Schemas ===
+const UpdateTaskSchema = z.object({
+  title: z.string().min(1).max(200).optional(),
+  description: z.string().max(20_000).optional(),
+  status: z.enum(["todo","in_progress","review","done"]).optional(),
+  priority: z.enum(["low","normal","high","urgent"]).optional(),
+  assigneeId: z.string().uuid().nullable().optional(),
+  dueAt: z.coerce.date().nullable().optional(),
+  tags: z.array(z.string().min(1).max(64)).max(50).optional(),
+});
+
+const CreateCommentSchema = z.object({
+  body: z.string().min(1).max(20_000),
+  // optional inline ball pass
+  ballPassToType: z.enum(["user","vendor","dept","system"]).optional(),
+  ballPassToId: z.string().min(1).optional(),
+});
+
+const SoftDeleteSchema = z.object({
+  reason: z.string().min(3).max(500).optional(),
+});
+
+// === Write routes with validation + audit ===
+
+// PATCH /:id  (update fields / status transitions)
+router.patch("/:id",
+  authenticate,
+  requirePerm("tasks:write"),
+  validate(UpdateTaskSchema),
+  async (req, res, next) => {
+    try {
+      const userId = req.user?.id;
+      const taskId = req.params.id;
+      const data = req.data; // <- set by validate()
+
+      // --- existing update logic (unchanged) ---
+      const updated = await updateTask(taskId, data); // your current function
+
+      // audit after success
+      await audit(userId, "task.update", `task:${taskId}`, { patch: data });
+      return res.json(updated);
+    } catch (err) {
+      return next(err);
+    }
+  }
+);
+
+// DELETE /:id  (hard delete if you have it)
+router.delete("/:id",
+  authenticate,
+  requirePerm("tasks:write"),
+  async (req, res, next) => {
+    try {
+      const userId = req.user?.id;
+      const taskId = req.params.id;
+
+      // --- existing delete logic ---
+      await deleteTask(taskId); // your current function
+
+      await audit(userId, "task.delete", `task:${taskId}`, {});
+      return res.status(204).end();
+    } catch (err) {
+      return next(err);
+    }
+  }
+);
+
+// DELETE /:id/soft  (soft-delete with optional reason)
+router.delete("/:id/soft",
+  authenticate,
+  requirePerm("tasks:write"),
+  validate(SoftDeleteSchema),
+  async (req, res, next) => {
+    try {
+      const userId = req.user?.id;
+      const taskId = req.params.id;
+      const { reason } = req.data ?? {};
+
+      // --- existing soft-delete logic ---
+      await softDeleteTask(taskId, reason); // your current function
+
+      await audit(userId, "task.soft_delete", `task:${taskId}`, { reason });
+      return res.status(204).end();
+    } catch (err) {
+      return next(err);
+    }
+  }
+);
+
+// POST /:taskId/comments  (create comment, with optional ball handoff)
+router.post("/:taskId/comments",
+  authenticate,
+  requirePerm("tasks:write"),
+  validate(CreateCommentSchema),
+  async (req, res, next) => {
+    try {
+      const userId = req.user?.id;
+      const taskId = req.params.taskId;
+      const { body, ballPassToType, ballPassToId } = req.data;
+
+      // --- existing create comment logic ---
+      const comment = await createTaskComment(taskId, { body, authorId: userId });
+
+      // optional ball pass (keep your existing function; no change if you don’t support it yet)
+      if (ballPassToType && ballPassToId) {
+        await passBall(taskId, { type: ballPassToType, id: ballPassToId, by: userId });
+        await audit(userId, "ball.pass", `task:${taskId}`, {
+          toType: ballPassToType, toId: ballPassToId, commentId: comment.id
+        });
+      }
+
+      await audit(userId, "comment.create", `task:${taskId}`, { commentId: comment.id });
+      return res.status(201).json(comment);
+    } catch (err) {
+      return next(err);
+    }
+  }
+);
+```
+
+Success check:
+
+* Send an invalid PATCH payload (e.g., `{ priority: "super" }`) → `400` with Zod issues.
+* Valid PATCH returns `200` and inserts an `audit_logs` row `task.update`.
+* POST comment with body only → `201` and `audit_logs` `comment.create`.
+* POST comment with `ballPassToType/Id` → also logs `ball.pass`.
+
+Next: wait for user
+
+If you paste your current `routes/tasks.js`, I’ll apply this as an exact minimal diff. After this, we’ll do the same treatment for `routes/attachments.js` (validation + permissions + audit) as the **next single step**.
