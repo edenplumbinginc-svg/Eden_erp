@@ -2,10 +2,10 @@ const express = require('express');
 const router = express.Router();
 const { z } = require('zod');
 const crypto = require('crypto');
-const db = require('../server/storage');
+const { pool } = require('../services/database');
 const { validate } = require('../middleware/validate');
-const { authenticate } = require('../middleware/authenticate');
-const { requirePerm } = require('../middleware/permissions');
+const { authenticate } = require('../middleware/auth');
+const { requirePerm, hasPerm } = require('../middleware/permissions');
 const { audit } = require('../utils/audit');
 
 const CreateGuestLinkSchema = z.object({
@@ -24,11 +24,28 @@ function addDurationToNow(str) {
 router.post(
   '/',
   authenticate,
-  (req, res, next) => {
-    requirePerm('coord:manage')(req, res, (e) => {
-      if (!e) return next();
-      return requirePerm('projects:write')(req, res, next);
-    });
+  async (req, res, next) => {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        error: { code: 'UNAUTHENTICATED', message: 'Sign in required' }
+      });
+    }
+    
+    const hasCoordManage = await hasPerm(userId, 'coord:manage');
+    const hasProjectsWrite = await hasPerm(userId, 'projects:write');
+    
+    if (!hasCoordManage && !hasProjectsWrite) {
+      return res.status(403).json({
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Insufficient permissions',
+          required: 'coord:manage OR projects:write'
+        }
+      });
+    }
+    
+    next();
   },
   validate(CreateGuestLinkSchema),
   async (req, res, next) => {
@@ -38,7 +55,7 @@ router.post(
       const token = crypto.randomUUID();
       const expiresAt = addDurationToNow(expiresIn);
 
-      await db.query(
+      await pool.query(
         `INSERT INTO guest_links (scope, scope_id, token, expires_at, created_by)
          VALUES ($1, $2, $3, $4, $5)`,
         [scope, scopeId, token, expiresAt.toISOString(), userId]
