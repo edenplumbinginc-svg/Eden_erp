@@ -17,6 +17,7 @@
     "db:studio": "drizzle-kit studio",
     "db:introspect": "drizzle-kit introspect",
     "seed:rbac": "node ./scripts/seed-rbac.mjs",
+    "seed:tasks-perms": "node ./scripts/seed-tasks-perms.mjs",
     "postdeploy": "node scripts/postdeploy.mjs",
     "uptime": "node scripts/ping-healthz.js",
     "sentry:test": "node -e \"require('@sentry/node').captureMessage('SENTRY_SCRIPT_OK')\"",
