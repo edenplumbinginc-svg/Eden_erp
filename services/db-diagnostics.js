@@ -46,7 +46,8 @@ async function waitForDb(maxAttempts = 5) {
       attempt++;
       
       if (attempt < maxAttempts) {
-        const delay = Math.min(5000, 500 * attempt); // Cap at 5 seconds
+        // True exponential backoff: 500ms * 2^attempt, capped at 5 seconds
+        const delay = Math.min(5000, 500 * Math.pow(2, attempt - 1));
         console.error('⚠️ Database connection attempt failed', {
           attempt,
           max_attempts: maxAttempts,
