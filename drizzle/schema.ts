@@ -4,17 +4,19 @@ import { sql } from "drizzle-orm"
 
 
 export const roles = pgTable("roles", {
-        id: uuid().defaultRandom().primaryKey().notNull(),
-        code: text().notNull(),
-        name: text().notNull(),
+        id: uuid("id").defaultRandom().primaryKey().notNull(),
+        slug: text("slug").notNull(),
+        name: text("name").notNull(),
+        createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 }, (table) => [
-        unique("roles_code_key").on(table.code),
+        unique("roles_slug_key").on(table.slug),
 ]);
 
 export const permissions = pgTable("permissions", {
-        id: uuid().defaultRandom().primaryKey().notNull(),
-        code: text().notNull(),
-        name: text().notNull(),
+        id: uuid("id").defaultRandom().primaryKey().notNull(),
+        code: text("code").notNull(),
+        description: text("description").notNull(),
+        createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 }, (table) => [
         unique("permissions_code_key").on(table.code),
 ]);

@@ -1,0 +1,184 @@
+[Mode: Execution]
+
+Step: Create the RBAC foundation in your DB (roles, permissions, role_permissions, user_roles) using Drizzle for Postgres.
+
+Why it matters: This gives you a clean, normalized core so every module (Estimation, Projects, Procurement, etc.) can enforce “who can do what” without hard-coding checks.
+
+Inputs needed:
+
+* You’re using Drizzle (Postgres) already.
+* Your Drizzle config path (usually `drizzle.config.ts`).
+* Your server’s DB URL is working (it is, per /diag/db).
+
+Command (copy–paste exactly; adjust paths if your folders differ):
+
+1. Define RBAC tables in your Drizzle schema.
+   Create or append to `src/db/schema/rbac.ts`:
+
+```ts
+// src/db/schema/rbac.ts
+import { pgTable, text, timestamp, primaryKey, uuid } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+
+export const roles = pgTable("roles", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  slug: text("slug").notNull().unique(),        // e.g., "admin", "estimator"
+  name: text("name").notNull(),                 // e.g., "Administrator"
+  createdAt: timestamp("created_at").default(sql`now()`).notNull(),
+});
+
+export const permissions = pgTable("permissions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  // convention: "<module>:<action>" e.g., "estimation:read", "projects:write", "admin:manage"
+  code: text("code").notNull().unique(),
+  description: text("description"),
+  createdAt: timestamp("created_at").default(sql`now()`).notNull(),
+});
+
+export const rolePermissions = pgTable("role_permissions", {
+  roleId: uuid("role_id").notNull().references(() => roles.id, { onDelete: "cascade" }),
+  permissionId: uuid("permission_id").notNull().references(() => permissions.id, { onDelete: "cascade" }),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.roleId, t.permissionId] }),
+}));
+
+export const userRoles = pgTable("user_roles", {
+  userId: uuid("user_id").notNull(), // reference your users table's PK
+  roleId: uuid("role_id").notNull().references(() => roles.id, { onDelete: "cascade" }),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.userId, t.roleId] }),
+}));
+```
+
+If you keep a central schema barrel, add:
+
+```ts
+// src/db/schema/index.ts
+export * from "./rbac";
+```
+
+2. Generate & run a migration.
+
+```bash
+# Generate SQL
+npx drizzle-kit generate
+
+# Apply migration
+npx drizzle-kit migrate
+```
+
+3. Seed baseline roles & permissions.
+   Create `scripts/seed-rbac.mjs`:
+
+```js
+// scripts/seed-rbac.mjs
+import 'dotenv/config';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import pkg from 'pg';
+import { roles, permissions, rolePermissions } from '../src/db/schema/rbac.js';
+
+const { Client } = pkg;
+const client = new Client({ connectionString: process.env.DATABASE_URL });
+await client.connect();
+const db = drizzle(client);
+
+const baseRoles = [
+  { slug: 'admin', name: 'Administrator' },
+  { slug: 'ops', name: 'Operations' },
+  { slug: 'estimator', name: 'Estimator' },
+  { slug: 'procurement', name: 'Procurement' },
+  { slug: 'coord', name: 'Coordination' },
+  { slug: 'hr', name: 'HR' },
+  { slug: 'viewer', name: 'Read-Only Viewer' },
+];
+
+const modules = [
+  'estimation','precon','projects','procurement','coord','hr','marketing','admin'
+];
+const actions = ['read','write','manage']; // manage = admin for that module
+
+// Build permission codes like "projects:read"
+const perms = [];
+for (const m of modules) for (const a of actions) perms.push({
+  code: `${m}:${a}`, description: `${m} -> ${a}`
+});
+
+// Insert roles
+for (const r of baseRoles) {
+  await db.insert(roles).values(r).onConflictDoNothing({ target: roles.slug });
+}
+
+// Insert permissions
+for (const p of perms) {
+  await db.insert(permissions).values(p).onConflictDoNothing({ target: permissions.code });
+}
+
+// Minimal role → permission map
+// admin gets everything:
+const { rows: roleRows } = await client.query('select id, slug from roles');
+const { rows: permRows } = await client.query('select id, code from permissions');
+const bySlug = Object.fromEntries(roleRows.map(r => [r.slug, r.id]));
+const byCode = Object.fromEntries(permRows.map(p => [p.code, p.id]));
+
+function grant(slug, codes) {
+  const roleId = bySlug[slug];
+  return Promise.all(codes.map(code => {
+    const permissionId = byCode[code];
+    if (!permissionId) return;
+    return client.query(
+      'insert into role_permissions(role_id, permission_id) values ($1,$2) on conflict do nothing',
+      [roleId, permissionId]
+    );
+  }));
+}
+
+// admin → all
+await grant('admin', permRows.map(p => p.code));
+
+// viewer → read everything
+await grant('viewer', permRows.filter(p => p.code.endsWith(':read')).map(p => p.code));
+
+// estimator → estimation read/write
+await grant('estimator', ['estimation:read','estimation:write']);
+
+// procurement → procurement read/write
+await grant('procurement', ['procurement:read','procurement:write']);
+
+// ops → projects read/write
+await grant('ops', ['projects:read','projects:write']);
+
+// coord → coordination read/write
+await grant('coord', ['coord:read','coord:write']);
+
+// hr → hr read/write
+await grant('hr', ['hr:read','hr:write']);
+
+await client.end();
+console.log('RBAC seed complete.');
+```
+
+Add an npm script and run it:
+
+```json
+{
+  "scripts": {
+    "seed:rbac": "node ./scripts/seed-rbac.mjs"
+  }
+}
+```
+
+```bash
+npm run seed:rbac
+```
+
+Success check:
+
+* Tables exist: `roles`, `permissions`, `role_permissions`, `user_roles`.
+* `select count(*) from roles;` ≥ 7; `select count(*) from permissions;` = modules×actions (8×3=24).
+* `admin` has all permissions; `viewer` has only `*:read`; others have module-scoped read/write.
+
+Next: wait for user
+
+---
+
+Quick mentor note: use permission codes like `"<module>:<action>"`. That makes route guards dead simple later: `requirePerm("projects:write")`. Once you confirm the migration + seed ran, I’ll give you the **single middleware** to enforce permissions on routes (plus a helper `hasPerm(user, code)`), and I’ll patch it into your existing auth flow. Paste your `package.json` and your Drizzle paths if they differ so I can align the scripts exactly.
