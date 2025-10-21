@@ -48,7 +48,7 @@ router.get('/', authenticate, requirePerm('projects:read'), async (req, res) => 
 });
 
 // Create project
-router.post('/', authenticate, validate(CreateProjectSchema), async (req, res) => {
+router.post('/', authenticate, requirePerm('projects:write'), validate(CreateProjectSchema), async (req, res) => {
   try {
     const { name, code } = req.data;
     const r = await pool.query(
@@ -66,7 +66,7 @@ router.post('/', authenticate, validate(CreateProjectSchema), async (req, res) =
 });
 
 // Update project
-router.patch('/:id', authenticate, validate(UpdateProjectSchema), async (req, res) => {
+router.patch('/:id', authenticate, requirePerm('projects:write'), validate(UpdateProjectSchema), async (req, res) => {
   try {
     const { name, code, status } = req.data;
     const updates = [];
@@ -94,7 +94,7 @@ router.patch('/:id', authenticate, validate(UpdateProjectSchema), async (req, re
 });
 
 // Delete project
-router.delete('/:id', authenticate, authorize(['Admin', 'Manager']), async (req, res) => {
+router.delete('/:id', authenticate, requirePerm('projects:write'), async (req, res) => {
   try {
     const r = await pool.query('DELETE FROM public.projects WHERE id = $1 RETURNING id', [req.params.id]);
     if (r.rowCount === 0) return res.status(404).json({ error: 'project not found' });
@@ -107,7 +107,7 @@ router.delete('/:id', authenticate, authorize(['Admin', 'Manager']), async (req,
 });
 
 // List tasks by project
-router.get('/:projectId/tasks', authenticate, async (req, res) => {
+router.get('/:projectId/tasks', authenticate, requirePerm('tasks:read'), async (req, res) => {
   try {
     const q = `
       SELECT t.id, t.title, t.description, t.status, t.priority,
@@ -130,7 +130,7 @@ router.get('/:projectId/tasks', authenticate, async (req, res) => {
 });
 
 // Create task in project
-router.post('/:projectId/tasks', authenticate, validate(CreateTaskSchema), async (req, res) => {
+router.post('/:projectId/tasks', authenticate, requirePerm('tasks:write'), validate(CreateTaskSchema), async (req, res) => {
   try {
     const { title, description, assignee_id, ball_in_court, due_at, priority, tags, origin } = req.data;
     
@@ -207,6 +207,14 @@ router.post('/:projectId/tasks', authenticate, validate(CreateTaskSchema), async
       
       console.log('[TX] Returning task data, transaction should commit');
       return taskData;
+    });
+    
+    // Audit log for task creation
+    await audit(req.user?.id, 'task.create', `project:${req.params.projectId}`, { 
+      taskId: task.id,
+      title: task.title,
+      status: task.status,
+      priority: task.priority
     });
     
     res.status(201).json(task);

@@ -1,0 +1,134 @@
+[Mode: Execution]
+
+Step: Harden **projects** routes with RBAC (`projects:read|write`), Zod validation, and audit logging (additive only).
+
+Why it matters: Your snapshot showed only partial guards on projects. This locks the backbone so Coordination stays consistent with Tasks/Attachments.
+
+Inputs needed:
+
+* Path to `routes/projects.js` (or `.ts`)
+* Paths to `authenticate`, `requirePerm`, `validate`, and `audit`
+
+Command (paste; adjust import paths to your tree):
+
+```js
+// routes/projects.js
+import { z } from "zod";
+import { authenticate } from "../middleware/authenticate.js";
+import { requirePerm } from "../middleware/permissions.js";
+import { validate } from "../middleware/validate.js";
+import { audit } from "../utils/audit.js";
+
+// ===== Zod Schemas =====
+const CreateProjectSchema = z.object({
+  name: z.string().min(1).max(200),
+  code: z.string().max(50).optional(),
+  description: z.string().max(20_000).optional(),
+  status: z.enum(["active","on_hold","closed"]).default("active").optional(),
+});
+
+const UpdateProjectSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  code: z.string().max(50).optional(),
+  description: z.string().max(20_000).optional(),
+  status: z.enum(["active","on_hold","closed"]).optional(),
+});
+
+// ===== READ (guard with projects:read) =====
+router.get("/",
+  authenticate,
+  requirePerm("projects:read"),
+  async (req, res, next) => {
+    // existing list logic
+    try { const rows = await listProjects(req.query); return res.json(rows); }
+    catch (e) { next(e); }
+  }
+);
+
+router.get("/:id",
+  authenticate,
+  requirePerm("projects:read"),
+  async (req, res, next) => {
+    try { const row = await getProject(req.params.id); return res.json(row); }
+    catch (e) { next(e); }
+  }
+);
+
+// ===== WRITE (guard with projects:write, validate, audit) =====
+router.post("/",
+  authenticate,
+  requirePerm("projects:write"),
+  validate(CreateProjectSchema),
+  async (req, res, next) => {
+    try {
+      const userId = req.user?.id;
+      const data = req.data;            // set by validate()
+      const created = await createProject({ ...data, createdBy: userId }); // your existing function
+      await audit(userId, "project.create", `project:${created.id}`, { data });
+      return res.status(201).json(created);
+    } catch (e) { next(e); }
+  }
+);
+
+router.patch("/:id",
+  authenticate,
+  requirePerm("projects:write"),
+  validate(UpdateProjectSchema),
+  async (req, res, next) => {
+    try {
+      const userId = req.user?.id;
+      const { id } = req.params;
+      const data = req.data;
+      const updated = await updateProject(id, data); // your existing function
+      await audit(userId, "project.update", `project:${id}`, { patch: data });
+      return res.json(updated);
+    } catch (e) { next(e); }
+  }
+);
+
+router.delete("/:id",
+  authenticate,
+  requirePerm("projects:write"),
+  async (req, res, next) => {
+    try {
+      const userId = req.user?.id;
+      const { id } = req.params;
+      await deleteProject(id); // your existing function
+      await audit(userId, "project.delete", `project:${id}`, {});
+      return res.status(204).end();
+    } catch (e) { next(e); }
+  }
+);
+
+// ===== Nested: tasks under project (ensure tasks:write for create) =====
+router.post("/:projectId/tasks",
+  authenticate,
+  requirePerm("tasks:write"),
+  // if you already have a CreateTask schema, reuse it here:
+  // validate(CreateTaskSchema),
+  async (req, res, next) => {
+    try {
+      const userId = req.user?.id;
+      const { projectId } = req.params;
+      const task = await createTask(projectId, req.body); // existing logic
+      await audit(userId, "task.create", `project:${projectId}`, { taskId: task.id });
+      return res.status(201).json(task);
+    } catch (e) { next(e); }
+  }
+);
+```
+
+Success check:
+
+* Unauthed → `401` on any `/projects` route.
+* Authed without `projects:read` → `403` on `GET /projects`.
+* Authed with `viewer` (has `projects:read`) → `GET /projects` returns `200`.
+* `POST /projects` with missing `name` → `400` (Zod).
+* `POST /projects` valid payload with `projects:write` → `201` + `audit_logs` row `project.create`.
+* `PATCH /projects/:id` valid → `200` + `project.update` audit row.
+* `DELETE /projects/:id` → `204` + `project.delete` audit row.
+* `POST /projects/:projectId/tasks` → requires `tasks:write` + `audit task.create`.
+
+Next: wait for user
+
+When you confirm these routes pass the checks, we can mark **Coordination Phase-1 backend** done and move to either (a) Ball-in-Court field refinements, or (b) the next module (Estimation or Procurement) with the same airtight pattern.
