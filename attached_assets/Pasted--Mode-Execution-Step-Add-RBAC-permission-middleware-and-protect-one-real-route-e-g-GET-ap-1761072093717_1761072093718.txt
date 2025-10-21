@@ -1,0 +1,102 @@
+[Mode: Execution]
+
+Step: Add RBAC permission middleware and protect one real route (e.g., `GET /api/projects`) with `projects:read`.
+
+Why it matters: Infra is locked—now you need enforceable “who can do what” so features don’t leak access. This is the smallest step that makes the rest of the app safe-by-default.
+
+Inputs needed:
+
+* Your Express server entry file path.
+* Your auth user shape (where do we read the authenticated user ID on each request? e.g., `req.user.id`).
+* Paste your current auth middleware (so I can patch cleanly, per your rule).
+
+Command (drop-in starter you can paste; I’ll tailor once you share your current code):
+
+```ts
+// src/auth/permissions.ts
+import type { Request, Response, NextFunction } from "express";
+import { drizzle } from "drizzle-orm/node-postgres";
+import pkg from "pg";
+import { eq, and, inArray } from "drizzle-orm";
+import { userRoles, rolePermissions, permissions } from "../db/schema/rbac"; // adjust path
+
+// ——— DB bootstrap (reuse your existing pool if you have one)
+const { Pool } = pkg;
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const db = drizzle(pool);
+
+// Helper: fetch a flat list of permission codes for a user
+export async function getUserPermissions(userId: string): Promise<string[]> {
+  const rows = await db
+    .select({ code: permissions.code })
+    .from(userRoles)
+    .innerJoin(rolePermissions, eq(rolePermissions.roleId, userRoles.roleId))
+    .innerJoin(permissions, eq(permissions.id, rolePermissions.permissionId))
+    .where(eq(userRoles.userId, userId));
+  return Array.from(new Set(rows.map(r => r.code)));
+}
+
+// Express middleware factory
+export function requirePerm(code: string) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // 🔑 Adjust this to your auth attach point:
+      const userId = (req as any).user?.id || (req as any).auth?.userId;
+      if (!userId) return res.status(401).json({ error: "unauthorized" });
+
+      // Admin fast-path (optional, keep or remove)
+      const adminCodes = ["admin:manage"];
+      const perms = await getUserPermissions(userId);
+      if (perms.includes(code) || perms.some(c => adminCodes.includes(c))) {
+        return next();
+      }
+      return res.status(403).json({ error: "forbidden", need: code });
+    } catch (e: any) {
+      return res.status(500).json({ error: "internal_error", message: e?.message });
+    }
+  };
+}
+```
+
+Wire it to a real route:
+
+```ts
+// src/routes/projects.ts (example)
+import { Router } from "express";
+import { requirePerm } from "../auth/permissions";
+
+export const projectsRouter = Router();
+
+projectsRouter.get("/", requirePerm("projects:read"), async (req, res) => {
+  // return a tiny stub for now; real data later
+  res.json({ ok: true, projects: [] });
+});
+```
+
+Register router (in your server entry, after auth middleware and before error handlers):
+
+```ts
+import { projectsRouter } from "./routes/projects";
+app.use("/api/projects", projectsRouter);
+```
+
+Grant a role to your test user (replace `YOUR_USER_UUID`):
+
+```sql
+-- Give yourself Operations role (projects read/write)
+insert into user_roles (user_id, role_id)
+select 'YOUR_USER_UUID', r.id
+from roles r
+where r.slug = 'ops'
+on conflict do nothing;
+```
+
+Success check:
+
+* With no auth or a user without `ops`/`admin`, `GET /api/projects` → `403 {"error":"forbidden","need":"projects:read"}`.
+* With a user granted `ops` **or** `admin`, `GET /api/projects` → `200 {"ok":true,"projects":[]}`.
+* Sentry should show the 403 as a handled response (no error), health stays green, uptime logs `[UP]`.
+
+Next: wait for user
+
+Mini lesson to sharpen your developer brain: keep permission codes human-parseable (`module:action`). It makes both seed scripts and code reviews brain-light. Once you paste your current auth attach (where `req.user` gets set) and server entry, I’ll splice this middleware exactly into your code, deleting anything redundant so it fits like a glove.

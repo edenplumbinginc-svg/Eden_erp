@@ -3,11 +3,12 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../services/database');
 const { authenticate, authorize } = require('../middleware/auth');
+const { requirePerm } = require('../middleware/permissions');
 const { notify, actorFromHeaders } = require('../lib/notify');
 const { withTx } = require('../lib/tx');
 
-// List projects
-router.get('/', authenticate, async (req, res) => {
+// List projects - RBAC protected with projects:read permission
+router.get('/', authenticate, requirePerm('projects:read'), async (req, res) => {
   try {
     const r = await pool.query(
       'SELECT id, name, code, status, created_at FROM public.projects ORDER BY created_at DESC'
