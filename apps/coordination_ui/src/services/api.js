@@ -37,6 +37,7 @@ export const apiService = {
   deleteProject: (id) => api.delete(`/projects/${id}`),
 
   // Tasks
+  getTask: (id) => api.get(`/tasks/${id}`).then(res => res.data),
   getTasksByProject: (projectId) => api.get(`/projects/${projectId}/tasks`),
   createTask: (projectId, data) => api.post(`/projects/${projectId}/tasks`, data),
   updateTask: (id, data) => api.patch(`/tasks/${id}`, data),
@@ -44,7 +45,14 @@ export const apiService = {
 
   // Comments
   getComments: (taskId) => api.get(`/tasks/${taskId}/comments`),
+  getTaskComments: (taskId) => api.get(`/tasks/${taskId}/comments`).then(res => res.data),
   createComment: (taskId, data) => api.post(`/tasks/${taskId}/comments`, data),
+  createTaskComment: (taskId, data) => api.post(`/tasks/${taskId}/comments`, data).then(res => res.data),
+
+  // Attachments
+  getTaskAttachments: (taskId) => api.get(`/tasks/${taskId}/attachments`).then(res => res.data),
+  initAttachmentUpload: (taskId, data) => api.post(`/tasks/${taskId}/attachments/init`, data).then(res => res.data),
+  completeAttachmentUpload: (taskId, data) => api.post(`/tasks/${taskId}/attachments/complete`, data).then(res => res.data),
 
   // Ball Handoff
   handoffBall: (taskId, data) => api.post(`/tasks/${taskId}/ball`, data),

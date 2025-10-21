@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink, useNavigate, useParams } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { apiService } from './services/api';
 import ProjectList from './components/ProjectList';
 import TaskList from './components/TaskList';
 import Reports from './components/Reports';
 import DevAuthSwitcher from './components/DevAuthSwitcher';
+import EdenHeader from './components/EdenHeader';
+import TaskDetail from './pages/TaskDetail';
+
+const queryClient = new QueryClient();
 
 function AppContent() {
   const [projects, setProjects] = useState([]);
@@ -50,16 +55,14 @@ function AppContent() {
   };
 
   return (
-    <div className="container">
-      <div className="header">
-        <h1>Eden Coordination System</h1>
-        <p>Project and Task Management with Ball Handoff Tracking</p>
-      </div>
-
-      <DevAuthSwitcher onUserChange={() => {
-        loadProjects();
-        loadUsers();
-      }} />
+    <div className="min-h-screen bg-gray-50">
+      <EdenHeader />
+      
+      <div className="container">
+        <DevAuthSwitcher onUserChange={() => {
+          loadProjects();
+          loadUsers();
+        }} />
 
       <div className="tabs">
         <NavLink
@@ -103,8 +106,13 @@ function AppContent() {
             }
           />
           <Route path="/reports" element={<Reports />} />
+          <Route 
+            path="/task/:taskId" 
+            element={<TaskDetail />} 
+          />
         </Routes>
       )}
+      </div>
     </div>
   );
 }
@@ -131,9 +139,11 @@ function TasksRoute({ projects, users, onBack }) {
 
 function App() {
   return (
-    <Router>
-      <AppContent />
-    </Router>
+    <QueryClientProvider client={queryClient}>
+      <Router>
+        <AppContent />
+      </Router>
+    </QueryClientProvider>
   );
 }
 
