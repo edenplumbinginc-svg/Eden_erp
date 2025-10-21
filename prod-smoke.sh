@@ -2,6 +2,14 @@
 set -euo pipefail
 export PSQL_PAGER=cat
 
+# Unset Replit Secrets that override .env
+unset DATABASE_URL EXPECTED_DB_HOST EXPECTED_DB_PROJECT_REF
+
+# Load DATABASE_URL from .env
+export $(grep '^DATABASE_URL=' .env | xargs)
+export DB_SSL_REJECT_UNAUTHORIZED=false
+export PGSSLMODE=allow
+
 echo "🛑 Stopping any running server..."
 pkill -f "node server" 2>/dev/null || true
 sleep 1

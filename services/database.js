@@ -7,8 +7,14 @@ const { instrumentPool } = require('../lib/db-wrapper');
 const allowInsecure = String(process.env.DB_SSL_REJECT_UNAUTHORIZED || '').toLowerCase() === 'false';
 const ssl = allowInsecure ? { rejectUnauthorized: false } : { rejectUnauthorized: true };
 
+// Strip sslmode from connection string if present (it would override our ssl config)
+const connectionString = (process.env.DATABASE_URL || '').replace(/[?&]sslmode=[^&]+/, '');
+
+console.log(`🔧 SSL Config: DB_SSL_REJECT_UNAUTHORIZED=${process.env.DB_SSL_REJECT_UNAUTHORIZED}, allowInsecure=${allowInsecure}, rejectUnauthorized=${ssl.rejectUnauthorized}`);
+console.log(`🔧 Connection String (masked): ${connectionString.replace(/:([^:@]+)@/, ':***@').substring(0, 120)}`);
+
 const rawPool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString,
   ssl
 });
 
