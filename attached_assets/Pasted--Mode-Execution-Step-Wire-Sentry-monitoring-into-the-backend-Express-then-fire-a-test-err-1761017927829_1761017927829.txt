@@ -1,0 +1,102 @@
+[Mode: Execution]
+Step: Wire **Sentry** monitoring into the backend (Express), then fire a test error so you can see events in the Sentry dashboard.
+Why it matters: You’ve got a green post-deploy gate; now you need visibility. Sentry will catch crashes, slow requests, and DB errors so you don’t have to hunt logs.
+Inputs needed: your **SENTRY_DSN** (paste it when prompted below).
+
+Command (paste in Replit → Shell exactly; replace the DSN placeholder when asked):
+
+```bash
+# 0) Dependencies
+npm i @sentry/node @sentry/profiling-node --silent
+
+# 1) Add Sentry init (CommonJS)
+cat > monitoring/sentry.cjs <<'JS'
+const Sentry = require("@sentry/node");
+const { nodeProfilingIntegration } = require("@sentry/profiling-node");
+
+function initSentry(app) {
+  const dsn = process.env.SENTRY_DSN;
+  if (!dsn) {
+    console.warn("[sentry] SENTRY_DSN not set — monitoring disabled");
+    return;
+  }
+  Sentry.init({
+    dsn,
+    environment: process.env.NODE_ENV || "production",
+    tracesSampleRate: 0.2,              // 20% of requests for tracing
+    integrations: [nodeProfilingIntegration()],
+    profilesSampleRate: 0.1,            // 10% profiling
+  });
+
+  // Request handler must be the first middleware
+  app.use(Sentry.handlers.requestHandler());
+  app.use(Sentry.handlers.tracingHandler());
+
+  // Expose a test route to generate an error
+  app.get("/boom", (_req, _res) => {
+    throw new Error("Sentry test crash: /boom");
+  });
+
+  // Error handler should be last
+  app.use(Sentry.handlers.errorHandler());
+
+  // Fallback error handler
+  app.use((err, _req, res, _next) => {
+    res.status(500).json({ error: "internal_error", message: err.message });
+  });
+
+  // Global process-level safety nets
+  process.on("unhandledRejection", (e) => {
+    Sentry.captureException(e);
+    console.error("[unhandledRejection]", e);
+  });
+  process.on("uncaughtException", (e) => {
+    Sentry.captureException(e);
+    console.error("[uncaughtException]", e);
+  });
+
+  console.log("[sentry] initialized");
+}
+module.exports = { initSentry };
+JS
+
+# 2) Make sure index.js wires Sentry before routes
+node -e '
+const fs=require("fs");
+let code=fs.readFileSync("index.js","utf8");
+if(!/initSentry/.test(code)){
+  code = code.replace(
+    /const app = express\(\);\n/,
+    "const app = express();\nconst { initSentry } = require(\"./monitoring/sentry.cjs\");\ninitSentry(app);\n"
+  );
+  fs.writeFileSync("index.js", code);
+  console.log("✔ Sentry wired into index.js");
+} else {
+  console.log("ℹ Sentry already wired");
+}
+'
+
+# 3) Add your DSN to .env (edit the placeholder!)
+if ! grep -q "^SENTRY_DSN=" .env 2>/dev/null; then
+  echo 'SENTRY_DSN=<PASTE_YOUR_SENTRY_DSN_HERE>' >> .env
+fi
+sed -n '1,200p' .env | sed 's/SENTRY_DSN=.*/SENTRY_DSN=<REDACTED>/' | sed 's/DATABASE_URL=.*/DATABASE_URL=<REDACTED>/'
+
+# 4) Restart backend (keep current DB TLS mode)
+killall node 2>/dev/null || true
+node . & sleep 1
+
+# 5) Trigger a test error to Sentry
+echo '--- Hitting /boom to generate a Sentry event ---'
+curl -sS http://localhost:3000/boom | head -n 2 || true
+```
+
+Success check:
+
+* Terminal prints `[sentry] initialized`.
+* `GET /boom` returns HTTP 500 with `{ "error": "internal_error", ... }`.
+* In Sentry, you see a new error event “Sentry test crash: /boom” from your service within ~1–2 minutes.
+
+Next: wait for user
+
+Once Sentry is green, I’ll add an **uptime check** that pings `/healthz` every 60s (copy-paste), and then we’ll lock in a 1-click **postdeploy** REPL run command so every deploy runs the gate automatically.
