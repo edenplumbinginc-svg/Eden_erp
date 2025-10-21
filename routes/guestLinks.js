@@ -61,9 +61,8 @@ router.post(
         [scope, scopeId, token, expiresAt.toISOString(), userId]
       );
 
-      const base = process.env.PUBLIC_BASE_URL || process.env.REPLIT_DEV_DOMAIN 
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-        : 'http://localhost:5000';
+      const base = process.env.PUBLIC_BASE_URL ?? 
+        (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000');
       const url = `${base}/guest?token=${token}`;
 
       await audit(userId, 'guest.invite', `${scope}:${scopeId}`, { 
