@@ -35,6 +35,7 @@ I prefer iterative development, with a focus on delivering functional increments
     - **System**: `/health`, `/db/ping`, `/db/users`, `/routes`.
     - **Projects**: Full CRUD operations (`GET`, `POST`, `PATCH`, `DELETE` on `/api/projects`). Nested task creation available at `/api/projects/:projectId/tasks` (POST).
     - **Tasks**: Full CRUD operations on `/api/tasks/:id` (GET, PATCH, DELETE). Comment management at `/api/tasks/:taskId/comments` (GET, POST). Ball handoff tracking, subtasks, and dependencies available.
+    - **Guest Links**: Time-boxed shareable links (`POST /api/guest-links`) for tasks/projects with dual permission support (coord:manage OR projects:write). Uses crypto.randomUUID() tokens with configurable expiration (e.g., "7d", "24h"). Audit-logged with action `guest.invite`.
     - **Reporting**: 5 specialized reporting endpoints (status, owner, priority, overdue, activity).
 - **Notifications**: System supports `in_app`, `email`, and `push` notification channels.
 - **Frontend UI**: Basic coordination dashboard showing projects list with DevAuthSwitcher for RBAC testing. Built with React + Vite + TailwindCSS.
@@ -62,6 +63,13 @@ I prefer iterative development, with a focus on delivering functional increments
 - **Dev Server**: Runs on port 5000 with proxy to backend on port 3000
 
 ## Recent Changes
+- **2025-10-21 (Late Evening)**: Completed Phase 1 Polish Sprint Step 1 - Guest-Link Backend:
+  - **POST /api/guest-links endpoint**: Generates time-boxed shareable links for tasks/projects with crypto.randomUUID() tokens
+  - **Dual Permission Support**: Uses `hasPerm()` helper for OR-based checks (coord:manage OR projects:write), avoiding broken requirePerm chaining
+  - **Database Schema**: Added `guest_links` table with scope/scope_id/token/expires_at/created_by columns via Drizzle
+  - **Audit Logging**: Captures `guest.invite` action with expiresIn and tokenPreview metadata
+  - **Base URL Logic**: Fixed to honor PUBLIC_BASE_URL env var, fallback to REPLIT_DEV_DOMAIN, then localhost:5000
+  - Verified: Permission checks work (VIEWER denied, OPS/test users approved), URLs generate correctly, DB/audit entries created
 - **2025-10-21 (Evening)**: Shipped Alpha UI Pack with:
   - **EdenHeader component**: Logo + "Coordination • Alpha" environment badge
   - **TaskDetail page**: Full-featured task view with Checklist, Comments (with live posting), Attachments (file upload via init/complete flow), Ball-in-Court badge, and Guest Invite stub
