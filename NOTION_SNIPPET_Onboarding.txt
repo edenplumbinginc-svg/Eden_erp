@@ -1,0 +1,26 @@
+📘 Developer Onboarding (Repo)
+
+- File: `DEVELOPER_ONBOARDING.md` (at repo root)
+- Covers: setup, env, health & diagnostics, monitoring (Sentry/uptime/postdeploy), RBAC seed & verification, route protection patterns, scripts, lifecycle, common errors, conventions, smoke checklist.
+- Actions: Clone → set secrets → `npm i` → `npm run dev` → hit `/healthz` → `npm run seed:rbac` → protect routes via `requirePerm("<module>:<action>")`.
+
+Key Resources:
+- RBAC_GUIDE.md - Complete RBAC system documentation
+- PERMISSIONS_GUIDE.md - Permission middleware usage guide
+- MONITORING_GUIDE.md - Sentry, uptime monitoring, post-deploy gates
+- DIAGNOSTICS_GUIDE.md - Database troubleshooting
+- INTEGRATIONS_GUIDE.md - GitHub & Notion integration docs
+
+Quick Start Commands:
+```bash
+npm install
+npm run dev                # Start server
+npm run seed:rbac          # Seed roles & permissions
+npm run uptime             # Start uptime monitor
+npm run postdeploy         # Run post-deploy health gate
+```
+
+Authentication in Dev:
+Use X-Dev-User-Email and X-Dev-User-Id headers to simulate logged-in users.
+
+Test user: test@edenplumbing.com (ops role, has projects:read/write)

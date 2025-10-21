@@ -1,0 +1,175 @@
+[Mode: Execution]
+
+Step: Create a Developer Onboarding doc in-repo and link it in Notion.
+
+Why it matters: New contributors (including Agent Replit) can clone, configure, run, diagnose, and ship without pinging you—keeps velocity high and context loss low.
+
+Inputs needed:
+
+* Repo root path (assume current)
+* Notion access to “ERP Master Plan”
+
+Command:
+
+```bash
+# 1) Create onboarding doc
+cat > DEVELOPER_ONBOARDING.md <<'MD'
+# Developer Onboarding
+
+## 0) System Overview
+- **Stack:** Node 18+, Express, Drizzle (Postgres), Supabase IPv4 (TLS=relaxed by default)
+- **Infra Layer:** Health checks (`/health`, `/healthz`), diagnostics (`/diag/db`), Sentry (optional), uptime monitor, post-deploy gate
+- **Access Control:** RBAC (roles, permissions, role_permissions, user_roles) + route-level middleware
+
+## 1) Prereqs
+- Node 18+ (`node -v`)
+- Postgres URL (Supabase) — set as `DATABASE_URL`
+- Optional Sentry DSN — set as `SENTRY_DSN`
+
+## 2) Environment
+Create `.env` (or use your platform secrets):
+```
+
+NODE_ENV=development
+PORT=3000
+DATABASE_URL=postgres://user:pass@host:5432/db
+TLS_MODE=relaxed
+
+# optional
+
+SENTRY_DSN=https://<key>@o<org>.ingest.sentry.io/<project>
+HEALTHZ_URL=[http://localhost:3000/healthz](http://localhost:3000/healthz)
+
+````
+
+## 3) Install & Run
+```bash
+npm i
+npm run dev
+# then visit: http://localhost:3000/healthz
+````
+
+## 4) Diagnostics & Health
+
+* **Liveness:** `GET /healthz` → `{"status":"ok","db":"up","tls":"relaxed","latency_ms":...}`
+* **Database:** `GET /diag/db` → connectivity + latency snapshot
+* **Manual error (dev-only):** `GET /__boom` (gated in production)
+
+## 5) Monitoring Layer
+
+* **Sentry (optional):**
+
+  ```bash
+  # add SENTRY_DSN secret, then:
+  npm run sentry:test   # emits a test event
+  ```
+* **Uptime (60s ping):**
+
+  ```bash
+  npm run uptime
+  ```
+* **Post-deploy gate:**
+
+  ```bash
+  npm run postdeploy
+  ```
+
+## 6) RBAC: Schema & Seeding
+
+* Tables: `roles`, `permissions`, `role_permissions`, `user_roles`
+* Seed baseline roles & permissions:
+
+  ```bash
+  npm run seed:rbac
+  ```
+* Verify:
+
+  ```sql
+  select count(*) from roles;          -- expect ≥ 7
+  select count(*) from permissions;    -- expect 24
+  select count(*) from role_permissions; 
+  ```
+
+## 7) Route Protection
+
+* Permission code format: `<module>:<action>` (e.g., `projects:read`, `estimation:write`, `admin:manage`)
+* Usage in routes:
+
+  ```ts
+  import { requirePerm } from "./middleware/permissions";
+  router.get("/api/projects", authenticate, requirePerm("projects:read"), handler);
+  ```
+* Programmatic check:
+
+  ```ts
+  import { hasPerm } from "./middleware/permissions";
+  if (await hasPerm(userId, "projects:write")) { /* allow edit */ }
+  ```
+
+## 8) Scripts (reference)
+
+```json
+{
+  "scripts": {
+    "dev": "node ./index.js",
+    "uptime": "node ./scripts/ping-healthz.mjs",
+    "postdeploy": "node ./scripts/postdeploy-gate.mjs",
+    "sentry:test": "node -e \"require('@sentry/node').captureMessage('SENTRY_SCRIPT_OK')\"",
+    "seed:rbac": "node ./scripts/seed-rbac.mjs"
+  }
+}
+```
+
+## 9) Graceful Lifecycle
+
+* Server handles SIGTERM, closes HTTP server and DB pool cleanly to avoid zombie connections.
+
+## 10) Common Errors
+
+* **Missing/invalid `DATABASE_URL`:** app fails fast on boot (env validation).
+* **TLS strict chain errors:** set `TLS_MODE=relaxed` (temporary), file CA-chain ticket to fix.
+* **403 vs 500:** 403 = missing permission; 500 = DB or unexpected error (surfaced to Sentry if enabled).
+
+## 11) Conventions
+
+* Commit style: `feat(scope): ...`, `fix(scope): ...`, `chore: ...`
+* Branching: `main` (protected), PRs from `feature/*`, deploys gated by `postdeploy`
+* Permission naming: keep human-readable and grep-friendly.
+
+## 12) Quick Smoke Checklist
+
+* [ ] `npm run dev` starts server
+* [ ] `/healthz` returns 200
+* [ ] `npm run seed:rbac` succeeds
+* [ ] Protected route returns 403 without perm, 200 with perm
+* [ ] `npm run uptime` logs `[UP] ...`
+* [ ] `npm run postdeploy` prints “🚀 POST-DEPLOY GATE PASSED.”
+* [ ] (Optional) Sentry receives `SENTRY_SCRIPT_OK`
+
+MD
+
+# 2) echo a short Notion blurb you can paste to the page
+
+cat > NOTION_SNIPPET_Onboarding.txt <<'TXT'
+📘 Developer Onboarding (Repo)
+
+* File: `DEVELOPER_ONBOARDING.md` (at repo root)
+* Covers: setup, env, health & diagnostics, monitoring (Sentry/uptime/postdeploy), RBAC seed & verification, route protection patterns, scripts, lifecycle, common errors, conventions, smoke checklist.
+* Actions: Clone → set secrets → `npm i` → `npm run dev` → hit `/healthz` → `npm run seed:rbac` → protect routes via `requirePerm("<module>:<action>")`.
+  TXT
+
+# 3) Show what to paste in Notion
+
+echo "Open Notion → ERP Master Plan → add page 'Developer Onboarding' → paste contents of NOTION_SNIPPET_Onboarding.txt and link to the repo file."
+
+```
+
+Success check:
+- `DEVELOPER_ONBOARDING.md` is in repo root with the content above.
+- Notion “ERP Master Plan” has a “Developer Onboarding” subpage linking to the file and containing the blurb.
+- A new dev can follow the doc to boot, seed RBAC, verify health, and see uptime logs without help.
+
+Next: wait for user
+
+(When ready, paste your current `package.json` and server entry if you want me to diff-check the scripts and add any missing lifecycle/validation lines in-place.)
+```
