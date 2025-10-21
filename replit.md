@@ -63,6 +63,13 @@ I prefer iterative development, with a focus on delivering functional increments
 - **Dev Server**: Runs on port 5000 with proxy to backend on port 3000
 
 ## Recent Changes
+- **2025-10-21 (Night)**: Completed Ball-in-Court Refinement with Typed Owner + Days Badge:
+  - **Database Schema**: Added `ball_owner_type` (user/vendor/dept/system), `ball_owner_id` (UUID), `ball_since` (timestamp) columns to tasks table
+  - **Auto-Set Logic**: Backend automatically sets `ball_since` to current timestamp whenever ball owner changes (type or id)
+  - **Audit Logging**: Captures `ball.owner_set` action with type/id/since metadata for full audit trail
+  - **API Validation**: Extended Zod schema to accept `ballOwnerType` and `ballOwnerId` fields with enum validation
+  - **Frontend UI**: Updated BallInCourt component to show amber badge with "vendor:a0535c10 • 0 days" format, live-updating days count
+  - Verified: Owner changes trigger ball_since updates, audit logs capture full history, UI displays correctly
 - **2025-10-21 (Late Evening - Final)**: Completed Phase 1 Polish Sprint Step 2 - Guest-Link Frontend Integration:
   - **API Helper**: Added `createGuestLink()` to `services/api.js` for calling POST /api/guest-links
   - **Countdown Component**: Live timer showing remaining time until link expiration (e.g., "6d 23h 59m 45s")
