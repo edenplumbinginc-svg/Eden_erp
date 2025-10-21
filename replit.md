@@ -62,4 +62,10 @@ I prefer iterative development, with a focus on delivering functional increments
 - **Dev Server**: Runs on port 5000 with proxy to backend on port 3000
 
 ## Recent Changes
-- **2025-10-21**: Added React frontend with DevAuthSwitcher for RBAC testing. Configured TailwindCSS styling and Axios API client with auth header interceptors. Verified end-to-end RBAC functionality: OPS users can create/update/comment on tasks, VIEWER users get 403 Forbidden errors as expected.
+- **2025-10-21 (Evening)**: Shipped Alpha UI Pack with:
+  - **EdenHeader component**: Logo + "Coordination • Alpha" environment badge
+  - **TaskDetail page**: Full-featured task view with Checklist, Comments (with live posting), Attachments (file upload via init/complete flow), Ball-in-Court badge, and Guest Invite stub
+  - **React Query integration**: Optimistic updates and cache invalidation for comments/attachments
+  - **Routing**: New `/task/:taskId` route for individual task views
+  - Verified: Comments post successfully, auth headers work, all components render correctly
+- **2025-10-21 (Afternoon)**: Added React frontend with DevAuthSwitcher for RBAC testing. Configured TailwindCSS styling and Axios API client with auth header interceptors. Verified end-to-end RBAC functionality: OPS users can create/update/comment on tasks, VIEWER users get 403 Forbidden errors as expected.
