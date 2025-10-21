@@ -1,12 +1,39 @@
 // routes/projects.js
 const express = require('express');
+const { z } = require('zod');
 const router = express.Router();
 const { pool } = require('../services/database');
 const { authenticate, authorize } = require('../middleware/auth');
 const { requirePerm } = require('../middleware/permissions');
+const { validate } = require('../middleware/validate');
 const { notify, actorFromHeaders } = require('../lib/notify');
 const { withTx } = require('../lib/tx');
 const { audit } = require('../utils/audit');
+
+const CreateProjectSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  code: z.string().optional()
+});
+
+const UpdateProjectSchema = z.object({
+  name: z.string().min(1).optional(),
+  code: z.string().optional(),
+  status: z.enum(['active', 'inactive', 'archived']).optional()
+}).refine(data => Object.keys(data).length > 0, {
+  message: "At least one field must be provided"
+});
+
+const CreateTaskSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+  status: z.string().optional(),
+  priority: z.string().optional(),
+  assignee_id: z.string().uuid().optional(),
+  ball_in_court: z.string().uuid().optional(),
+  due_at: z.string().datetime().optional(),
+  tags: z.array(z.string()).optional(),
+  origin: z.string().optional()
+});
 
 // List projects - RBAC protected with projects:read permission
 router.get('/', authenticate, requirePerm('projects:read'), async (req, res) => {
@@ -21,10 +48,9 @@ router.get('/', authenticate, requirePerm('projects:read'), async (req, res) => 
 });
 
 // Create project
-router.post('/', authenticate, async (req, res) => {
+router.post('/', authenticate, validate(CreateProjectSchema), async (req, res) => {
   try {
-    const { name, code } = req.body ?? {};
-    if (!name) return res.status(400).json({ error: 'name required' });
+    const { name, code } = req.data;
     const r = await pool.query(
       `INSERT INTO public.projects (name, code, status)
        VALUES ($1,$2,'active')
@@ -40,9 +66,9 @@ router.post('/', authenticate, async (req, res) => {
 });
 
 // Update project
-router.patch('/:id', authenticate, async (req, res) => {
+router.patch('/:id', authenticate, validate(UpdateProjectSchema), async (req, res) => {
   try {
-    const { name, code, status } = req.body ?? {};
+    const { name, code, status } = req.data;
     const updates = [];
     const values = [];
     let idx = 1;
@@ -50,8 +76,6 @@ router.patch('/:id', authenticate, async (req, res) => {
     if (name !== undefined) { updates.push(`name = $${idx++}`); values.push(name); }
     if (code !== undefined) { updates.push(`code = $${idx++}`); values.push(code); }
     if (status !== undefined) { updates.push(`status = $${idx++}`); values.push(status); }
-
-    if (updates.length === 0) return res.status(400).json({ error: 'no fields to update' });
 
     values.push(req.params.id);
     const r = await pool.query(
@@ -106,10 +130,9 @@ router.get('/:projectId/tasks', authenticate, async (req, res) => {
 });
 
 // Create task in project
-router.post('/:projectId/tasks', authenticate, async (req, res) => {
+router.post('/:projectId/tasks', authenticate, validate(CreateTaskSchema), async (req, res) => {
   try {
-    const { title, description, assignee_id, ball_in_court, due_at, priority, tags, origin } = req.body ?? {};
-    if (!title) return res.status(400).json({ error: 'title required' });
+    const { title, description, assignee_id, ball_in_court, due_at, priority, tags, origin } = req.data;
     
     // Default status to 'todo' instead of 'open' for new convention
     const status = req.body.status || 'todo';

@@ -221,6 +221,12 @@ ORDER BY created_at DESC;
 
 ## 4. Idempotency
 
+**Current Status:** ⚠️ **Development scaffold - Not production-ready**
+
+The current idempotency implementation provides basic duplicate detection but has a critical limitation: keys are committed before handlers complete, so failed requests poison the key and prevent legitimate retries.
+
+**For production use,** see "Production Idempotency Implementation" below.
+
 ### Purpose
 Prevents duplicate operations from retries, webhook replays, or double-clicks.
 
@@ -293,12 +299,58 @@ curl -X POST http://localhost:3000/api/procurement/po \
 }
 ```
 
-### Benefits
-- Prevents double charges
-- Safe webhook retries
-- Double-click protection
-- Network retry safety
+### Known Limitations (Current Implementation)
+
+⚠️ **Critical:** Key is committed before handler executes. If handler fails, key remains and blocks retries.
+
+**Example failure scenario:**
+1. Request with key "abc" arrives
+2. Middleware inserts key "abc", commits
+3. Handler fails (DB error, validation, etc.)
+4. Retry with same key "abc" → returns 201 "already processed"  
+5. **Resource was never created!**
+
+### Production Idempotency Implementation
+
+For production use, implement one of these patterns:
+
+**Option A: Response Caching (Stripe-style)**
+
+```javascript
+// Store response payload with key for replay
+const handleIdempotent = async (scopedKey, handler) => {
+  const cached = await getCachedResponse(scopedKey);
+  if (cached) return res.status(cached.status).json(cached.body);
+  
+  const response = await handler();
+  await cacheResponse(scopedKey, response.status, response.body);
+  return response;
+};
+```
+
+**Option B: Transactional Coupling**
+
+```javascript
+// Only commit key when business transaction commits
+await withTransaction(async (tx) => {
+  const resource = await createResource(tx, data);
+  await tx.query('INSERT INTO idempotency (key) VALUES ($1)', [scopedKey]);
+  return resource;
+});
+```
+
+**Option C: Use proven library**
+
+- **idempotency-middleware** (npm)
+- **Stripe idempotency** pattern
+- **Redis-backed idempotency** with TTL
+
+### Basic Benefits (Development)
+- Prevents immediate double-clicks
+- Basic webhook deduplication
 - Key format: `{scope}:{client-key}` prevents cross-scope collisions
+
+**Use in development only. Upgrade before production.**
 
 ---
 
