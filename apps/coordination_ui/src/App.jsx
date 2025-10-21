@@ -4,6 +4,7 @@ import { apiService } from './services/api';
 import ProjectList from './components/ProjectList';
 import TaskList from './components/TaskList';
 import Reports from './components/Reports';
+import DevAuthSwitcher from './components/DevAuthSwitcher';
 
 function AppContent() {
   const [projects, setProjects] = useState([]);
@@ -21,10 +22,15 @@ function AppContent() {
     setLoading(true);
     setError(null);
     try {
+      console.log('Loading projects...');
       const response = await apiService.getProjects();
+      console.log('Projects loaded:', response.data.length);
       setProjects(response.data);
     } catch (err) {
-      setError('Failed to load projects: ' + err.message);
+      console.error('Error loading projects:', err);
+      console.error('Error response:', err.response);
+      const errorMsg = err.response?.data?.error || err.message || 'Unknown error';
+      setError('Failed to load projects: ' + errorMsg);
     } finally {
       setLoading(false);
     }
@@ -49,6 +55,11 @@ function AppContent() {
         <h1>Eden Coordination System</h1>
         <p>Project and Task Management with Ball Handoff Tracking</p>
       </div>
+
+      <DevAuthSwitcher onUserChange={() => {
+        loadProjects();
+        loadUsers();
+      }} />
 
       <div className="tabs">
         <NavLink
