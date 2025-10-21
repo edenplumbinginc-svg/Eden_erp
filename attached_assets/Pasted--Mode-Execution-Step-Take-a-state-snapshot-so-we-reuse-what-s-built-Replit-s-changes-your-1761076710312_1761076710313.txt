@@ -1,0 +1,54 @@
+[Mode: Execution]
+
+Step: Take a “state snapshot” so we reuse what’s built (Replit’s changes + your earlier Coordination work) before adding anything new.
+
+Why it matters: This prevents rework. We’ll see exactly which Coordination tables/routes already exist, which airtight pieces are wired, and which `coord:*` permissions are guarding endpoints—then we only add missing bits.
+
+Inputs needed:
+
+* `DATABASE_URL` available
+* Repo checked out with your current server running or buildable
+
+Command (copy–paste all):
+
+```bash
+# --- DB: list existing coordination-ish tables
+psql "$DATABASE_URL" -P pager=off -F " | " -A -c "
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema='public'
+  AND (table_name LIKE 'coord_%' OR table_name IN ('projects','tasks','task_comments','task_attachments','notifications','activity','audit_logs','idempotency'))
+ORDER BY table_name;
+"
+
+# --- DB: peek columns for likely tables
+for t in coord_projects coord_tasks coord_task_comments coord_task_attachments coord_notifications coord_activity projects tasks task_comments task_attachments notifications activity audit_logs idempotency; do
+  psql \"$DATABASE_URL\" -P pager=off -F ' | ' -A -c \"SELECT '${t}' AS table, column_name, data_type FROM information_schema.columns WHERE table_schema='public' AND table_name='${t}' ORDER BY ordinal_position;\" 2>/dev/null
+done
+
+# --- CODE: coordination routes, validation, and guards
+echo; echo '— ROUTES touching coord/projects/tasks/comments/attachments/notifications —'
+grep -RIn -E "/(coord|projects|tasks|comments|attachments|notifications)" src/routes | sed 's/^/  /' || true
+
+echo; echo '— requirePerm on coordination or shared routes —'
+grep -RIn -E "requirePerm\\(\"(coord|projects|tasks|.*:read|.*:write)" src | sed 's/^/  /' || true
+
+echo; echo '— Zod validation middleware usages —'
+grep -RIn -E "validate\\(" src | sed 's/^/  /' || true
+
+echo; echo '— Idempotency middleware usages —'
+grep -RIn -E "requireIdem\\(" src | sed 's/^/  /' || true
+
+echo; echo '— Audit helper usages —'
+grep -RIn -E "audit\\(" src | sed 's/^/  /' || true
+```
+
+Success check:
+
+* You get a list of existing tables/columns (so we only add missing fields like `ballOwnerType`, `ballOwnerId`, `ballSince`, `lastActivityAt`).
+* You see which Coordination routes already exist and which have `validate(...)`, `requirePerm("coord:*" | "projects:*" | "tasks:*")`, `requireIdem(...)`, and `audit(...)`.
+* Reply with the outputs (or confirm “all green”), and I’ll generate an **additive migration + tiny route patches** to fill only the gaps—no renames, no drops.
+
+Next: wait for user
+
+Tip while Replit is “adding a new login method”: freeze Coordination changes until we reconcile this snapshot; auth shifts can affect `req.user`/`req.auth`, and I’ll align permission middleware to the new attach point in the same pass.
