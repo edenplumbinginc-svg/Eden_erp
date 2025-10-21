@@ -9,7 +9,11 @@ I prefer iterative development, with a focus on delivering functional increments
 ## System Architecture
 
 ### UI/UX Decisions
-The current focus is on backend development. A `ui/` directory is present for future frontend components, including reusable components, custom React hooks, and page layouts.
+- **Frontend Framework**: React 18 with Vite build system for fast development and hot module replacement.
+- **Styling**: TailwindCSS for utility-first responsive design.
+- **Development Authentication**: `DevAuthSwitcher` component provides quick user role switching (OPS, VIEWER, ADMIN) for testing RBAC permissions without full OAuth setup.
+- **API Integration**: Axios-based API client (`services/api.js`) with request interceptors that automatically inject development auth headers (`X-Dev-User-Email`, `X-Dev-User-Id`).
+- **Project Structure**: Monorepo with frontend in `apps/coordination_ui/` directory. Vite proxy forwards `/api` requests to backend on port 3000.
 
 ### Technical Implementations
 - **Backend Framework**: Express.js for building RESTful APIs.
@@ -29,10 +33,11 @@ The current focus is on backend development. A `ui/` directory is present for fu
 - **Core Services**: Authentication, email, notifications, permissions, reporting, storage, and utilities.
 - **API Endpoints**:
     - **System**: `/health`, `/db/ping`, `/db/users`, `/routes`.
-    - **Projects**: Full CRUD operations (`GET`, `POST`, `PATCH`, `DELETE` on `/api/projects`).
-    - **Tasks**: Full CRUD operations for tasks associated with projects (`GET`, `POST`, `PATCH`, `DELETE` on `/api/projects/:projectId/tasks`).
+    - **Projects**: Full CRUD operations (`GET`, `POST`, `PATCH`, `DELETE` on `/api/projects`). Nested task creation available at `/api/projects/:projectId/tasks` (POST).
+    - **Tasks**: Full CRUD operations on `/api/tasks/:id` (GET, PATCH, DELETE). Comment management at `/api/tasks/:taskId/comments` (GET, POST). Ball handoff tracking, subtasks, and dependencies available.
     - **Reporting**: 5 specialized reporting endpoints (status, owner, priority, overdue, activity).
 - **Notifications**: System supports `in_app`, `email`, and `push` notification channels.
+- **Frontend UI**: Basic coordination dashboard showing projects list with DevAuthSwitcher for RBAC testing. Built with React + Vite + TailwindCSS.
 
 ### System Design Choices
 - **Monolithic Architecture**: Designed as a single, cohesive unit to simplify initial development and deployment.
@@ -41,9 +46,20 @@ The current focus is on backend development. A `ui/` directory is present for fu
 - **Secure by Design**: Enforced authentication on API routes and multi-layered database configuration validation.
 
 ## External Dependencies
+### Backend
 - **Database**: Supabase PostgreSQL
 - **Backend Framework**: Express.js
 - **Database Driver**: `pg` (Node.js PostgreSQL client)
 - **Environment Variables**: `dotenv`
 - **ORM**: Drizzle ORM
 - **PostgreSQL Extensions**: `pgcrypto`, `citext`
+
+### Frontend
+- **Framework**: React 18
+- **Build Tool**: Vite 5
+- **HTTP Client**: Axios
+- **Styling**: TailwindCSS 3
+- **Dev Server**: Runs on port 5000 with proxy to backend on port 3000
+
+## Recent Changes
+- **2025-10-21**: Added React frontend with DevAuthSwitcher for RBAC testing. Configured TailwindCSS styling and Axios API client with auth header interceptors. Verified end-to-end RBAC functionality: OPS users can create/update/comment on tasks, VIEWER users get 403 Forbidden errors as expected.

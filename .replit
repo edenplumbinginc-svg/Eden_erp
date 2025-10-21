@@ -17,26 +17,11 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Verify"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
 args = "Backend"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
 args = "Frontend"
-
-[[workflows.workflow]]
-name = "Verify"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npm run verify"
-
-[workflows.workflow.metadata]
-outputType = "console"
 
 [[workflows.workflow]]
 name = "Backend"
@@ -75,9 +60,9 @@ localPort = 5002
 externalPort = 3003
 
 [[ports]]
-localPort = 42193
-externalPort = 3001
+localPort = 40157
+externalPort = 4200
 
 [[ports]]
-localPort = 45549
-externalPort = 3002
+localPort = 42193
+externalPort = 3001
