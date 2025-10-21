@@ -122,8 +122,8 @@ export const notifications = pgTable("notifications", {
         actorId: uuid("actor_id"),
         actorEmail: text("actor_email"),
 }, (table) => [
-        index("idx_notifications_project").using("btree", table.projectId.asc().nullsLast().op("timestamptz_ops"), table.createdAt.desc().nullsFirst().op("timestamptz_ops")),
-        index("idx_notifications_task").using("btree", table.taskId.asc().nullsLast().op("uuid_ops")),
+        index("idx_notifications_project").using("btree", table.projectId.asc().nullsLast(), table.createdAt.desc().nullsFirst()),
+        index("idx_notifications_task").using("btree", table.taskId.asc().nullsLast()),
         foreignKey({
                         columns: [table.userId],
                         foreignColumns: [users.id],
@@ -322,9 +322,9 @@ export const auditLogs = pgTable("audit_logs", {
                         foreignColumns: [users.id],
                         name: "audit_logs_user_id_fkey"
                 }),
-        index("idx_audit_logs_user").using("btree", table.userId.asc().nullsLast().op("uuid_ops")),
-        index("idx_audit_logs_action").using("btree", table.action.asc().nullsLast().op("text_ops")),
-        index("idx_audit_logs_created").using("btree", table.createdAt.desc().nullsFirst().op("timestamptz_ops")),
+        index("idx_audit_logs_user").using("btree", table.userId.asc().nullsLast()),
+        index("idx_audit_logs_action").using("btree", table.action.asc().nullsLast()),
+        index("idx_audit_logs_created").using("btree", table.createdAt.desc().nullsFirst()),
 ]);
 
 export const idempotency = pgTable("idempotency", {
