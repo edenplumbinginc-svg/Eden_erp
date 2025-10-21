@@ -1,0 +1,150 @@
+[Mode: Execution]
+
+Step: Create empty **schema shells** for the Coordination module (projects, tasks, comments, attachments, notifications, activity/audit, ball-in-court fields) so we can iterate safely.
+
+Why it matters: Locking the database shapes first gives you a controlled backbone to plug endpoints/UI into, and lets you expand/trim fields without breaking routes.
+
+Inputs needed:
+
+* Drizzle (Postgres) is set up.
+* Your schema folder path (I’ll assume `src/db/schema`).
+
+Command (copy-paste; adjust paths if needed):
+
+```ts
+// src/db/schema/coordination.ts
+import {
+  pgTable, uuid, text, timestamp, boolean, integer, jsonb, index
+} from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+
+// ——— Projects
+export const projects = pgTable("coord_projects", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  code: text("code"),                         // optional external code
+  name: text("name").notNull(),
+  description: text("description"),
+  status: text("status").default("active"),   // active | on_hold | closed
+  ownerId: uuid("owner_id"),                  // user who owns the project
+  createdAt: timestamp("created_at").default(sql`now()`).notNull(),
+  updatedAt: timestamp("updated_at").default(sql`now()`).notNull(),
+}, (t) => ({
+  byStatus: index("coord_projects_status_idx").on(t.status),
+  byOwner: index("coord_projects_owner_idx").on(t.ownerId),
+}));
+
+// ——— Tasks (Ball-in-Court fields baked in)
+export const tasks = pgTable("coord_tasks", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  projectId: uuid("project_id").notNull(),         // FK→ projects.id (enforce later if needed)
+  title: text("title").notNull(),
+  description: text("description"),
+  status: text("status").default("todo").notNull(),// todo | in_progress | review | done
+  priority: text("priority").default("normal"),    // low | normal | high | urgent
+  dueDate: timestamp("due_date"),
+  assigneeId: uuid("assignee_id"),                 // nominal assignee
+  tags: jsonb("tags").$type<string[] | null>(),    // ["Procurement","Follow-up"]
+  checklist: jsonb("checklist").$type<any>(),      // optional subtasks structure
+
+  // Ball-in-Court (active owner separate from assignee)
+  ballOwnerType: text("ball_owner_type"),          // user | vendor | dept | system
+  ballOwnerId: text("ball_owner_id"),              // id in that domain
+  ballSince: timestamp("ball_since"),
+  lastActivityAt: timestamp("last_activity_at"),
+
+  // Basic meta
+  createdBy: uuid("created_by"),
+  createdAt: timestamp("created_at").default(sql`now()`).notNull(),
+  updatedAt: timestamp("updated_at").default(sql`now()`).notNull(),
+}, (t) => ({
+  byProject: index("coord_tasks_project_idx").on(t.projectId),
+  byAssignee: index("coord_tasks_assignee_idx").on(t.assigneeId),
+  byStatus: index("coord_tasks_status_idx").on(t.status),
+  byDue: index("coord_tasks_due_idx").on(t.dueDate),
+}));
+
+// ——— Comments (thread per task)
+export const taskComments = pgTable("coord_task_comments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  taskId: uuid("task_id").notNull(),
+  authorId: uuid("author_id"),
+  body: text("body").notNull(),
+  // Inline action: "Ball passed to X"
+  ballPassToType: text("ball_pass_to_type"),
+  ballPassToId: text("ball_pass_to_id"),
+  createdAt: timestamp("created_at").default(sql`now()`).notNull(),
+}, (t) => ({
+  byTask: index("coord_comments_task_idx").on(t.taskId),
+}));
+
+// ——— Attachments (file metadata; binary in Supabase Storage)
+export const taskAttachments = pgTable("coord_task_attachments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  taskId: uuid("task_id").notNull(),
+  uploaderId: uuid("uploader_id"),
+  // storage info
+  bucket: text("bucket").notNull(),            // e.g., "attachments"
+  path: text("path").notNull(),                // e.g., "task/<id>/file.pdf"
+  mime: text("mime"),
+  sizeBytes: integer("size_bytes"),
+  // voice note transcription (optional)
+  transcript: text("transcript"),
+  createdAt: timestamp("created_at").default(sql`now()`).notNull(),
+}, (t) => ({
+  byTask: index("coord_attach_task_idx").on(t.taskId),
+}));
+
+// ——— Notifications (simple shell; can expand to email/push later)
+export const notifications = pgTable("coord_notifications", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull(),
+  event: text("event").notNull(),              // task.created | task.assigned | task.overdue | comment.added
+  entity: text("entity").notNull(),            // e.g., "task:<uuid>"
+  payload: jsonb("payload"),                   // freeform for rendering
+  read: boolean("read").default(false).notNull(),
+  createdAt: timestamp("created_at").default(sql`now()`).notNull(),
+}, (t) => ({
+  byUser: index("coord_notif_user_idx").on(t.userId),
+  byRead: index("coord_notif_read_idx").on(t.read),
+}));
+
+// ——— Activity / Audit trail (every change/comment/file)
+export const activity = pgTable("coord_activity", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  taskId: uuid("task_id").notNull(),
+  actorId: uuid("actor_id"),
+  action: text("action").notNull(),            // task.create | task.update | status.change | ball.pass | comment.add | file.upload
+  meta: jsonb("meta"),                         // old→new values, etc.
+  createdAt: timestamp("created_at").default(sql`now()`).notNull(),
+}, (t) => ({
+  byTask: index("coord_activity_task_idx").on(t.taskId),
+}));
+
+// ——— Minimal indices only; FKs & triggers can be added in a later pass.
+```
+
+If you keep a schema barrel, export it:
+
+```ts
+// src/db/schema/index.ts
+export * from "./coordination";
+```
+
+Then generate & apply migration:
+
+```bash
+npx drizzle-kit generate
+npx drizzle-kit migrate
+```
+
+Success check:
+
+* Tables exist: `coord_projects`, `coord_tasks`, `coord_task_comments`, `coord_task_attachments`, `coord_notifications`, `coord_activity`.
+* `select count(*) from coord_projects;` runs (0 rows is fine).
+* Migrations apply cleanly with no FK errors.
+
+Next: wait for user
+
+---
+
+Once you confirm migrations applied, I’ll give you the **empty API endpoint shells** that match your checklist (CRUD for projects/tasks/comments, attachments list/upload/delete stub, notifications stub) with `requirePerm("coord:read|write|manage")`, plus Zod validation stubs—still “empty,” but ready to flesh out logic in tiny steps.

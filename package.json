@@ -37,7 +37,9 @@
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.44.6",
     "express": "^5.1.0",
-    "pg": "^8.16.3"
+    "express-rate-limit": "^8.1.0",
+    "pg": "^8.16.3",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "drizzle-kit": "^0.31.5"

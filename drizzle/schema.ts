@@ -308,3 +308,26 @@ export const taskDependencies = pgTable("task_dependencies", {
                 }).onDelete("cascade"),
         primaryKey({ columns: [table.taskId, table.blocksTaskId], name: "task_dependencies_pkey"}),
 ]);
+
+export const auditLogs = pgTable("audit_logs", {
+        id: uuid().defaultRandom().primaryKey().notNull(),
+        userId: uuid("user_id"),
+        action: text().notNull(),
+        entity: text().notNull(),
+        meta: jsonb().default({}),
+        createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+        foreignKey({
+                        columns: [table.userId],
+                        foreignColumns: [users.id],
+                        name: "audit_logs_user_id_fkey"
+                }),
+        index("idx_audit_logs_user").using("btree", table.userId.asc().nullsLast().op("uuid_ops")),
+        index("idx_audit_logs_action").using("btree", table.action.asc().nullsLast().op("text_ops")),
+        index("idx_audit_logs_created").using("btree", table.createdAt.desc().nullsFirst().op("timestamptz_ops")),
+]);
+
+export const idempotency = pgTable("idempotency", {
+        key: text().primaryKey().notNull(),
+        createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+});
