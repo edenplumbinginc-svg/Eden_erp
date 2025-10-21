@@ -1,10 +1,11 @@
-modules = ["nodejs-20", "postgresql-16"]
+modules = ["nodejs-20", "postgresql-16", "python-3.11"]
 [agent]
 expertMode = true
+integrations = ["github:1.0.0"]
 
 [nix]
 channel = "stable-25_05"
-packages = ["nano-wallet", "jq"]
+packages = ["jq", "nano-wallet"]
 
 [workflows]
 runButton = "Project"
