@@ -63,6 +63,13 @@ I prefer iterative development, with a focus on delivering functional increments
 - **Dev Server**: Runs on port 5000 with proxy to backend on port 3000
 
 ## Recent Changes
+- **2025-10-21 (Late Evening - Final)**: Completed Phase 1 Polish Sprint Step 2 - Guest-Link Frontend Integration:
+  - **API Helper**: Added `createGuestLink()` to `services/api.js` for calling POST /api/guest-links
+  - **Countdown Component**: Live timer showing remaining time until link expiration (e.g., "6d 23h 59m 45s")
+  - **TaskDetail UI**: Wired "Generate guest link" button with full state management (loading, error handling, success state)
+  - **Link Display Panel**: Shows copyable URL with one-click copy-to-clipboard functionality
+  - **End-to-End Verification**: OPS users can generate links, VIEWER users get 403 errors, DB/audit logs capture correctly
+  - Frontend seamlessly integrates with backend RBAC and audit trail
 - **2025-10-21 (Late Evening)**: Completed Phase 1 Polish Sprint Step 1 - Guest-Link Backend:
   - **POST /api/guest-links endpoint**: Generates time-boxed shareable links for tasks/projects with crypto.randomUUID() tokens
   - **Dual Permission Support**: Uses `hasPerm()` helper for OR-based checks (coord:manage OR projects:write), avoiding broken requirePerm chaining

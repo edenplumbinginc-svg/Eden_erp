@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiService } from "../services/api";
+import Countdown from "../components/Countdown";
 
 function Badge({ children, title }) {
   return <span title={title} className="text-xs px-2 py-0.5 rounded bg-gray-100 border">{children}</span>;
@@ -158,6 +159,10 @@ export default function TaskDetail() {
     enabled: !!taskId
   });
 
+  const [invite, setInvite] = useState(null);
+  const [inviteErr, setInviteErr] = useState(null);
+  const [inviting, setInviting] = useState(false);
+
   if (!taskId) {
     return <div className="mx-auto max-w-6xl p-4">No task ID provided</div>;
   }
@@ -186,11 +191,48 @@ export default function TaskDetail() {
 
           <div className="space-y-2">
             <div className="font-semibold">Guest Invite</div>
-            <button
-              className="px-3 py-1 rounded border hover:bg-gray-50"
-              onClick={() => alert("Guest invite flow is stubbed. Backend route to mint an expiring link will be added next step.")}>
-              Generate guest link (stub)
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                className="px-3 py-1 rounded border"
+                disabled={inviting}
+                onClick={async () => {
+                  try {
+                    setInviting(true);
+                    setInviteErr(null);
+                    const res = await apiService.createGuestLink({ scope: "task", id: taskId, expiresIn: "7d" });
+                    setInvite(res);
+                  } catch (e) {
+                    setInviteErr(e?.response?.data?.error?.message || e.message);
+                    setInvite(null);
+                  } finally {
+                    setInviting(false);
+                  }
+                }}
+              >
+                {inviting ? "Generating…" : "Generate guest link"}
+              </button>
+              {inviteErr && <span className="text-sm text-red-600">{inviteErr}</span>}
+            </div>
+
+            {invite && (
+              <div className="rounded border p-3 bg-white">
+                <div className="text-xs text-gray-500 mb-1">Expires in: <Countdown target={invite.expiresAt} /></div>
+                <div className="flex items-center gap-2">
+                  <input
+                    className="border p-1 rounded w-full text-sm"
+                    readOnly
+                    value={invite.url}
+                    onFocus={(e)=>e.target.select()}
+                  />
+                  <button
+                    className="px-2 py-1 rounded bg-black text-white text-sm"
+                    onClick={() => navigator.clipboard.writeText(invite.url)}
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -66,7 +66,10 @@ export const apiService = {
   getRecentActivity: () => api.get('/reports/activity/recent'),
 
   // Users
-  getUsers: () => api.get('/users')
+  getUsers: () => api.get('/users'),
+
+  // Guest Links
+  createGuestLink: ({ scope, id, expiresIn = "7d" }) => api.post('/guest-links', { scope, id, expiresIn }).then(res => res.data)
 };
 
 // Dev Auth Control - allows switching users to test different permissions
