@@ -1,0 +1,87 @@
+[Mode: Execution]
+
+Step: Guard the existing **tasks** routes with RBAC (`tasks:read` / `tasks:write`) — no logic changes, just protection.
+
+Why it matters: Your snapshot shows `tasks.js` has zero guards. Adding them now makes the module safe-by-default and lets us layer validation/audit in the next step without risking exposure.
+
+Inputs needed:
+
+* Path to your tasks routes file (e.g., `src/routes/tasks.js` or `src/routes/tasks.ts`)
+* Current file contents (paste it after you run this so I can patch precisely)
+
+Command (paste these minimal edits into your tasks routes file; adjust paths if different):
+
+```js
+// at top of routes/tasks.js
+import { requirePerm } from "../middleware/permissions.js"; // adjust path if needed
+import { authenticate } from "../middleware/authenticate.js"; // whatever you currently use
+
+// …existing imports stay as-is
+```
+
+```js
+// READ endpoints → tasks:read
+router.get("/:id",
+  authenticate,
+  requirePerm("tasks:read"),
+  async (req, res, next) => {
+    // existing handler unchanged
+  }
+);
+
+router.get("/:taskId/comments",
+  authenticate,
+  requirePerm("tasks:read"),
+  async (req, res, next) => {
+    // existing handler unchanged
+  }
+);
+
+router.get("/:taskId/attachments",
+  authenticate,
+  requirePerm("tasks:read"),
+  async (req, res, next) => {
+    // existing handler unchanged (if present here; else in attachments router)
+  }
+);
+```
+
+```js
+// WRITE endpoints → tasks:write
+router.patch("/:id",
+  authenticate,
+  requirePerm("tasks:write"),
+  async (req, res, next) => {
+    // existing handler unchanged
+  }
+);
+
+router.delete("/:id",
+  authenticate,
+  requirePerm("tasks:write"),
+  async (req, res, next) => {
+    // existing handler unchanged
+  }
+);
+
+router.post("/:taskId/comments",
+  authenticate,
+  requirePerm("tasks:write"),
+  async (req, res, next) => {
+    // existing handler unchanged
+  }
+);
+
+// If you have create task here (often in projects router), ensure that route uses tasks:write too.
+```
+
+Success check:
+
+* Unauthenticated request → `401`.
+* Authenticated user without `tasks:read` hitting `GET /tasks/:id` → `403 {"error":"forbidden","need":"tasks:read"}`.
+* Authenticated user with `ops` or `coord` role → `GET /tasks/:id` returns `200`.
+* Authenticated user without `tasks:write` hitting `PATCH /tasks/:id` → `403 {"error":"forbidden","need":"tasks:write"}`.
+
+Next: wait for user
+
+When you’re ready, paste your current `routes/tasks.*` file here. I’ll do an exact patch (keeping your handlers untouched) and then in the **next single step** we’ll add Zod validation + audit calls to the write routes.

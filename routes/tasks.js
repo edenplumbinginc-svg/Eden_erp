@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const { pool, enqueueNotification } = require('../services/database');
 const { authenticate, deriveStableUUID } = require('../middleware/auth');
+const { requirePerm } = require('../middleware/permissions');
 const { notify, actorFromHeaders } = require('../lib/notify');
 const { withTx } = require('../lib/tx');
 
@@ -27,7 +28,7 @@ function isValidStatusTransition(currentStatus, newStatus) {
 }
 
 // Get single task (with computed fields)
-router.get('/:id', authenticate, async (req, res) => {
+router.get('/:id', authenticate, requirePerm('tasks:read'), async (req, res) => {
   try {
     const q = `
       SELECT t.id, t.title, t.description, t.status, t.priority,
@@ -50,7 +51,7 @@ router.get('/:id', authenticate, async (req, res) => {
 });
 
 // Update task
-router.patch('/:id', authenticate, async (req, res) => {
+router.patch('/:id', authenticate, requirePerm('tasks:write'), async (req, res) => {
   try {
     const { title, description, status, priority, assignee_id, ball_in_court, due_at, tags, origin } = req.body ?? {};
     
@@ -143,7 +144,7 @@ router.patch('/:id', authenticate, async (req, res) => {
 });
 
 // Delete task (soft delete)
-router.delete('/:id', authenticate, async (req, res) => {
+router.delete('/:id', authenticate, requirePerm('tasks:write'), async (req, res) => {
   try {
     const r = await pool.query(
       'UPDATE public.tasks SET deleted_at = now() WHERE id = $1 AND deleted_at IS NULL RETURNING id',
@@ -157,7 +158,7 @@ router.delete('/:id', authenticate, async (req, res) => {
 });
 
 // Task comments
-router.get('/:taskId/comments', authenticate, async (req, res) => {
+router.get('/:taskId/comments', authenticate, requirePerm('tasks:read'), async (req, res) => {
   try {
     const r = await pool.query(
       `SELECT id, task_id, author_id, body, created_at, updated_at
@@ -172,7 +173,7 @@ router.get('/:taskId/comments', authenticate, async (req, res) => {
   }
 });
 
-router.post('/:taskId/comments', authenticate, async (req, res) => {
+router.post('/:taskId/comments', authenticate, requirePerm('tasks:write'), async (req, res) => {
   try {
     const { body, author_id } = req.body ?? {};
     if (!body) return res.status(400).json({ error: 'body required' });
@@ -219,7 +220,7 @@ router.post('/:taskId/comments', authenticate, async (req, res) => {
 });
 
 // Ball handoff
-router.post('/:taskId/ball', authenticate, async (req, res) => {
+router.post('/:taskId/ball', authenticate, requirePerm('tasks:write'), async (req, res) => {
   try {
     const { to_user_id, from_user_id, note } = req.body ?? {};
     if (!to_user_id) return res.status(400).json({ error: 'to_user_id required' });
@@ -249,7 +250,7 @@ router.post('/:taskId/ball', authenticate, async (req, res) => {
   }
 });
 
-router.get('/:taskId/ball', authenticate, async (req, res) => {
+router.get('/:taskId/ball', authenticate, requirePerm('tasks:read'), async (req, res) => {
   try {
     const r = await pool.query(
       `SELECT id, task_id, from_user_id, to_user_id, note, changed_at
@@ -265,7 +266,7 @@ router.get('/:taskId/ball', authenticate, async (req, res) => {
 });
 
 // Subtasks
-router.get('/:id/subtasks', authenticate, async (req, res) => {
+router.get('/:id/subtasks', authenticate, requirePerm('tasks:read'), async (req, res) => {
   try {
     const r = await pool.query(
       `SELECT id, task_id, title, done, order_index, created_at, updated_at
@@ -280,7 +281,7 @@ router.get('/:id/subtasks', authenticate, async (req, res) => {
   }
 });
 
-router.post('/:id/subtasks', authenticate, async (req, res) => {
+router.post('/:id/subtasks', authenticate, requirePerm('tasks:write'), async (req, res) => {
   try {
     const { title, done, order_index } = req.body ?? {};
     if (!title) return res.status(400).json({ error: 'title required' });
@@ -298,7 +299,7 @@ router.post('/:id/subtasks', authenticate, async (req, res) => {
 });
 
 // Subtask operations (by subtask ID)
-router.patch('/subtasks/:id', authenticate, async (req, res) => {
+router.patch('/subtasks/:id', authenticate, requirePerm('tasks:write'), async (req, res) => {
   try {
     const { title, done, order_index } = req.body ?? {};
     const updates = [];
@@ -326,7 +327,7 @@ router.patch('/subtasks/:id', authenticate, async (req, res) => {
   }
 });
 
-router.delete('/subtasks/:id', authenticate, async (req, res) => {
+router.delete('/subtasks/:id', authenticate, requirePerm('tasks:write'), async (req, res) => {
   try {
     const r = await pool.query('DELETE FROM public.subtasks WHERE id = $1 RETURNING id', [req.params.id]);
     if (r.rowCount === 0) return res.status(404).json({ error: 'subtask not found' });
@@ -337,7 +338,7 @@ router.delete('/subtasks/:id', authenticate, async (req, res) => {
 });
 
 // Task dependencies
-router.get('/:id/dependencies', authenticate, async (req, res) => {
+router.get('/:id/dependencies', authenticate, requirePerm('tasks:read'), async (req, res) => {
   try {
     const r = await pool.query(
       `SELECT td.task_id, td.blocks_task_id, 
@@ -353,7 +354,7 @@ router.get('/:id/dependencies', authenticate, async (req, res) => {
   }
 });
 
-router.post('/:id/dependencies', authenticate, async (req, res) => {
+router.post('/:id/dependencies', authenticate, requirePerm('tasks:write'), async (req, res) => {
   try {
     const { blocks_task_id } = req.body ?? {};
     if (!blocks_task_id) return res.status(400).json({ error: 'blocks_task_id required' });
@@ -385,7 +386,7 @@ router.post('/:id/dependencies', authenticate, async (req, res) => {
   }
 });
 
-router.delete('/:id/dependencies/:blocksId', authenticate, async (req, res) => {
+router.delete('/:id/dependencies/:blocksId', authenticate, requirePerm('tasks:write'), async (req, res) => {
   try {
     const r = await pool.query(
       `DELETE FROM public.task_dependencies 
@@ -401,7 +402,7 @@ router.delete('/:id/dependencies/:blocksId', authenticate, async (req, res) => {
 });
 
 // Soft delete endpoint
-router.delete('/:id/soft', authenticate, async (req, res) => {
+router.delete('/:id/soft', authenticate, requirePerm('tasks:write'), async (req, res) => {
   try {
     const r = await pool.query(
       `UPDATE public.tasks
