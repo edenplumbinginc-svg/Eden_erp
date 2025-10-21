@@ -25,9 +25,21 @@ const pool = instrumentPool(rawPool);
  * Bootstrap database connection and ensure required extensions
  * Schema management is now handled by Drizzle (see drizzle/schema.ts)
  * Use `npm run db:push` to sync schema changes to the database
+ * 
+ * Now includes retry/backoff logic for resilient startup
  */
 async function bootstrapDatabase() {
+  const { waitForDb } = require('./db-diagnostics');
+  
   try {
+    // Wait for database with retry/backoff (max 5 attempts)
+    const connectionResult = await waitForDb(5);
+    
+    if (!connectionResult.connected) {
+      console.error('⚠️ Database connection failed after retries');
+      return { connected: false, error: 'Connection failed after retries', degraded: true };
+    }
+    
     // Ensure PostgreSQL extensions are enabled
     await pool.query(`CREATE EXTENSION IF NOT EXISTS pgcrypto;`);
     

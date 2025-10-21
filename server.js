@@ -116,6 +116,25 @@ app.get('/db/ping', async (_, res) => {
   }
 });
 
+// --- Comprehensive database diagnostics endpoint ---
+const { getDatabaseDiagnostics } = require('./services/db-diagnostics');
+app.get('/diag/db', async (req, res) => {
+  try {
+    const diagnostics = await getDatabaseDiagnostics();
+    const statusCode = diagnostics.status === 'up' ? 200 : 503;
+    res.status(statusCode).json(diagnostics);
+  } catch (err) {
+    res.status(500).json({
+      timestamp: new Date().toISOString(),
+      status: 'error',
+      error: {
+        message: err.message,
+        type: err.constructor.name
+      }
+    });
+  }
+});
+
 // --- Enforce authentication on all /api/* routes ---
 const { requireAuth } = require('./middleware/auth');
 app.use('/api', requireAuth);
