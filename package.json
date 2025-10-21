@@ -15,7 +15,10 @@
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:introspect": "drizzle-kit introspect"
+    "db:introspect": "drizzle-kit introspect",
+    "postdeploy": "node scripts/postdeploy.mjs",
+    "health:strict": "curl -sS http://localhost:3000/healthz | jq \".status, .db, .tls, .latency_ms\" || curl -sS http://localhost:3000/healthz",
+    "health:relaxed": "HEALTH_TLS_RELAX=1 node . & sleep 1 && curl -sS http://localhost:3000/healthz && killall node || true"
   },
   "description": "Monolithic shell.",
   "main": "index.js",
