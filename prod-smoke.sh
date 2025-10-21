@@ -2,11 +2,8 @@
 set -euo pipefail
 export PSQL_PAGER=cat
 
-# Unset Replit Secrets that override .env
-unset DATABASE_URL EXPECTED_DB_HOST EXPECTED_DB_PROJECT_REF
-
-# Load DATABASE_URL from .env
-export $(grep '^DATABASE_URL=' .env | xargs)
+# Use Replit Secret for DATABASE_URL (has correct password)
+# Set SSL configuration
 export DB_SSL_REJECT_UNAUTHORIZED=false
 export PGSSLMODE=allow
 
