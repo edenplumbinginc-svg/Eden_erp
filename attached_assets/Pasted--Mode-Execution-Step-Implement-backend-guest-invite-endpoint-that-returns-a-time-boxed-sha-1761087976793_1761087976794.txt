@@ -1,0 +1,143 @@
+[Mode: Execution]
+
+Step: Implement **backend guest-invite endpoint** that returns a time-boxed share link.
+
+Why it matters: Lets you invite external collaborators safely to a task/project while keeping RBAC intact and every invite audited.
+
+Inputs needed:
+
+* `DATABASE_URL` working
+* Paths: `server.js` (or app entry), `src/routes`, `src/utils/audit.js`, `middleware/permissions.js`
+
+Command (copy-paste; additive, no breaking changes):
+
+1. **Create table (SQL, idempotent)**
+
+```sql
+-- migrations/20251021_guest_links.sql
+CREATE TABLE IF NOT EXISTS guest_links (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  scope TEXT NOT NULL,                   -- 'task' | 'project'
+  scope_id UUID NOT NULL,
+  token UUID NOT NULL UNIQUE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_by UUID,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS guest_links_scope_idx ON guest_links (scope, scope_id);
+CREATE INDEX IF NOT EXISTS guest_links_exp_idx   ON guest_links (expires_at);
+```
+
+Run it:
+
+```bash
+psql "$DATABASE_URL" -f migrations/20251021_guest_links.sql
+```
+
+2. **Add endpoint**
+
+```js
+// src/routes/guestLinks.js
+import { Router } from "express";
+import { z } from "zod";
+import crypto from "crypto";
+import { db } from "../db/index.js";               // your pg/drizzle adapter
+import { sql } from "drizzle-orm";                 // if using drizzle; else use pg client directly
+import { validate } from "../middleware/validate.js";
+import { authenticate } from "../middleware/authenticate.js";
+import { requirePerm } from "../middleware/permissions.js";
+import { audit } from "../utils/audit.js";
+
+export const guestLinksRouter = Router();
+
+const CreateGuestLinkSchema = z.object({
+  scope: z.enum(["task","project"]),
+  id: z.string().uuid(),                  // scope_id
+  // e.g., "7d", "24h", "2h". Default 7d
+  expiresIn: z.string().regex(/^\d+(h|d)$/).default("7d")
+});
+
+function addDurationToNow(str){
+  const n = parseInt(str.slice(0, -1), 10);
+  const unit = str.at(-1);
+  const ms = unit === "d" ? n*24*60*60*1000 : n*60*60*1000;
+  return new Date(Date.now() + ms);
+}
+
+guestLinksRouter.post(
+  "/guest-links",
+  authenticate,
+  // either Coordination manager or someone who can write to projects
+  (req,res,next)=>requirePerm("coord:manage")(req,res,(e)=>{
+    if (!e) return next();                // coord:manage passes
+    return requirePerm("projects:write")(req,res,next); // else require projects:write
+  }),
+  validate(CreateGuestLinkSchema),
+  async (req, res, next) => {
+    try {
+      const userId = req.user?.id ?? null;
+      const { scope, id: scopeId, expiresIn } = req.data;
+      const token = crypto.randomUUID();
+      const expiresAt = addDurationToNow(expiresIn);
+
+      // insert (raw SQL for universal compatibility)
+      await db.execute(sql`
+        INSERT INTO guest_links (scope, scope_id, token, expires_at, created_by)
+        VALUES (${scope}, ${scopeId}::uuid, ${token}::uuid, ${expiresAt.toISOString()}::timestamptz, ${userId}::uuid)
+      `);
+
+      // your public base URL (adjust if you have env for frontend/base)
+      const base = process.env.PUBLIC_BASE_URL || "https://example.com";
+      const url = `${base}/guest?token=${token}`;
+
+      await audit(userId, "guest.invite", `${scope}:${scopeId}`, { expiresIn, tokenPreview: token.slice(0,8) });
+
+      return res.status(201).json({ url, expiresAt });
+    } catch (err) {
+      return next(err);
+    }
+  }
+);
+```
+
+3. **Mount the router**
+
+```js
+// server.js (or src/server.js)
+import { guestLinksRouter } from "./src/routes/guestLinks.js"; // adjust path to your structure
+app.use("/api", guestLinksRouter);
+```
+
+4. **Set base URL (optional)**
+
+```bash
+# .env (or Replit Secrets)
+PUBLIC_BASE_URL=https://edenerp-edenplumbinginc.replit.app
+```
+
+5. **Quick tests**
+
+```bash
+# as Manager/Admin (use a user that has coord:manage or projects:write)
+curl -s -X POST http://localhost:3000/api/guest-links \
+  -H "Content-Type: application/json" \
+  -H "X-Dev-User-Email: test@edenplumbing.com" \
+  -H "X-Dev-User-Id: 855546bf-f53d-4538-b8d5-cd30f5c157a2" \
+  -d '{"scope":"task","id":"1011b627-3c25-4f5c-8ac3-e449d15dd180","expiresIn":"7d"}' | jq
+
+# verify DB + audit
+psql "$DATABASE_URL" -c "SELECT scope, scope_id, token, expires_at FROM guest_links ORDER BY created_at DESC LIMIT 1;"
+psql "$DATABASE_URL" -c "SELECT action, entity, meta->>'expiresIn' as expires FROM audit_logs WHERE action='guest.invite' ORDER BY created_at DESC LIMIT 1;"
+```
+
+Success check:
+
+* `POST /api/guest-links` returns `{ url, expiresAt }` with 201.
+* A row exists in `guest_links` with your scope/id and a future `expires_at`.
+* An `audit_logs` row exists with `guest.invite`.
+* Permission errors behave correctly: users without `coord:manage` **and** without `projects:write` get `403`.
+
+Next: wait for user
+
+When you confirm this works, I’ll do the **next single step**: wire the **frontend button** to call `/api/guest-links` and show the link with a live countdown.

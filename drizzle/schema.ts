@@ -331,3 +331,22 @@ export const idempotency = pgTable("idempotency", {
         key: text().primaryKey().notNull(),
         createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 });
+
+export const guestLinks = pgTable("guest_links", {
+        id: uuid().defaultRandom().primaryKey().notNull(),
+        scope: text().notNull(),
+        scopeId: uuid("scope_id").notNull(),
+        token: uuid().notNull(),
+        expiresAt: timestamp("expires_at", { withTimezone: true, mode: 'string' }).notNull(),
+        createdBy: uuid("created_by"),
+        createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+        unique("guest_links_token_key").on(table.token),
+        index("guest_links_scope_idx").using("btree", table.scope.asc().nullsLast(), table.scopeId.asc().nullsLast()),
+        index("guest_links_exp_idx").using("btree", table.expiresAt.asc().nullsLast()),
+        foreignKey({
+                columns: [table.createdBy],
+                foreignColumns: [users.id],
+                name: "guest_links_created_by_fkey"
+        }),
+]);

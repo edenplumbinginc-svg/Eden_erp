@@ -220,6 +220,7 @@ app.use('/api/tasks', require('./routes/tasks'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api', require('./routes/attachments'));
+app.use('/api/guest-links', require('./routes/guestLinks'));
 
 // --- Subtask routes need to be at /api level ---
 app.patch('/api/subtasks/:id', async (req, res) => {
