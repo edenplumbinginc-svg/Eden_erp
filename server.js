@@ -221,6 +221,7 @@ app.use('/api/reports', require('./routes/reports'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api', require('./routes/attachments'));
 app.use('/api/guest-links', require('./routes/guestLinks'));
+app.use('/api/ops', require('./routes/ops'));
 
 // --- Subtask routes need to be at /api level ---
 app.patch('/api/subtasks/:id', async (req, res) => {
@@ -293,6 +294,50 @@ if (sentryEnabled) {
 const { notFoundHandler, errorHandler } = require('./middleware/error-handler');
 app.use(notFoundHandler);
 app.use(errorHandler);
+
+// --- Nightly overdue notifier ---
+const { enqueue } = require('./services/queue');
+
+const ONE_DAY = 24 * 60 * 60 * 1000;
+
+async function runDailyOverdue() {
+  try {
+    console.log('[DAILY-JOB] Running overdue check...');
+    const { rows } = await pool.query(`
+      SELECT t.id, t.title, t.assignee_id, t.project_id, t.due_at
+      FROM tasks t
+      WHERE t.due_at IS NOT NULL 
+        AND t.due_at < now() 
+        AND t.status NOT IN ('done','closed')
+        AND t.deleted_at IS NULL
+    `);
+    
+    console.log(`[DAILY-JOB] Found ${rows.length} overdue tasks`);
+    
+    for (const r of rows) {
+      if (r.assignee_id) {
+        await enqueue("notify-user", { 
+          userId: r.assignee_id, 
+          event: "task.overdue", 
+          meta: { 
+            taskId: r.id, 
+            title: r.title, 
+            due_at: r.due_at, 
+            project_id: r.project_id 
+          } 
+        });
+      }
+    }
+    
+    await enqueue("daily-summary", { dateIso: new Date().toISOString().slice(0,10) });
+    console.log('[DAILY-JOB] Overdue check complete');
+  } catch (err) {
+    console.error('[DAILY-JOB] Error running overdue check:', err);
+  }
+}
+
+setTimeout(runDailyOverdue, 10000);
+setInterval(runDailyOverdue, ONE_DAY);
 
 // --- Start server ---
 const port = process.env.PORT || 3000;

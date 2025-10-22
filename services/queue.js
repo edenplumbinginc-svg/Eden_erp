@@ -8,6 +8,11 @@ function registerHandler(name, handler) {
 function enqueue(name, payload) {
   jobQueue.push({ name, payload, enqueuedAt: new Date() });
   console.log(`[QUEUE] Enqueued job: ${name}`, payload);
+  
+  const handler = handlers[name];
+  if (handler) {
+    setImmediate(() => handler(payload).catch(err => console.error(`[job:${name}]`, err)));
+  }
 }
 
 async function processJobs() {
@@ -32,6 +37,14 @@ async function processJobs() {
 }
 
 setInterval(processJobs, 1000);
+
+registerHandler("notify-user", async ({ userId, event, meta }) => {
+  console.log(`[notify-user] → user=${userId} event=${event}`, meta || {});
+});
+
+registerHandler("daily-summary", async ({ dateIso }) => {
+  console.log(`[daily-summary] generating for ${dateIso}`);
+});
 
 module.exports = {
   enqueue,

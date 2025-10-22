@@ -110,9 +110,9 @@ router.patch('/:id', authenticate, requirePerm('tasks:write'), validate(UpdateTa
     let currentTaskData = null;
     let currentTask = null;
     
-    if (status !== undefined || ballOwnerType !== undefined || ballOwnerId !== undefined) {
+    if (status !== undefined || assignee_id !== undefined || ballOwnerType !== undefined || ballOwnerId !== undefined) {
       currentTask = await pool.query(
-        'SELECT status, ball_in_court, ball_owner_type, ball_owner_id, ball_since, project_id, title, priority, due_at FROM public.tasks WHERE id = $1', 
+        'SELECT status, assignee_id, ball_in_court, ball_owner_type, ball_owner_id, ball_since, project_id, title, priority, due_at FROM public.tasks WHERE id = $1', 
         [req.params.id]
       );
       if (currentTask.rowCount === 0) return res.status(404).json({ error: 'task not found' });
@@ -195,6 +195,7 @@ router.patch('/:id', authenticate, requirePerm('tasks:write'), validate(UpdateTa
             taskId: req.params.id,
             actorId: req.user?.id || null,
             actorEmail: actorEmail || null,
+            userId: currentTaskData.assignee_id,
             payload: {
               title: currentTaskData.title,
               old_status: currentStatus,
@@ -204,6 +205,24 @@ router.patch('/:id', authenticate, requirePerm('tasks:write'), validate(UpdateTa
             }
           });
         }
+      }
+      
+      // Insert notification within the same transaction if assignee changed
+      if (assignee_id !== undefined && currentTaskData && assignee_id !== currentTaskData.assignee_id && assignee_id !== null) {
+        const { actorEmail } = actorFromHeaders(req);
+        await notify(tx, {
+          type: 'task_assigned',
+          projectId: currentTaskData.project_id,
+          taskId: req.params.id,
+          actorId: req.user?.id || null,
+          actorEmail: actorEmail || null,
+          userId: assignee_id,
+          payload: {
+            title: currentTaskData.title,
+            priority: currentTaskData.priority,
+            due_date: currentTaskData.due_at
+          }
+        });
       }
       
       return updatedTask;
