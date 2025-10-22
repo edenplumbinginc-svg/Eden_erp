@@ -1,0 +1,136 @@
+[Mode: Execution]
+
+**Step:** Add/upgrade API smoke tests + doc snippet so anyone can verify core routes in 1 command.
+
+**Why it matters:** Locks in a fast, objective “is the app healthy?” check before each thin slice.
+
+**Inputs needed:** none
+
+**Command (paste at repo root):**
+
+````bash
+mkdir -p scripts
+
+# Core smoke (health, projects, tasks, notifications)
+cat > scripts/smoke-api.js <<'JS'
+const fetch = require('node-fetch');
+
+const BASE = process.env.BASE_URL || 'http://localhost:3000';
+const TOKEN = process.env.API_TOKEN || process.env.ADMIN_TOKEN || '';
+
+async function jget(path) {
+  const res = await fetch(BASE + path, { headers: TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {} });
+  if (!res.ok) throw new Error(`${path} -> ${res.status}`);
+  return res.json();
+}
+
+(async () => {
+  try {
+    // 1) health
+    const hz = await jget('/healthz');
+    if (!hz.ok) throw new Error('healthz not ok');
+
+    // 2) projects (read)
+    const projects = await jget('/projects?limit=50');
+    if (!Array.isArray(projects) || projects.length < 1) throw new Error('no projects found');
+
+    // 3) tasks (read)
+    const tasks = await jget('/tasks?limit=50');
+    if (!Array.isArray(tasks)) throw new Error('tasks not array');
+
+    // 4) notifications (read)
+    const notes = await jget('/notifications?limit=50');
+    if (!Array.isArray(notes)) throw new Error('notifications not array');
+
+    // Optional: if job exists, ping it (admin token usually required)
+    try {
+      const res = await fetch(BASE + '/jobs/overdue/recompute', {
+        method: 'POST',
+        headers: TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {}
+      });
+      if (res.ok) {
+        const j = await res.json();
+        if (!j.ok) throw new Error('overdue recompute not ok');
+        console.log('✓ overdue recompute ok', j);
+      } else {
+        console.log('• skipped overdue recompute (endpoint or auth not available)');
+      }
+    } catch {
+      console.log('• skipped overdue recompute (no admin token or route absent)');
+    }
+
+    console.log('✅ smoke:api PASSED', {
+      projects: projects.length,
+      tasks: tasks.length,
+      notifications: notes.length
+    });
+  } catch (e) {
+    console.error('❌ smoke:api FAILED', e.message);
+    process.exit(1);
+  }
+})();
+JS
+
+# Ensure script is wired
+applypatch <<'PATCH'
+*** Begin Patch
+*** Update File: package.json
+@@
+   "scripts": {
+-    "smoke:api": "node scripts/smoke-api.js"
++    "smoke:api": "node scripts/smoke-api.js"
+   }
+*** End Patch
+PATCH
+
+# Docs: add “Smoke Test” section
+applypatch <<'PATCH'
+*** Begin Patch
+*** Update File: docs/api-contract.md
+@@
+ ## Smoke Test
+ 
+ Run a quick health check against the live API:
+ 
+ ```bash
+ BASE_URL="http://localhost:3000" \
+ API_TOKEN="<jwt or empty>" \
+ npm run smoke:api
+````
+
+**Pass criteria**
+
+* `/healthz` returns `{ ok: true }`
+* `/projects` returns an array (≥1)
+* `/tasks` returns an array
+* `/notifications` returns an array
+* (Optional) `/jobs/overdue/recompute` returns `{ ok: true }` if available and authorized
+  *** End Patch
+  PATCH
+
+# Update HANDOFF summary with the smoke command (if file exists, append; ignore error if missing)
+
+if [ -f HANDOFF.md ]; then
+cat >> HANDOFF.md <<'EOF'
+
+## Quick Smoke
+
+```bash
+BASE_URL="http://localhost:3000" API_TOKEN="<jwt>" npm run smoke:api
+```
+
+Pass: healthz ok, lists return arrays, optional overdue recompute ok.
+EOF
+fi
+
+echo "✅ Smoke test wired & docs updated"
+
+```
+
+**Success check:**
+- `npm run smoke:api` prints ✅ with counts (projects/tasks/notifications).
+- `docs/api-contract.md` shows the Smoke Test snippet.
+- (If present) `HANDOFF.md` now includes “Quick Smoke”.
+
+**Next:** wait for user
+```

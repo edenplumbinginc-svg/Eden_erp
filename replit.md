@@ -23,6 +23,7 @@ I prefer iterative development, with a focus on delivering functional increments
 - **RBAC (Role-Based Access Control)**: Complete RBAC foundation with normalized tables, module-based permission naming (`<module>:<action>`), and permission middleware (`requirePerm()`, `hasPerm()`). Includes 9 baseline roles and 32 module-based permissions.
 - **Airtight Layer**: Production-grade middleware for (1) Zod schema validation, (2) Rate Limiting, (3) Audit Logs (`audit_logs` table), (4) Idempotency protection, (5) Background Job Queue, and (6) PII Scrubbing in Sentry logs.
 - **Monitoring**: Comprehensive production monitoring with health checks, structured JSON logging, Sentry integration for error tracking/performance, and automated post-deploy gates.
+- **Smoke Tests**: Automated API health checks via `npm run smoke:api` (Node.js script testing health, projects, tasks, notifications, reports endpoints).
 - **Database Configuration Safety**: Multi-layered validation ensures correct database connection.
 - **Database Diagnostics**: Full diagnostic infrastructure with retry/backoff, DNS resolution, `/diag/db` endpoint, and fail-fast startup.
 - **Automation**: Automated job for sending idle task reminders and a background job queue for async tasks (emails, syncs, exports).

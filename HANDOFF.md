@@ -37,7 +37,8 @@
 - ✅ `replit.md` - Architecture + user preferences
 - ✅ `docs/ui-definition-of-done.md` - 6-point checklist per screen
 - ✅ `docs/iteration-cadence.md` - Daily/weekly sprint rhythm
-- ✅ `docs/curl-smoke.sh` - API smoke tests
+- ✅ `docs/api-contract.md` - API endpoints + smoke tests
+- ✅ `scripts/smoke-api.js` - Automated API health checks
 
 ### Test Results
 ```
@@ -78,10 +79,24 @@ npm run db:push --force  # Push schema changes
 npm run smoke:api        # Run smoke tests
 ```
 
+## 🧪 Quick Smoke Test
+
+```bash
+BASE_URL="http://localhost:3000" npm run smoke:api
+```
+
+**Pass criteria:**
+- `/healthz` returns `{ status: "ok" }`
+- `/api/projects` returns an array (≥1)
+- `/api/projects/:id/tasks` returns an array
+- `/api/notifications/recent` returns an array
+- `/api/reports/tasks/status` returns task counts by status
+
 ## 🧠 Migration to New Thread
 Copy the prompt from `attached_assets/Pasted--Mode-Execution...` and paste in a new Replit Agent thread to continue at this pace.
 
 ---
-**Last Updated**: 2025-10-22 04:17 UTC  
+**Last Updated**: 2025-10-22 04:30 UTC  
 **Stability**: ✅ PRODUCTION READY  
+**Smoke Tests**: ✅ ALL PASSING  
 **Next Feature**: Idle Reminders Job

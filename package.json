@@ -26,7 +26,7 @@
     "diag:db": "curl -sS http://localhost:3000/diag/db | node -e \"const data = require('fs').readFileSync(0, 'utf8'); try { console.log(JSON.stringify(JSON.parse(data), null, 2)); } catch(e) { console.log(data); }\"",
     "diag:db:json": "curl -sS http://localhost:3000/diag/db",
     "dev:web": "npm --prefix apps/ui run dev",
-    "smoke:api": "bash docs/curl-smoke.sh"
+    "smoke:api": "node scripts/smoke-api.js"
   },
   "description": "Monolithic shell.",
   "main": "index.js",
