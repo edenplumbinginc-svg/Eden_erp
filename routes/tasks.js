@@ -10,6 +10,7 @@ const { notify, actorFromHeaders } = require('../lib/notify');
 const { withTx } = require('../lib/tx');
 const { audit } = require('../utils/audit');
 const { maybeAutoCloseParent } = require('../services/taskAutoClose');
+const { handoffTask } = require('../services/handoff');
 
 // Zod validation schemas
 const UpdateTaskSchema = z.object({
@@ -55,6 +56,10 @@ const BallHandoffSchema = z.object({
 
 const CreateDependencySchema = z.object({
   blocks_task_id: z.string().uuid()
+});
+
+const HandoffSchema = z.object({
+  to_department: z.string().min(1).max(100)
 });
 
 // Status flow validation
@@ -590,6 +595,23 @@ router.put('/:id/snooze_idle', authenticate, requirePerm('tasks:write'), async (
     res.json({ ok: true, data: r.rows[0] });
   } catch (e) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+// Department handoff with 24h duplicate guard
+router.post('/:id/handoff', authenticate, requirePerm('tasks:write'), validate(HandoffSchema), async (req, res) => {
+  try {
+    const taskId = req.params.id;
+    const toDepartment = req.body.to_department;
+    const actorEmail = req.user?.email || 'unknown';
+    
+    const result = await handoffTask({ taskId, toDepartment, actorEmail });
+    res.json(result);
+  } catch (e) {
+    if (e.message === 'task not found') {
+      return res.status(404).json({ ok: false, error: 'task not found' });
+    }
+    res.status(500).json({ ok: false, error: e.message });
   }
 });
 
