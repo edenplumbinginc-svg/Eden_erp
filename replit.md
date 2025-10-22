@@ -15,7 +15,7 @@ I prefer iterative development, with a focus on delivering functional increments
 - **API Integration**: Axios-based client with interceptors for development auth headers.
 - **Project Structure**: Monorepo with frontend in `apps/coordination_ui/`. Vite proxies `/api` to backend on port 3000.
 - **Theming**: Soft Light (Google-ish) theme with custom utilities, active scale feedback, and focus rings.
-- **Components**: StatusSelect, BICChip, Overdue Badge, Notifications Bell, Toast System.
+- **Components**: StatusSelect, BICChip, Overdue Badge, Idle Badge, Notifications Bell, Toast System.
 
 ### Technical Implementations
 - **Backend Framework**: Express.js.
@@ -27,10 +27,11 @@ I prefer iterative development, with a focus on delivering functional increments
 - **Monitoring**: Health checks, structured JSON logging, Sentry integration, and automated post-deploy gates.
 - **Smoke Tests**: Automated API health checks.
 - **Database Safety**: Multi-layered validation and diagnostics.
-- **Automation**: Automated job for idle task reminders, background job queue for async tasks (emails, syncs, exports).
+- **Automation**: Background job queue for async tasks (emails, syncs, exports).
 - **Notifications System**: Integrated job queue for `notify-user` and `daily-summary`, triggered by task events and overdue checks.
 - **User Preferences System**: Database table and API endpoints for managing user settings like `default_project_id` and `tasks_group_by`.
-- **Automated Overdue Task Tracking**: `is_overdue` and `overdue_snoozed_until` fields, `recomputeOverdue` service, daily cron job, and manual admin endpoint.
+- **Automated Overdue Task Tracking**: `is_overdue` and `overdue_snoozed_until` fields, `recomputeOverdue` service, daily cron job at 3:00 AM, and manual admin endpoint.
+- **Automated Idle Task Reminders**: `needs_idle_reminder` and `idle_snoozed_until` fields, `recomputeIdle` service with 3-day threshold, daily cron job at 9:05 AM, snooze endpoint, and UI badge.
 - **Auto-Complete Parent Task**: Service to auto-manage parent task status based on subtask completion, with manual override (`status_locked`).
 - **Email Summary**: Nodemailer service for daily digest with smart fallback.
 
