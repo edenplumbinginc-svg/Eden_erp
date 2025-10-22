@@ -1,0 +1,179 @@
+[Mode: Execution]
+
+Step: Add a **Checklist Editor** (add / toggle / delete) to Task Detail using your existing Subtask API.
+
+Why it matters: This makes checklists truly usable day-to-day and knocks off a visible item from Phase-1 without touching backend logic.
+
+Inputs needed:
+
+* Backend routes already exist (you shipped them):
+
+  * `POST /api/tasks/:id/subtasks`
+  * `PATCH /api/tasks/subtasks/:subtaskId`
+  * `DELETE /api/tasks/subtasks/:subtaskId`
+* Frontend app at `apps/coordination_ui`
+
+Command (copy-paste; additive only):
+
+1. API helpers
+
+```js
+// apps/coordination_ui/src/api.js
+// …existing exports…
+export async function listSubtasks(taskId) {
+  const { data } = await api.get(`/tasks/${taskId}`); // assuming task returns subtasks[]; if not, fetch a separate endpoint if you have one
+  return Array.isArray(data?.subtasks) ? data.subtasks : [];
+}
+export async function createSubtask(taskId, payload) {
+  const { data } = await api.post(`/tasks/${taskId}/subtasks`, payload); // { title }
+  return data;
+}
+export async function updateSubtask(subtaskId, payload) {
+  const { data } = await api.patch(`/tasks/subtasks/${subtaskId}`, payload); // { done?, title? }
+  return data;
+}
+export async function deleteSubtask(subtaskId) {
+  await api.delete(`/tasks/subtasks/${subtaskId}`);
+  return true;
+}
+```
+
+2. ChecklistEditor component
+
+```jsx
+// apps/coordination_ui/src/components/ChecklistEditor.jsx
+import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { listSubtasks, createSubtask, updateSubtask, deleteSubtask } from "../api";
+
+export default function ChecklistEditor({ taskId, canEdit }) {
+  const qc = useQueryClient();
+  const { data: items = [], isLoading } = useQuery({
+    queryKey: ["subtasks", taskId],
+    queryFn: () => listSubtasks(taskId),
+    enabled: !!taskId
+  });
+
+  const [title, setTitle] = useState("");
+
+  const mCreate = useMutation({
+    mutationFn: (t) => createSubtask(taskId, { title: t }),
+    onSuccess: () => { setTitle(""); qc.invalidateQueries({ queryKey: ["subtasks", taskId] }); }
+  });
+
+  const mToggle = useMutation({
+    mutationFn: ({ id, done }) => updateSubtask(id, { done }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["subtasks", taskId] })
+  });
+
+  const mRename = useMutation({
+    mutationFn: ({ id, title }) => updateSubtask(id, { title }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["subtasks", taskId] })
+  });
+
+  const mDelete = useMutation({
+    mutationFn: (id) => deleteSubtask(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["subtasks", taskId] })
+  });
+
+  return (
+    <div className="space-y-3">
+      <div className="font-semibold">Checklist</div>
+
+      {isLoading ? <div className="text-sm text-gray-500">Loading…</div> : (
+        <ul className="space-y-2">
+          {items.length === 0 && <li className="text-sm text-gray-500">No checklist yet.</li>}
+          {items.map(it => (
+            <li key={it.id} className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                className="h-4 w-4"
+                checked={!!it.done}
+                disabled={!canEdit || mToggle.isPending}
+                onChange={e => mToggle.mutate({ id: it.id, done: e.target.checked })}
+              />
+              {canEdit ? (
+                <input
+                  className="border rounded px-2 py-1 flex-1"
+                  value={it.title || ""}
+                  onChange={e => mRename.mutate({ id: it.id, title: e.target.value })}
+                />
+              ) : (
+                <span className={it.done ? "line-through text-gray-500" : ""}>{it.title}</span>
+              )}
+              {canEdit && (
+                <button
+                  className="text-xs px-2 py-1 border rounded"
+                  onClick={() => mDelete.mutate(it.id)}
+                  disabled={mDelete.isPending}
+                >
+                  Delete
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {canEdit && (
+        <div className="flex items-center gap-2">
+          <input
+            className="border rounded px-2 py-1 flex-1"
+            placeholder="New checklist item…"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+          />
+          <button
+            className="px-3 py-1 rounded border"
+            onClick={() => title.trim() && mCreate.mutate(title.trim())}
+            disabled={mCreate.isPending}
+          >
+            Add
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+3. Use it in Task Detail
+
+```jsx
+// apps/coordination_ui/src/pages/TaskDetail.jsx
+// …existing imports…
+import ChecklistEditor from "../components/ChecklistEditor";
+
+// inside TaskDetail render:
+<div className="grid md:grid-cols-2 gap-6">
+  <div className="space-y-6">
+    <ChecklistEditor taskId={taskId} canEdit={true} />
+    <Comments taskId={taskId} />
+  </div>
+  <div className="space-y-6">
+    <Attachments taskId={taskId} />
+    {/* Guest Invite panel remains here */}
+    {/* … */}
+  </div>
+</div>
+```
+
+Notes:
+
+* If your task payload doesn’t embed `subtasks`, adjust `listSubtasks()` to hit your actual list endpoint. The rest remains identical.
+* RBAC: creating/updating/deleting subtasks requires `tasks:write` (already enforced on backend).
+
+Success check:
+
+* As **OPS/ADMIN**, open `/task/:taskId`:
+
+  * Add item → list refreshes with new row.
+  * Toggle checkbox → persists and re-renders.
+  * Rename inline → persists on blur/keystroke (we send on each change for speed).
+  * Delete → row disappears.
+* As **VIEWER**, verify UI blocks edits (if you want, pass `canEdit={false}` for viewer mode or gate using current role).
+* Audit logs show `subtask.create`, `subtask.update`, `subtask.delete` entries (you already wired these in tasks routes).
+
+Next: wait for user
+
+When this passes, I’ll do the next single step: **Project → Task navigation** (project detail with task list and deep-link into Task Detail).

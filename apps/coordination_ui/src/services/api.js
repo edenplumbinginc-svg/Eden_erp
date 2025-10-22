@@ -69,7 +69,13 @@ export const apiService = {
   getUsers: () => api.get('/users'),
 
   // Guest Links
-  createGuestLink: ({ scope, id, expiresIn = "7d" }) => api.post('/guest-links', { scope, id, expiresIn }).then(res => res.data)
+  createGuestLink: ({ scope, id, expiresIn = "7d" }) => api.post('/guest-links', { scope, id, expiresIn }).then(res => res.data),
+
+  // Subtasks
+  listSubtasks: (taskId) => api.get(`/tasks/${taskId}/subtasks`).then(res => res.data),
+  createSubtask: (taskId, payload) => api.post(`/tasks/${taskId}/subtasks`, payload).then(res => res.data),
+  updateSubtask: (subtaskId, payload) => api.patch(`/tasks/subtasks/${subtaskId}`, payload).then(res => res.data),
+  deleteSubtask: (subtaskId) => api.delete(`/tasks/subtasks/${subtaskId}`).then(res => res.data)
 };
 
 // Export the raw axios instance for direct use
