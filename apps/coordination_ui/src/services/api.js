@@ -77,6 +77,8 @@ export const apiService = {
 
   // Notifications
   listRecentNotifications: () => api.get('/notifications/recent').then(res => Array.isArray(res.data) ? res.data : []),
+  markNotificationRead: (id) => api.patch(`/notifications/${id}/read`).then(res => res.data),
+  markAllNotificationsRead: () => api.patch('/notifications/mark-all-read').then(res => res.data),
 
   // Subtasks
   listSubtasks: (taskId) => api.get(`/tasks/${taskId}/subtasks`).then(res => res.data),

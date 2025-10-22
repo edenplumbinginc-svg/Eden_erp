@@ -1,4 +1,5 @@
 const { pool } = require('./database');
+const { createNotification, getDepartmentUsers } = require('./notifications');
 
 /**
  * Perform a department handoff with a 24h duplicate guard per (task_id, to_department).
@@ -7,6 +8,7 @@ const { pool } = require('./database');
  *    * Insert into handoff_events
  *    * Update tasks.department = to_department
  *    * Write audit entry 'task.handoff'
+ *    * Create notifications for all users in the target department
  *
  * @param {Object} params
  * @param {string} params.taskId - UUID of the task
@@ -23,10 +25,11 @@ async function handoffTask({ taskId, toDepartment, actorEmail, note }) {
   try {
     await client.query('BEGIN');
 
-    // Fetch current department (for audit)
-    const t = await client.query('SELECT department FROM tasks WHERE id = $1 FOR UPDATE', [taskId]);
+    // Fetch current department and task details (for audit and notifications)
+    const t = await client.query('SELECT department, title, project_id FROM tasks WHERE id = $1 FOR UPDATE', [taskId]);
     if (t.rowCount === 0) throw new Error('task not found');
-    const fromDepartment = t.rows[0].department || null;
+    const task = t.rows[0];
+    const fromDepartment = task.department || null;
 
     // Duplicate-fire guard (24h)
     const dup = await client.query(
@@ -78,6 +81,31 @@ async function handoffTask({ taskId, toDepartment, actorEmail, note }) {
     );
 
     await client.query('COMMIT');
+
+    // Create notifications for all users in the target department (after commit)
+    try {
+      const departmentUsers = await getDepartmentUsers(toDepartment);
+      console.log(`[HANDOFF] Notifying ${departmentUsers.length} users in ${toDepartment} department`);
+      
+      for (const user of departmentUsers) {
+        await createNotification({
+          userId: user.id,
+          type: 'ball_handoff',
+          taskId: taskId,
+          projectId: task.project_id,
+          actorEmail: actorEmail,
+          payload: {
+            title: task.title,
+            fromDepartment,
+            toDepartment,
+            note: note || null
+          }
+        });
+      }
+    } catch (notifError) {
+      console.error('[HANDOFF] Failed to create notifications:', notifError.message);
+    }
+
     return { ok: true, skipped: false, fromDepartment, toDepartment };
   } catch (e) {
     await client.query('ROLLBACK');

@@ -12,10 +12,9 @@ export default function NotificationsBell() {
   const { data: items = [], refetch } = useQuery({
     queryKey: ["recent_notifications"],
     queryFn: () => apiService.listRecentNotifications(),
-    refetchInterval: 30_000,  // poll every 30s
+    refetchInterval: 30_000,
   });
 
-  // toast on new items
   useEffect(() => {
     if (!items.length) return;
     const latestTs = Math.max(...items.map(n => +new Date(n.created_at)));
@@ -25,8 +24,29 @@ export default function NotificationsBell() {
     lastSeen.current = latestTs;
   }, [items, push]);
 
-  // For now, assume all are unread since we don't have read_at field
-  const unreadCount = useMemo(() => items.length, [items]);
+  const unreadCount = useMemo(() => items.filter(n => !n.read_at).length, [items]);
+
+  const handleMarkAsRead = async (id) => {
+    try {
+      await apiService.markNotificationRead(id);
+      push("success", "Notification marked as read");
+      refetch();
+    } catch (error) {
+      push("error", "Failed to mark notification as read");
+      console.error("Mark as read error:", error);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await apiService.markAllNotificationsRead();
+      push("success", "All notifications marked as read");
+      refetch();
+    } catch (error) {
+      push("error", "Failed to mark all as read");
+      console.error("Mark all as read error:", error);
+    }
+  };
 
   return (
     <div className="relative">
@@ -41,25 +61,55 @@ export default function NotificationsBell() {
       {open && (
         <div className="absolute right-0 mt-2 w-96 max-h-96 overflow-auto bg-white border rounded shadow z-40">
           <div className="flex items-center justify-between px-3 py-2 border-b">
-            <div className="font-semibold text-sm">Recent</div>
-            <button className="text-xs underline" onClick={() => refetch()}>Refresh</button>
+            <div className="font-semibold text-sm">Recent Notifications</div>
+            <div className="flex gap-2">
+              {unreadCount > 0 && (
+                <button 
+                  className="text-xs underline text-blue-600 hover:text-blue-800" 
+                  onClick={handleMarkAllAsRead}
+                >
+                  Mark all read
+                </button>
+              )}
+              <button className="text-xs underline" onClick={() => refetch()}>Refresh</button>
+            </div>
           </div>
           <ul className="divide-y">
             {items.length === 0 && <li className="p-3 text-sm text-gray-500">No notifications.</li>}
-            {items.map((n, i) => (
-              <li key={n.id || i} className="p-3 text-sm flex items-start justify-between gap-3">
-                <div>
-                  <div className="font-medium">{labelFor(n.type)}</div>
-                  <div className="text-xs text-gray-600">
-                    {n.entity || n.task_id || n.project_id} • {new Date(n.created_at).toLocaleString()}
+            {items.map((n) => {
+              const isUnread = !n.read_at;
+              return (
+                <li key={n.id} className={`p-3 text-sm flex items-start justify-between gap-3 ${isUnread ? 'bg-blue-50' : 'bg-white'}`}>
+                  <div className="flex-1">
+                    <div className={`${isUnread ? 'font-bold' : 'font-medium'}`}>
+                      {formatNotificationText(n)}
+                    </div>
+                    <div className="text-xs text-gray-600 mt-1">
+                      {new Date(n.created_at).toLocaleString()}
+                    </div>
                   </div>
-                  {n.payload?.title && <div className="text-xs mt-1">{n.payload.title}</div>}
-                </div>
-                {n.task_id && (
-                  <Link className="px-2 py-1 border rounded text-xs" to={`/task/${n.task_id}`}>Open</Link>
-                )}
-              </li>
-            ))}
+                  <div className="flex flex-col gap-1">
+                    {n.task_id && (
+                      <Link 
+                        className="px-2 py-1 border rounded text-xs bg-white hover:bg-gray-50 text-center" 
+                        to={`/task/${n.task_id}`}
+                        onClick={() => setOpen(false)}
+                      >
+                        Open
+                      </Link>
+                    )}
+                    {isUnread && (
+                      <button
+                        className="px-2 py-1 border rounded text-xs bg-white hover:bg-gray-50"
+                        onClick={() => handleMarkAsRead(n.id)}
+                      >
+                        ✓ Read
+                      </button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
@@ -67,13 +117,24 @@ export default function NotificationsBell() {
   );
 }
 
-function labelFor(type){
-  switch(type){
-    case "task_created": return "Task created";
-    case "task_assigned": return "Task assigned";
-    case "status_changed": return "Status changed";
-    case "task_overdue": return "Task overdue";
-    case "comment_added": return "Comment added";
-    default: return type || "Notification";
+function formatNotificationText(notification) {
+  const { type, payload, actor_email } = notification;
+  const actorName = actor_email ? actor_email.split('@')[0] : 'Someone';
+  
+  switch(type) {
+    case "ball_handoff":
+      return `🏀 Task handed to ${payload.toDepartment}: ${payload.title}`;
+    case "comment_added":
+      return `💬 ${actorName} commented on: ${payload.title}`;
+    case "status_changed":
+      return `📊 Task "${payload.title}" changed to ${payload.newStatus}`;
+    case "task_created":
+      return `✨ New task created: ${payload.title || 'Untitled'}`;
+    case "task_assigned":
+      return `👤 Task assigned to you: ${payload.title || 'Untitled'}`;
+    case "task_overdue":
+      return `⏰ Task overdue: ${payload.title || 'Untitled'}`;
+    default:
+      return payload.title || type || "Notification";
   }
 }

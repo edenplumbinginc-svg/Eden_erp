@@ -12,6 +12,7 @@ const { audit } = require('../utils/audit');
 const { maybeAutoCloseParent } = require('../services/taskAutoClose');
 const { handoffTask } = require('../services/handoff');
 const { parseQuery, fetchTasks } = require('../services/taskQuery');
+const { createNotification } = require('../services/notifications');
 
 // Zod validation schemas
 const UpdateTaskSchema = z.object({
@@ -136,7 +137,7 @@ router.patch('/:id', authenticate, requirePerm('tasks:write'), validate(UpdateTa
     
     if (status !== undefined || assignee_id !== undefined || ballOwnerType !== undefined || ballOwnerId !== undefined) {
       currentTask = await pool.query(
-        'SELECT status, assignee_id, ball_in_court, ball_owner_type, ball_owner_id, ball_since, project_id, title, priority, due_at FROM public.tasks WHERE id = $1', 
+        'SELECT status, assignee_id, ball_in_court, ball_owner_type, ball_owner_id, ball_since, project_id, title, priority, due_at, created_by FROM public.tasks WHERE id = $1', 
         [req.params.id]
       );
       if (currentTask.rowCount === 0) return res.status(404).json({ error: 'task not found' });
@@ -268,6 +269,32 @@ router.patch('/:id', authenticate, requirePerm('tasks:write'), validate(UpdateTa
       });
     }
     
+    // Create user-specific notification for status change
+    if (status !== undefined && currentStatus !== null && currentTaskData) {
+      const newStatus = status === 'open' ? 'todo' : status;
+      if (currentStatus !== newStatus && currentTaskData.created_by && currentTaskData.created_by !== req.user?.id) {
+        try {
+          const { actorEmail } = actorFromHeaders(req);
+          await createNotification({
+            userId: currentTaskData.created_by,
+            type: 'status_changed',
+            taskId: req.params.id,
+            projectId: currentTaskData.project_id,
+            actorId: req.user?.id || null,
+            actorEmail: actorEmail || 'unknown',
+            payload: { 
+              title: currentTaskData.title, 
+              oldStatus: currentStatus, 
+              newStatus: newStatus 
+            }
+          });
+          console.log(`[STATUS CHANGE] Notified creator about status change on task ${req.params.id}`);
+        } catch (notifError) {
+          console.error('[STATUS CHANGE] Failed to create notification:', notifError.message);
+        }
+      }
+    }
+    
     res.json(result);
   } catch (e) {
     if (e.message === 'no fields to update') {
@@ -356,6 +383,40 @@ router.post('/:taskId/comments', authenticate, requirePerm('tasks:write'), valid
       commentId: comment.id, 
       bodyLength: body.length 
     });
+    
+    // Create user-specific notifications for comment
+    try {
+      const taskDetails = await pool.query(
+        'SELECT created_by, assignee_id, ball_in_court, project_id, title FROM public.tasks WHERE id = $1',
+        [req.params.taskId]
+      );
+      
+      if (taskDetails.rowCount > 0) {
+        const task = taskDetails.rows[0];
+        const notifyUsers = new Set([task.created_by, task.assignee_id, task.ball_in_court]);
+        notifyUsers.delete(finalAuthorId);
+        notifyUsers.delete(null);
+        
+        const { actorEmail } = actorFromHeaders(req);
+        for (const userId of notifyUsers) {
+          await createNotification({
+            userId,
+            type: 'comment_added',
+            taskId: req.params.taskId,
+            projectId: task.project_id,
+            actorId: finalAuthorId,
+            actorEmail: actorEmail || 'unknown',
+            payload: { 
+              title: task.title, 
+              commentPreview: body.substring(0, 100) 
+            }
+          });
+        }
+        console.log(`[COMMENT] Notified ${notifyUsers.size} users about comment on task ${req.params.taskId}`);
+      }
+    } catch (notifError) {
+      console.error('[COMMENT] Failed to create notifications:', notifError.message);
+    }
     
     res.status(201).json(comment);
   } catch (e) {

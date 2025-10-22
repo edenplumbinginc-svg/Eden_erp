@@ -11,10 +11,11 @@ const { authenticate, authorize } = require('../middleware/auth');
  *   projectId?: uuid
  *   type?: 'task_created' | 'status_changed' | 'comment_added'
  *   since?: ISO timestamp (filters created_at >= since)
+ *   includeRead?: boolean (default false, only shows unread)
  */
-router.get('/recent', async (req, res, next) => {
+router.get('/recent', authenticate, async (req, res, next) => {
   try {
-    const { projectId, type, since } = req.query;
+    const { projectId, type, since, includeRead } = req.query;
     let { limit } = req.query;
 
     // Constrain limit
@@ -23,6 +24,15 @@ router.get('/recent', async (req, res, next) => {
     const clauses = [];
     const params = [];
     let idx = 1;
+
+    // Filter by current user
+    clauses.push(`user_id = $${idx++}::uuid`);
+    params.push(req.user.id);
+
+    // Only show unread by default
+    if (includeRead !== 'true') {
+      clauses.push(`read_at IS NULL`);
+    }
 
     if (projectId) {
       clauses.push(`project_id = $${idx++}::uuid`);
@@ -40,16 +50,66 @@ router.get('/recent', async (req, res, next) => {
     const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
 
     const sql = `
-      SELECT id, type, project_id, task_id, actor_email, payload,
-             created_at
+      SELECT id, type, project_id, task_id, actor_id, actor_email, payload,
+             read_at, created_at
       FROM notifications
       ${where}
-      ORDER BY id DESC
+      ORDER BY created_at DESC
       LIMIT ${limit}
     `;
 
     const { rows } = await pool.query(sql, params);
     res.json(rows);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * PATCH /api/notifications/:id/read
+ * Mark a single notification as read
+ */
+router.patch('/:id/read', authenticate, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `UPDATE notifications 
+       SET read_at = NOW() 
+       WHERE id = $1 AND user_id = $2 AND read_at IS NULL
+       RETURNING *`,
+      [id, req.user.id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Notification not found or already read' });
+    }
+
+    res.json({ ok: true, notification: result.rows[0] });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * PATCH /api/notifications/mark-all-read
+ * Mark all user's notifications as read
+ */
+router.patch('/mark-all-read', authenticate, async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      `UPDATE notifications 
+       SET read_at = NOW() 
+       WHERE user_id = $1 AND read_at IS NULL
+       RETURNING id`,
+      [req.user.id]
+    );
+
+    res.json({ 
+      ok: true, 
+      count: result.rowCount,
+      message: `${result.rowCount} notification(s) marked as read` 
+    });
   } catch (err) {
     next(err);
   }
