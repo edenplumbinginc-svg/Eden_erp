@@ -189,6 +189,7 @@ export const tasks = pgTable("tasks", {
         overdueSnoozedUntil: timestamp("overdue_snoozed_until", { withTimezone: true, mode: 'string' }),
         needsIdleReminder: boolean("needs_idle_reminder").default(false).notNull(),
         idleSnoozedUntil: timestamp("idle_snoozed_until", { withTimezone: true, mode: 'string' }),
+        department: text(),
 }, (table) => [
         index("idx_tasks_ball").using("btree", table.ballInCourt.asc().nullsLast().op("uuid_ops")),
         index("idx_tasks_project").using("btree", table.projectId.asc().nullsLast().op("uuid_ops")),
@@ -378,4 +379,21 @@ export const guestLinks = pgTable("guest_links", {
                 foreignColumns: [users.id],
                 name: "guest_links_created_by_fkey"
         }),
+]);
+
+export const handoffEvents = pgTable("handoff_events", {
+        id: uuid().defaultRandom().primaryKey().notNull(),
+        taskId: uuid("task_id").notNull(),
+        fromDepartment: text("from_department"),
+        toDepartment: text("to_department").notNull(),
+        actorEmail: text("actor_email").notNull(),
+        createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+        index("idx_handoff_events_task").using("btree", table.taskId.asc().nullsLast()),
+        index("idx_handoff_events_recent").using("btree", table.taskId.asc().nullsLast(), table.toDepartment.asc().nullsLast(), table.createdAt.desc().nullsFirst()),
+        foreignKey({
+                columns: [table.taskId],
+                foreignColumns: [tasks.id],
+                name: "handoff_events_task_id_fkey"
+        }).onDelete("cascade"),
 ]);
