@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { apiService } from '../services/api';
 
 function ProjectList({ projects, onRefresh, onSelectProject }) {
@@ -99,9 +100,9 @@ function ProjectList({ projects, onRefresh, onSelectProject }) {
                 </span>
               </div>
               <div className="actions">
-                <button className="btn btn-primary" onClick={() => onSelectProject(project)}>
+                <Link className="btn btn-primary" to={`/project/${project.id}`}>
                   View Tasks
-                </button>
+                </Link>
                 <button className="btn btn-secondary" onClick={() => handleUpdate(project.id, project.name)}>
                   Edit
                 </button>
