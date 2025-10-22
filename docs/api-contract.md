@@ -178,6 +178,68 @@ curl -X POST http://localhost:3000/api/ops/overdue/recompute \
 
 **Audit Logging:** Each recompute writes an audit log entry with action `"system.overdue.recompute"`.
 
+```bash
+# Recompute idle reminder flags for all tasks
+POST /api/ops/idle/recompute
+Header: X-Dev-User-Email: test@edenplumbing.com
+Header: X-Dev-User-Id: 855546bf-f53d-4538-b8d5-cd30f5c157a2
+
+# Response:
+{
+  "ok": true,
+  "set_true": 10,   // Tasks marked as needing idle reminders
+  "set_false": 7    // Tasks cleared from idle reminders
+}
+
+# Example cURL:
+curl -X POST http://localhost:3000/api/ops/idle/recompute \
+  -H "X-Dev-User-Email: test@edenplumbing.com" \
+  -H "X-Dev-User-Id: 855546bf-f53d-4538-b8d5-cd30f5c157a2"
+```
+
+**Automation:** This endpoint is automatically called daily at 9:05 AM (America/Toronto timezone) via node-cron.
+
+**Idle Logic:** Tasks are marked as idle if:
+- `updated_at` is older than N days (default 3, configurable via `IDLE_DAYS` env var)
+- Status is NOT 'done' or 'cancelled'
+- Not currently snoozed (idle_snoozed_until < now())
+
+**Audit Logging:** Each recompute writes an audit log entry with action `"system.idle.recompute"`.
+
+```bash
+# Snooze idle reminder for a specific task
+PUT /api/tasks/:id/snooze_idle
+Header: X-Dev-User-Email: test@edenplumbing.com
+Header: X-Dev-User-Id: 855546bf-f53d-4538-b8d5-cd30f5c157a2
+Content-Type: application/json
+Body: {
+  "days": 3
+}
+
+# Response:
+{
+  "ok": true,
+  "data": {
+    "id": "task-123",
+    "idle_snoozed_until": "2025-10-25T12:00:00Z",
+    "needs_idle_reminder": false
+  }
+}
+
+# Example cURL:
+curl -X PUT http://localhost:3000/api/tasks/<TASK_ID>/snooze_idle \
+  -H "X-Dev-User-Email: test@edenplumbing.com" \
+  -H "X-Dev-User-Id: 855546bf-f53d-4538-b8d5-cd30f5c157a2" \
+  -H "Content-Type: application/json" \
+  -d '{"days": 3}'
+```
+
+**Validation:** Days must be between 1 and 30.
+
+**UI Integration:** The "Snooze 3d" button appears next to tasks with the "Idle" badge in the Modern UI.
+
+**Audit Logging:** Each snooze writes an audit log entry with action `"task.idle.snooze"`.
+
 ---
 
 ## Auto-Actions
