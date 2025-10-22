@@ -72,6 +72,9 @@ export const apiService = {
   createGuestLink: ({ scope, id, expiresIn = "7d" }) => api.post('/guest-links', { scope, id, expiresIn }).then(res => res.data)
 };
 
+// Export the raw axios instance for direct use
+export { api };
+
 // Dev Auth Control - allows switching users to test different permissions
 export const devAuth = {
   getCurrentUser: () => ({ ...currentDevUser }),

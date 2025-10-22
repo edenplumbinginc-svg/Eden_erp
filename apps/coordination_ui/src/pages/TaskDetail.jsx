@@ -1,8 +1,9 @@
 import React, { useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiService } from "../services/api";
+import { apiService, api } from "../services/api";
 import Countdown from "../components/Countdown";
+import Alert from "../components/Alert";
 
 function daysSince(ts) {
   if (!ts) return null;
@@ -91,6 +92,9 @@ function Attachments({ taskId }) {
   const qc = useQueryClient();
   const uploadRef = useRef();
   const [file, setFile] = useState(null);
+  const [uploadPct, setUploadPct] = useState(0);
+  const [uploadErr, setUploadErr] = useState(null);
+  const [uploadOk, setUploadOk] = useState(false);
 
   const { data } = useQuery({
     queryKey: ["attachments", taskId],
@@ -99,29 +103,50 @@ function Attachments({ taskId }) {
 
   const uploadFile = useMutation({
     mutationFn: async (file) => {
+      setUploadErr(null);
+      setUploadOk(false);
+      setUploadPct(0);
+
       const init = await apiService.initAttachmentUpload(taskId, {
         fileName: file.name,
-        mime: file.type,
+        mime: file.type || "application/octet-stream",
         sizeBytes: file.size
       });
 
-      await fetch(init.uploadUrl, {
-        method: "PUT",
-        body: file,
-        headers: { "Content-Type": file.type }
+      await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", init.uploadUrl);
+        if (file.type) xhr.setRequestHeader("Content-Type", file.type);
+        xhr.upload.onprogress = (e) => {
+          if (!e.lengthComputable) return;
+          const pct = Math.round((e.loaded / e.total) * 100);
+          setUploadPct(pct);
+        };
+        xhr.onload = () => (xhr.status >= 200 && xhr.status < 300) ? resolve() : reject(new Error(`Upload failed (${xhr.status})`));
+        xhr.onerror = () => reject(new Error("Network error during upload"));
+        xhr.send(file);
       });
 
-      return apiService.completeAttachmentUpload(taskId, {
+      const done = await apiService.completeAttachmentUpload(taskId, {
         bucket: init.bucket,
         path: init.path,
-        mime: file.type,
+        mime: file.type || "application/octet-stream",
         sizeBytes: file.size
       });
+
+      return done;
     },
     onSuccess: () => {
+      setUploadOk(true);
+      setTimeout(() => setUploadOk(false), 3000);
       if (uploadRef.current) uploadRef.current.value = "";
       setFile(null);
+      setUploadPct(0);
       qc.invalidateQueries({ queryKey: ["attachments", taskId] });
+    },
+    onError: (e) => {
+      const msg = e?.response?.data?.error?.message || e.message || "Upload failed";
+      setUploadErr(msg);
     }
   });
 
@@ -156,6 +181,25 @@ function Attachments({ taskId }) {
           {uploadFile.isPending ? "Uploading…" : "Upload file"}
         </button>
       </div>
+
+      {uploadFile.isPending && (
+        <div className="mt-2">
+          <div className="h-2 w-full bg-gray-200 rounded">
+            <div
+              className="h-2 bg-black rounded"
+              style={{ width: `${uploadPct}%`, transition: "width 120ms linear" }}
+            />
+          </div>
+          <div className="text-xs text-gray-600 mt-1">{uploadPct}%</div>
+        </div>
+      )}
+
+      {uploadErr && (
+        <div className="mt-2"><Alert>{uploadErr}</Alert></div>
+      )}
+      {uploadOk && (
+        <div className="mt-2"><Alert kind="success">Upload complete.</Alert></div>
+      )}
     </div>
   );
 }
