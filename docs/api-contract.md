@@ -249,6 +249,48 @@ curl -X PUT http://localhost:3000/api/tasks/<TASK_ID>/snooze_idle \
 
 **Audit Logging:** Each snooze writes an audit log entry with action `"task.idle.snooze"`.
 
+```bash
+# Handoff task to another department
+POST /api/tasks/:id/handoff
+Header: X-Dev-User-Email: test@edenplumbing.com
+Header: X-Dev-User-Id: 855546bf-f53d-4538-b8d5-cd30f5c157a2
+Content-Type: application/json
+Body: {
+  "to_department": "Operations"
+}
+
+# Response (successful handoff):
+{
+  "ok": true,
+  "updated": true,
+  "event_id": "event-uuid-123",
+  "task_id": "task-uuid-456",
+  "from_department": "Procurement",
+  "to_department": "Operations"
+}
+
+# Response (duplicate within 24h):
+{
+  "ok": true,
+  "skipped": true,
+  "reason": "duplicate_within_24h",
+  "last_handoff_at": "2025-10-22T10:30:00Z"
+}
+
+# Example cURL:
+curl -X POST http://localhost:3000/api/tasks/<TASK_ID>/handoff \
+  -H "X-Dev-User-Email: test@edenplumbing.com" \
+  -H "X-Dev-User-Id: 855546bf-f53d-4538-b8d5-cd30f5c157a2" \
+  -H "Content-Type: application/json" \
+  -d '{"to_department": "Operations"}'
+```
+
+**Duplicate Guard:** Handoff events are tracked in the `handoff_events` table. If a handoff to the same department occurred within the last 24 hours, the endpoint returns `{ skipped: true }` instead of creating a duplicate event.
+
+**UI Integration:** Each task displays a department badge and handoff dropdown with "Operations", "Procurement", "Accounting", "Service", "Estimating", and "Scheduling" options.
+
+**Audit Logging:** Each successful handoff writes an audit log entry with action `"task.handoff"`.
+
 ---
 
 ## Auto-Actions
