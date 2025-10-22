@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { apiService } from '../services/api';
 import SummaryCard from '../components/SummaryCard';
 import TasksByStatusChart from '../components/TasksByStatusChart';
@@ -27,7 +28,12 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-bold">Dashboard</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
+        <h1 className="font-bold">Dashboard</h1>
+        <Link to="/tasks/new" className="btn btn-primary">
+          + Create Task
+        </Link>
+      </div>
       
       <div className="grid grid-cols-3 gap-4">
         <SummaryCard 

@@ -30,7 +30,12 @@ export default function ProjectDetail() {
       </div>
 
       <div className="space-y-2">
-        <div className="font-semibold">Tasks</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-2)' }}>
+          <div className="font-semibold">Tasks</div>
+          <Link to={`/tasks/new?project=${projectId}`} className="btn btn-primary">
+            + Create Task
+          </Link>
+        </div>
         {isLoading ? (
           <div className="text-body text-muted">Loading…</div>
         ) : tasks.length === 0 ? (
