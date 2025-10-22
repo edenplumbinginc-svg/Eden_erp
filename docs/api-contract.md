@@ -346,6 +346,61 @@ curl -X POST http://localhost:3000/api/tasks/<TASK_ID>/handoff \
 
 ---
 
+## Shareable Views (URL-Bound Filtering)
+
+The frontend supports shareable task views through URL query parameters. Users can apply filters, configure the view, and share the exact URL with colleagues for instant access to the same filtered view.
+
+### Features
+- **URL-Bound State:** All filter selections are synchronized to the URL in real-time
+- **Debounced API Calls:** 300ms debounce prevents excessive API requests during filter changes
+- **Copy View Link:** One-click button to copy the current filtered view URL to clipboard
+- **Pagination:** Navigate through large result sets with persistent filter state
+- **Composable Filters:** All filters combine with AND logic for precise task selection
+
+### Available Filters
+- **Status Chips:** Toggle between open, todo, in_progress, review, done
+- **Search:** Full-text search in task title and description (debounced)
+- **Priority:** Filter by low, normal, high, urgent
+- **Department:** Filter by Operations, Procurement, Accounting, Service, Estimating, Scheduling
+- **Project ID:** Filter tasks by specific project UUID
+- **Assignee ID:** Filter tasks assigned to specific user UUID
+- **Overdue/Idle Flags:** Quick checkboxes for overdue or idle tasks
+
+### Example URLs
+
+**All overdue tasks in Operations:**
+```
+http://localhost:5000/?status=open,in_progress&department=Operations&overdue=true
+```
+
+**High-priority tasks containing "pump":**
+```
+http://localhost:5000/?status=todo,in_progress&priority=high,urgent&q=pump
+```
+
+**Idle tasks assigned to a specific user:**
+```
+http://localhost:5000/?idle=true&assignee=855546bf-f53d-4538-b8d5-cd30f5c157a2
+```
+
+### Implementation Details
+- **Hooks:**
+  - `useQueryState()` - Manages URL query parameters with History API
+  - `useTasksQuery()` - Fetches tasks from `/api/tasks` with debouncing
+- **Components:**
+  - `TasksFilters` - Filter UI with status chips, search, and advanced filters
+  - `AllTasksView` - Task list view with pagination and filter integration
+- **View Toggle:** App header includes "Project View" and "All Tasks" toggle buttons
+
+### Use Cases
+1. **Shared Workflows:** Send colleagues a pre-filtered view for daily standup
+2. **Saved Views:** Bookmark frequently used filter combinations
+3. **Reports:** Generate filtered views for specific departments or priorities
+4. **Automation:** Use filtered URLs as starting points for bulk actions
+5. **Exports:** Filter tasks before exporting to CSV or other formats
+
+---
+
 ## Auto-Actions
 
 ### Parent Task Auto-Complete
