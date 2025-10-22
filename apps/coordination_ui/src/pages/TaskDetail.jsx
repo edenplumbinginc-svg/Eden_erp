@@ -71,7 +71,7 @@ function Comments({ taskId }) {
           value={body}
           onChange={e => setBody(e.target.value)}
         />
-        <button className="px-3 py-1 rounded bg-black text-white"
+        <button className="btn btn-primary"
           onClick={() => body.trim() && createComment.mutate({ body })}>
           Comment
         </button>
@@ -170,7 +170,7 @@ function Attachments({ taskId }) {
           onChange={e => setFile(e.target.files?.[0] ?? null)}
         />
         <button
-          className="px-3 py-1 rounded border disabled:opacity-50"
+          className="btn btn-secondary"
           disabled={!file || uploadFile.isPending}
           onClick={() => file && uploadFile.mutate(file)}>
           {uploadFile.isPending ? "Uploading…" : "Upload file"}
@@ -237,7 +237,7 @@ export default function TaskDetail() {
         <div className="flex flex-col items-end gap-2">
           <BallInCourt task={task} />
           <button
-            className="px-3 py-1 rounded bg-amber-500 text-white hover:bg-amber-600 text-sm font-medium"
+            className="btn btn-primary"
             onClick={() => setHandoffModalOpen(true)}
           >
             Pass Ball 🏀
@@ -279,7 +279,7 @@ export default function TaskDetail() {
             <div className="font-semibold">Guest Invite</div>
             <div className="flex items-center gap-2">
               <button
-                className="px-3 py-1 rounded border"
+                className="btn btn-secondary"
                 disabled={inviting}
                 onClick={async () => {
                   try {
@@ -301,7 +301,7 @@ export default function TaskDetail() {
             </div>
 
             {invite && (
-              <div className="rounded border p-3 bg-white">
+              <div className="card">
                 <div className="text-xs text-gray-500 mb-1">Expires in: <Countdown target={invite.expiresAt} /></div>
                 <div className="flex items-center gap-2">
                   <input
@@ -311,7 +311,7 @@ export default function TaskDetail() {
                     onFocus={(e)=>e.target.select()}
                   />
                   <button
-                    className="px-2 py-1 rounded bg-black text-white text-sm"
+                    className="btn btn-primary"
                     onClick={() => navigator.clipboard.writeText(invite.url)}
                   >
                     Copy

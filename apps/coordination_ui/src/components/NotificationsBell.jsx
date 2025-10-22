@@ -93,7 +93,7 @@ export default function NotificationsBell() {
 
   return (
     <div className="relative">
-      <button className="relative px-3 py-1 border rounded text-sm" onClick={() => setOpen(o => !o)}>
+      <button className="btn btn-secondary" onClick={() => setOpen(o => !o)}>
         🔔 Notifications
         {unreadCount > 0 && (
           <span className="ml-2 inline-block text-xs bg-amber-500 text-white rounded-full px-2">
@@ -151,7 +151,7 @@ export default function NotificationsBell() {
                             <div className="flex flex-col gap-1">
                               {n.task_id && (
                                 <Link 
-                                  className="px-2 py-1 border rounded text-xs bg-white hover:bg-gray-50 text-center" 
+                                  className="btn btn-secondary text-xs" 
                                   to={`/task/${n.task_id}`}
                                   onClick={() => setOpen(false)}
                                 >
@@ -160,7 +160,7 @@ export default function NotificationsBell() {
                               )}
                               {isUnread && (
                                 <button
-                                  className="px-2 py-1 border rounded text-xs bg-white hover:bg-gray-50"
+                                  className="btn btn-secondary text-xs"
                                   onClick={() => handleMarkAsRead(n.id)}
                                 >
                                   ✓ Read

@@ -62,12 +62,12 @@ export default function HandoffModal({ isOpen, onClose, task }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between rounded-t-lg">
-          <h2 className="text-xl font-semibold">Pass Ball 🏀</h2>
+    <div className="modal-overlay">
+      <div className="modal" style={{ maxWidth: '500px' }}>
+        <div className="modal-header">
+          <h2>Pass Ball 🏀</h2>
           <button
-            className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+            className="modal-close"
             onClick={handleClose}
             disabled={handoffMutation.isPending}
           >
@@ -75,19 +75,16 @@ export default function HandoffModal({ isOpen, onClose, task }) {
           </button>
         </div>
         
-        <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
+        <form onSubmit={handleSubmit} className="form">
           <div>
             <div className="text-sm text-gray-600 mb-2">
               Current department: <span className="font-semibold text-amber-700">{currentDepartment}</span>
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Hand off to department:
-            </label>
+          <div className="form-group">
+            <label>Hand off to department:</label>
             <select
-              className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black"
               value={selectedDepartment}
               onChange={(e) => setSelectedDepartment(e.target.value)}
               disabled={handoffMutation.isPending}
@@ -99,12 +96,9 @@ export default function HandoffModal({ isOpen, onClose, task }) {
             </select>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Note (optional):
-            </label>
+          <div className="form-group">
+            <label>Note (optional):</label>
             <textarea
-              className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black resize-none"
               placeholder="Optional: reason for handoff"
               rows="3"
               value={note}
@@ -113,10 +107,10 @@ export default function HandoffModal({ isOpen, onClose, task }) {
             />
           </div>
 
-          <div className="flex gap-3 pt-2">
+          <div className="actions">
             <button
               type="button"
-              className="flex-1 px-4 py-2 rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
+              className="btn btn-secondary"
               onClick={handleClose}
               disabled={handoffMutation.isPending}
             >
@@ -124,7 +118,7 @@ export default function HandoffModal({ isOpen, onClose, task }) {
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 rounded bg-black text-white hover:bg-gray-800 disabled:opacity-50"
+              className="btn btn-primary"
               disabled={handoffMutation.isPending || !selectedDepartment}
             >
               {handoffMutation.isPending ? 'Passing...' : 'Confirm Handoff'}

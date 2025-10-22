@@ -8,7 +8,7 @@ export default function EdenHeader() {
       <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <img src="/logo-eden.svg" alt="EDEN" className="h-7 w-auto" />
-          <span className="text-sm px-2 py-0.5 rounded bg-black text-white">Coordination • Alpha</span>
+          <span className="status-badge" style={{ backgroundColor: 'var(--md-on-surface)', color: 'white' }}>Coordination • Alpha</span>
         </div>
         <div className="flex items-center gap-4">
           <Link to="/" className="text-sm underline">Projects</Link>

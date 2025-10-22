@@ -33,12 +33,12 @@ export default function CreateTaskModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold">Create New Task</h2>
+    <div className="modal-overlay">
+      <div className="modal" style={{ maxWidth: '800px' }}>
+        <div className="modal-header">
+          <h2>Create New Task</h2>
           <button
-            className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+            className="modal-close"
             onClick={onClose}
             disabled={createTaskMutation.isPending}
           >
@@ -46,7 +46,7 @@ export default function CreateTaskModal({ isOpen, onClose }) {
           </button>
         </div>
         
-        <div className="px-6 py-4">
+        <div>
           <TaskForm
             onSubmit={handleSubmit}
             onCancel={onClose}

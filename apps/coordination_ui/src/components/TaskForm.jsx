@@ -87,14 +87,14 @@ export default function TaskForm({ onSubmit, onCancel, initialData = {}, submitL
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+    <form onSubmit={handleSubmit} className="form">
+      <div className="form-group">
+        <label>
           Title <span className="text-red-500">*</span>
         </label>
         <input
           type="text"
-          className={`w-full border rounded px-3 py-2 ${errors.title ? 'border-red-500' : 'border-gray-300'}`}
+          className={errors.title ? 'border-red-500' : ''}
           value={formData.title}
           onChange={(e) => handleChange('title', e.target.value)}
           placeholder="Enter task title"
@@ -103,10 +103,9 @@ export default function TaskForm({ onSubmit, onCancel, initialData = {}, submitL
         {errors.title && <div className="text-xs text-red-600 mt-1">{errors.title}</div>}
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+      <div className="form-group">
+        <label>Description</label>
         <textarea
-          className="w-full border border-gray-300 rounded px-3 py-2"
           rows={3}
           value={formData.description}
           onChange={(e) => handleChange('description', e.target.value)}
@@ -115,10 +114,9 @@ export default function TaskForm({ onSubmit, onCancel, initialData = {}, submitL
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+        <div className="form-group">
+          <label>Status</label>
           <select
-            className="w-full border border-gray-300 rounded px-3 py-2"
             value={formData.status}
             onChange={(e) => handleChange('status', e.target.value)}
           >
@@ -130,10 +128,9 @@ export default function TaskForm({ onSubmit, onCancel, initialData = {}, submitL
           </select>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+        <div className="form-group">
+          <label>Priority</label>
           <select
-            className="w-full border border-gray-300 rounded px-3 py-2"
             value={formData.priority}
             onChange={(e) => handleChange('priority', e.target.value)}
           >
@@ -147,10 +144,9 @@ export default function TaskForm({ onSubmit, onCancel, initialData = {}, submitL
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Project</label>
+        <div className="form-group">
+          <label>Project</label>
           <select
-            className="w-full border border-gray-300 rounded px-3 py-2"
             value={formData.project_id}
             onChange={(e) => handleChange('project_id', e.target.value)}
           >
@@ -163,10 +159,9 @@ export default function TaskForm({ onSubmit, onCancel, initialData = {}, submitL
           </select>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Assignee</label>
+        <div className="form-group">
+          <label>Assignee</label>
           <select
-            className="w-full border border-gray-300 rounded px-3 py-2"
             value={formData.assignee_id}
             onChange={(e) => handleChange('assignee_id', e.target.value)}
           >
@@ -180,20 +175,18 @@ export default function TaskForm({ onSubmit, onCancel, initialData = {}, submitL
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+      <div className="form-group">
+        <label>Due Date</label>
         <input
           type="date"
-          className="w-full border border-gray-300 rounded px-3 py-2"
           value={formData.due_at}
           onChange={(e) => handleChange('due_at', e.target.value)}
         />
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Department (Ball-in-Court)</label>
+      <div className="form-group">
+        <label>Department (Ball-in-Court)</label>
         <select
-          className="w-full border border-gray-300 rounded px-3 py-2"
           value={formData.ball_owner_department}
           onChange={(e) => handleChange('ball_owner_department', e.target.value)}
         >
@@ -206,15 +199,14 @@ export default function TaskForm({ onSubmit, onCancel, initialData = {}, submitL
         </select>
       </div>
 
-      <details className="border rounded p-3">
-        <summary className="text-sm font-medium text-gray-700 cursor-pointer">
+      <details className="card" style={{ cursor: 'pointer' }}>
+        <summary className="font-medium">
           Advanced Options (Voice/Email)
         </summary>
         <div className="space-y-3 mt-3">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Origin</label>
+          <div className="form-group">
+            <label>Origin</label>
             <select
-              className="w-full border border-gray-300 rounded px-3 py-2"
               value={formData.origin}
               onChange={(e) => handleChange('origin', e.target.value)}
             >
@@ -224,11 +216,11 @@ export default function TaskForm({ onSubmit, onCancel, initialData = {}, submitL
             </select>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Voice URL</label>
+          <div className="form-group">
+            <label>Voice URL</label>
             <input
               type="url"
-              className={`w-full border rounded px-3 py-2 ${errors.voice_url ? 'border-red-500' : 'border-gray-300'}`}
+              className={errors.voice_url ? 'border-red-500' : ''}
               value={formData.voice_url}
               onChange={(e) => handleChange('voice_url', e.target.value)}
               placeholder="https://example.com/audio.mp3"
@@ -236,10 +228,9 @@ export default function TaskForm({ onSubmit, onCancel, initialData = {}, submitL
             {errors.voice_url && <div className="text-xs text-red-600 mt-1">{errors.voice_url}</div>}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Voice Transcript</label>
+          <div className="form-group">
+            <label>Voice Transcript</label>
             <textarea
-              className="w-full border border-gray-300 rounded px-3 py-2"
               rows={2}
               value={formData.voice_transcript}
               onChange={(e) => handleChange('voice_transcript', e.target.value)}
@@ -247,10 +238,9 @@ export default function TaskForm({ onSubmit, onCancel, initialData = {}, submitL
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Ball-in-Court Note</label>
+          <div className="form-group">
+            <label>Ball-in-Court Note</label>
             <textarea
-              className="w-full border border-gray-300 rounded px-3 py-2"
               rows={2}
               value={formData.ball_in_court_note}
               onChange={(e) => handleChange('ball_in_court_note', e.target.value)}
@@ -260,11 +250,11 @@ export default function TaskForm({ onSubmit, onCancel, initialData = {}, submitL
         </div>
       </details>
 
-      <div className="flex justify-end gap-3 pt-4 border-t">
+      <div className="actions">
         {onCancel && (
           <button
             type="button"
-            className="px-4 py-2 rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
+            className="btn btn-secondary"
             onClick={onCancel}
             disabled={isSubmitting}
           >
@@ -273,7 +263,7 @@ export default function TaskForm({ onSubmit, onCancel, initialData = {}, submitL
         )}
         <button
           type="submit"
-          className="px-4 py-2 rounded bg-black text-white hover:bg-gray-800 disabled:opacity-50"
+          className="btn btn-primary"
           disabled={isSubmitting}
         >
           {isSubmitting ? 'Submitting...' : submitLabel}

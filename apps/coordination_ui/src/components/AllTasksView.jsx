@@ -109,7 +109,7 @@ export default function AllTasksView() {
           <TasksFilters />
         </div>
         <button
-          className="px-4 py-2 rounded bg-black text-white hover:bg-gray-800 ml-4 whitespace-nowrap"
+          className="btn btn-primary ml-4 whitespace-nowrap"
           onClick={() => setIsCreateModalOpen(true)}
         >
           + Create Task
@@ -167,7 +167,7 @@ export default function AllTasksView() {
         {!loading && !error && data && data.totalPages > 1 && (
           <div className="flex items-center justify-center gap-2 mt-4">
             <button
-              className="btn text-sm px-3 py-1"
+              className="btn btn-secondary"
               disabled={data.page === 1}
               onClick={() => set({ page: String(data.page - 1) })}
             >
@@ -177,7 +177,7 @@ export default function AllTasksView() {
               Page {data.page} of {data.totalPages}
             </span>
             <button
-              className="btn text-sm px-3 py-1"
+              className="btn btn-secondary"
               disabled={data.page === data.totalPages}
               onClick={() => set({ page: String(data.page + 1) })}
             >
