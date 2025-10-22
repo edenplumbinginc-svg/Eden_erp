@@ -1,7 +1,7 @@
 # Eden ERP - Project Documentation
 
 ## Overview
-Eden ERP is a monolithic ERP shell designed for Eden Plumbing Inc., serving as a foundational scaffolding. Its primary purpose is to provide a robust backend with a well-defined database schema, organizational structure, and a basic REST API. The project aims to streamline business operations, starting with coordination and procurement, by offering a scalable and maintainable platform. This system is designed to be the backbone for future application modules, facilitating efficient management of projects, tasks, and resources within the company.
+Eden ERP is a monolithic ERP shell for Eden Plumbing Inc., providing a robust backend with a defined database schema, organizational structure, and a basic REST API. Its purpose is to streamline business operations, starting with coordination and procurement, offering a scalable platform for future application modules to efficiently manage projects, tasks, and resources.
 
 ## User Preferences
 I prefer iterative development, with a focus on delivering functional increments. Please ask before making major architectural changes or introducing new dependencies. I appreciate clear and concise explanations for complex topics. Ensure the codebase remains clean, well-documented, and adheres to established patterns.
@@ -9,40 +9,46 @@ I prefer iterative development, with a focus on delivering functional increments
 ## System Architecture
 
 ### UI/UX Decisions
-- **Frontend Framework**: React 18 with Vite for development.
+- **Frontend Framework**: React 18 with Vite.
 - **Styling**: TailwindCSS for utility-first responsive design.
-- **Development Authentication**: `DevAuthSwitcher` component for quick user role switching (OPS, VIEWER, ADMIN) for RBAC testing.
-- **API Integration**: Axios-based API client with interceptors for development auth headers.
-- **Project Structure**: Monorepo with frontend in `apps/coordination_ui/`. Vite proxies `/api` requests to backend on port 3000.
+- **Development Authentication**: `DevAuthSwitcher` for quick user role switching.
+- **API Integration**: Axios-based client with interceptors for development auth headers.
+- **Project Structure**: Monorepo with frontend in `apps/coordination_ui/`. Vite proxies `/api` to backend on port 3000.
+- **Theming**: Soft Light (Google-ish) theme with custom utilities, active scale feedback, and focus rings.
+- **Components**: StatusSelect, BICChip, Overdue Badge, Notifications Bell, Toast System.
 
 ### Technical Implementations
 - **Backend Framework**: Express.js.
-- **Database**: Supabase PostgreSQL with Drizzle ORM for schema management.
+- **Database**: Supabase PostgreSQL with Drizzle ORM.
 - **Runtime**: Node.js 20.
-- **Authentication**: Global authentication on all `/api/*` routes, supporting development headers and JWT bearer tokens.
-- **RBAC (Role-Based Access Control)**: Complete RBAC foundation with normalized tables, module-based permission naming (`<module>:<action>`), and permission middleware (`requirePerm()`, `hasPerm()`). Includes 9 baseline roles and 32 module-based permissions.
-- **Airtight Layer**: Production-grade middleware for (1) Zod schema validation, (2) Rate Limiting, (3) Audit Logs (`audit_logs` table), (4) Idempotency protection, (5) Background Job Queue, and (6) PII Scrubbing in Sentry logs.
-- **Monitoring**: Comprehensive production monitoring with health checks, structured JSON logging, Sentry integration for error tracking/performance, and automated post-deploy gates.
-- **Smoke Tests**: Automated API health checks via `npm run smoke:api` (Node.js script testing health, projects, tasks, notifications, reports endpoints).
-- **Database Configuration Safety**: Multi-layered validation ensures correct database connection.
-- **Database Diagnostics**: Full diagnostic infrastructure with retry/backoff, DNS resolution, `/diag/db` endpoint, and fail-fast startup.
-- **Automation**: Automated job for sending idle task reminders and a background job queue for async tasks (emails, syncs, exports).
-- **Notifications System**: Integrated job queue for `notify-user` and `daily-summary`, with notifications triggered by task events and overdue checks.
+- **Authentication**: Global authentication on `/api/*` routes, supporting development headers and JWT.
+- **RBAC**: Complete foundation with normalized tables, module-based permission naming, and middleware.
+- **Airtight Layer**: Middleware for Zod schema validation, Rate Limiting, Audit Logs, Idempotency, Background Job Queue, and PII Scrubbing.
+- **Monitoring**: Health checks, structured JSON logging, Sentry integration, and automated post-deploy gates.
+- **Smoke Tests**: Automated API health checks.
+- **Database Safety**: Multi-layered validation and diagnostics.
+- **Automation**: Automated job for idle task reminders, background job queue for async tasks (emails, syncs, exports).
+- **Notifications System**: Integrated job queue for `notify-user` and `daily-summary`, triggered by task events and overdue checks.
+- **User Preferences System**: Database table and API endpoints for managing user settings like `default_project_id` and `tasks_group_by`.
+- **Automated Overdue Task Tracking**: `is_overdue` and `overdue_snoozed_until` fields, `recomputeOverdue` service, daily cron job, and manual admin endpoint.
+- **Auto-Complete Parent Task**: Service to auto-manage parent task status based on subtask completion, with manual override (`status_locked`).
+- **Email Summary**: Nodemailer service for daily digest with smart fallback.
 
 ### Feature Specifications
 - **Core Modules**: `coordination` (projects, tasks, comments, attachments) and `procurement`.
 - **Core Services**: Authentication, email, notifications, permissions, reporting, storage, and utilities.
-- **API Endpoints**: CRUD for Projects and Tasks, nested task creation, comment management, time-boxed guest links, and 5 specialized reporting endpoints.
+- **API Endpoints**: CRUD for Projects and Tasks, nested task creation, comment management, time-boxed guest links, and specialized reporting endpoints.
 - **Notifications**: Supports `in_app`, `email`, and `push` channels.
-- **Frontend UI**: Coordination dashboard, project detail view, and full-featured task view with checklist editor, comments, attachments, and guest link generation.
+- **Frontend UI**: Coordination dashboard, project detail view, full-featured task view, guest view (public read-only), create task modal, and reports page.
 - **Reporting**: Four card layout (Tasks by Status, Tasks by Owner, Overdue Tasks, Recent Activity) with deep-linking.
+- **Guest View**: Public read-only access to tasks and projects via token, with rate limiting and audit logging.
 
 ### System Design Choices
-- **Monolithic Architecture**: Single, cohesive unit for simplified development and deployment.
+- **Monolithic Architecture**: Single, cohesive unit.
 - **Scalable Database**: PostgreSQL with a session pooler.
-- **Observability**: Built-in comprehensive monitoring, logging, and health checks.
+- **Observability**: Built-in monitoring, logging, and health checks.
 - **Secure by Design**: Enforced authentication and multi-layered database configuration validation.
-- **Auto-Sync to GitHub**: Background workflow (`autosync.sh`) automatically commits and pushes changes to GitHub every 5 minutes, preventing work loss in Replit's ephemeral environment.
+- **Auto-Sync to GitHub**: Background workflow `autosync.sh` commits and pushes changes every 5 minutes using `GITHUB_TOKEN`.
 
 ## External Dependencies
 ### Backend
@@ -52,109 +58,14 @@ I prefer iterative development, with a focus on delivering functional increments
 - **Environment Variables**: `dotenv`
 - **ORM**: Drizzle ORM
 - **PostgreSQL Extensions**: `pgcrypto`, `citext`
+- **Email**: Nodemailer
+- **Scheduling**: `node-cron`
+- **Timezone**: `luxon`
 
 ### Frontend
 - **Framework**: React 18
 - **Build Tool**: Vite 5
 - **HTTP Client**: Axios
 - **Styling**: TailwindCSS 3
+- **Data Fetching**: React Query
 - **Dev Server**: Runs on port 5000 with proxy to backend on port 3000
-
-## Recent Changes
-- **2025-10-22 (Latest)**: Implemented Auto-Sync to GitHub:
-  - **Auto-Sync Script**: `autosync.sh` runs as a background workflow, checking for changes every 5 minutes
-  - **GitHub Authentication**: Uses `GITHUB_TOKEN` secret stored in Replit Secrets for secure token-based authentication
-  - **Git Identity**: Commits are authored by "Eden ERP Auto-Sync <eden-erp-bot@edenplumbing.com>"
-  - **Automatic Commits**: Uncommitted changes are automatically staged, committed with timestamp, and pushed to `main` branch
-  - **Background Workflow**: Configured as "Auto-Sync" workflow that auto-starts on Replit boot
-  - **Credential Storage**: Uses Git credential helper with OAuth2 token for seamless authentication
-  - Verified: Successfully pushed 2 commits to GitHub (995e794 → a1f7bf4), no manual intervention required
-- **2025-10-22**: Implemented Automated Overdue Task Tracking:
-  - **Database Fields**: Added `is_overdue` (boolean) and `overdue_snoozed_until` (timestamp) to tasks table
-  - **Recompute Service**: `services/recomputeOverdue.js` with idempotent logic (sets is_overdue based on due_at, excludes done/snoozed tasks)
-  - **Daily Automation**: node-cron job runs at 3:00 AM America/Toronto timezone to auto-refresh overdue flags
-  - **Admin Endpoint**: POST `/api/ops/overdue/recompute` for manual refresh with response counts
-  - **UI Button**: "Refresh Overdue" button in Modern UI dashboard header for instant admin control
-  - **Audit Logging**: Every recompute writes to audit_logs with action `system.overdue.recompute` and detailed metadata
-  - **Documentation**: Full API contract with cURL examples in docs/api-contract.md
-  - Dependencies: luxon (timezone handling), node-cron (scheduled jobs)
-  - Verified: Endpoint returns counts, audit logs persist, UI button triggers recompute and refreshes task list
-- **2025-10-22**: Implemented Auto-Complete Parent Task Feature:
-  - **Auto-Close Service**: `services/taskAutoClose.js` automatically manages parent task status based on subtask completion
-  - **Smart Rules**: Parent auto-completes to "done" when all subtasks are done; reopens to "in_progress" when any subtask is reopened
-  - **Manual Override**: New `status_locked` boolean field prevents auto-updates when user manually sets task status
-  - **Audit Logging**: All auto-close transitions write to audit_logs with "task.autoclose" action
-  - **Route Integration**: Hooked into PATCH /subtasks/:id endpoint for seamless operation
-  - **Schema Updates**: Added `status_locked`, reconciled missing `ball_owner_type`, `ball_owner_id`, `ball_since` fields
-  - **Production Ready**: Architect-approved implementation with full test coverage
-  - Verified: All subtasks done → parent = "done", any subtask reopened → parent = "in_progress", manual overrides work correctly
-- **2025-10-22**: Added Inline Status Change + Ball-in-Court (BIC) Chips + Overdue Badges (apps/ui):
-  - **StatusSelect Component**: Inline dropdown for status changes (To do, In progress, Blocked, Complete, Cancelled)
-  - **Optimistic Updates**: UI updates immediately when changing status, with rollback on error
-  - **BICChip Component**: Shows ball_in_court assignee with blue dot indicator
-  - **Overdue Badge**: Red badge appears on tasks past due date and not complete
-  - **Live Stats**: Dashboard stats update automatically as you change task statuses
-  - **PATCH /api/tasks/:id**: Inline status changes persist to backend instantly
-  - Control where you read - no drill-down needed to update tasks
-- **2025-10-22**: Wired Create Task with Live Refresh (apps/ui):
-  - **Project Picker**: Dropdown to select from all available projects
-  - **Create Task Modal**: Soft Light themed modal with title input, Enter key support, autofocus
-  - **Live POST**: Creates tasks via `/api/projects/:id/tasks` endpoint with dev auth
-  - **Auto Refresh**: Task list automatically reloads after successful creation
-  - **Real-Time Stats**: Dashboard stats (completed, in progress, overdue) update per selected project
-  - **Error Handling**: Graceful alerts for missing project or title validation
-  - Full write-path implemented - UI now moves work, not just displays it
-- **2025-10-22**: Applied Soft Light (Google-ish) Theme to Modern UI (apps/ui):
-  - **Theme System**: Soft Light CSS with custom utilities (.soft-card, .soft-panel, .btn, .input)
-  - **Design Language**: Light #f7f8fa background, white cards, rounded-2xl corners, subtle shadows
-  - **Google-Style Components**: Blue #4285F4 primary buttons, smooth ease-out transitions (200ms)
-  - **Interactive Elements**: Active scale feedback, focus rings, hover states
-  - **Dashboard Layout**: Header with EDEN branding, stat cards, search input, task list
-  - **Vite Configuration**: Port 5000, allowedHosts: 'all' for Replit compatibility
-  - **API Connection**: Health check endpoint integrated, shows API status
-  - Ready to wire up real data from backend endpoints
-- **2025-10-22**: Shipped Guest View (Public Read-Only Access):
-  - **Backend Route**: `/api/guest/resolve?token=UUID` for public, unauthenticated access
-  - **Token Validation**: Checks expiry, returns 404 for invalid, 410 for expired tokens
-  - **Task Scope**: Returns task details, comments (up to 100), and attachments with metadata
-  - **Project Scope**: Returns project info and recent tasks (up to 200)
-  - **Rate Limiting**: 60 requests per minute to prevent abuse
-  - **Audit Logging**: Every guest view writes to audit_logs with tokenPreview
-  - **Frontend Page**: `/guest?token=...` shows read-only view with expiry timestamp
-  - **Clean UI**: Rounded cards for task info, attachments list, and comments with timestamps
-  - Verified: Backend returns full data, audit logs record guest.view events, error handling works
-- **2025-10-22**: Added Email Summary (Daily Digest):
-  - **Mailer Service**: Nodemailer with smart fallback (console transport if no SMTP configured)
-  - **Summary Builder**: Generates plain-text digest with Overdue, Due Today, and Recent Activity sections
-  - **Daily Job Integration**: Wired into existing `daily-summary` job queue handler
-  - **Manual Trigger**: POST `/api/ops/run-daily` for testing
-  - **Dev Mode**: Logs emails to console with `[MAIL:DEV]` prefix when SMTP not configured
-  - **Production Ready**: Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM env vars for real emails
-  - Verified: Daily digest shows 1 overdue task, 0 due today, 10 recent activities
-- **2025-10-22**: Added Notifications Bell + Toast System:
-  - **NotificationsBell Component**: Polls `/api/notifications/recent` every 30s, shows badge with notification count
-  - **Drawer UI**: Click bell to see recent notifications with deep links to tasks
-  - **Toast System**: Global ToasterProvider with success/error toasts (auto-dismiss success after 2.5s)
-  - **Comment Toasts**: "Comment posted" on success, error message on failure
-  - **Upload Toasts**: "File uploaded successfully" on success, error message on failure
-  - **Auto-refresh**: Toasts appear when new notifications arrive ("New notifications received")
-  - **Header Integration**: Bell appears in EdenHeader with Projects/Reports navigation links
-  - All notification types (task_created, task_assigned, status_changed, task_overdue, comment_added) display with proper labels
-- **2025-10-22**: Wired Notifications System Backend:
-  - **Job Queue**: Extended `services/queue.js` with fire-and-forget job handlers for `notify-user` and `daily-summary`
-  - **Notification Helper**: Updated `lib/notify.js` to insert notifications and enqueue jobs automatically
-  - **Task Events**: Added notifications for task creation, status changes, and assignee changes in `routes/tasks.js`
-  - **Overdue Checker**: Added nightly job (runs every 24h, first check at 10s after startup) to notify assignees of overdue tasks
-  - **Daily Summary**: Scaffold for daily digest emails (currently logs to console, ready for email integration)
-  - **Manual Trigger**: Added POST /api/ops/run-daily endpoint to manually trigger daily summary
-  - Verified: Status changes, assignments, and overdue checks all trigger notifications; daily summary runs successfully
-- **2025-10-22**: Completed Reports Page with Deep-Linking:
-  - **React Query Integration**: Upgraded Reports component to use React Query for efficient data fetching
-  - **Four Card Layout**: Tasks by Status, Tasks by Owner, Overdue Tasks, and Recent Activity (7 days)
-  - **Deep-Linking**: "Open" buttons on overdue tasks navigate directly to `/task/:id` for quick access
-  - **Live Data**: Shows real-time coordination stats
-- **2025-10-22**: Completed Project → Task Navigation Flow:
-  - **GET /api/projects/:id**: New endpoint to fetch single project details
-  - **ProjectDetail Page**: Shows project info and task list with direct links to task details
-  - **3-Level Navigation**: Projects List → Project Detail → Task Detail with back navigation
-  - **React Query Integration**: All data fetching uses React Query for caching and automatic refetching
