@@ -67,13 +67,20 @@ function ProjectList({ projects, onRefresh, onSelectProject }) {
                   <span className="capitalize font-medium">{s.status.replace('_', ' ')}</span>
                   <span className="text-gray-600 font-semibold">{s.count}</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-lg h-6 cursor-pointer hover:bg-gray-300 overflow-hidden"
+                <div className="w-full bg-gray-200 rounded-lg h-8 cursor-pointer hover:bg-gray-300 overflow-hidden"
                      onClick={() => navigate(`/alltasks?status=${s.status}`)}>
                   <div 
-                    className="bg-blue-500 h-6 rounded-lg transition-all hover:bg-blue-600 flex items-center justify-end pr-2" 
-                    style={{width: totalTasks > 0 ? `${Math.max(5, (s.count / totalTasks) * 100)}%` : '5%'}}
+                    className="h-8 rounded-lg transition-all flex items-center justify-end pr-2" 
+                    style={{
+                      width: totalTasks > 0 ? `${Math.max(8, (s.count / totalTasks) * 100)}%` : '8%',
+                      backgroundColor: s.status === 'complete' || s.status === 'done' ? '#10b981' :
+                                       s.status === 'in_progress' ? '#3b82f6' :
+                                       s.status === 'review' ? '#f59e0b' :
+                                       s.status === 'open' ? '#f97316' :
+                                       '#6b7280'
+                    }}
                   >
-                    <span className="text-white text-xs font-semibold">
+                    <span className="text-white text-xs font-bold">
                       {Math.round((s.count / totalTasks) * 100)}%
                     </span>
                   </div>
