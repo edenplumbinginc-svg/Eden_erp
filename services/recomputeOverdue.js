@@ -1,5 +1,5 @@
 const { DateTime } = require('luxon');
-const pool = require('../db/pool');
+const { pool } = require('./database');
 
 /**
  * Recompute overdue flags for all tasks

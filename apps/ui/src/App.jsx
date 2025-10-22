@@ -54,6 +54,7 @@ export default function App() {
   const [q, setQ] = useState("");
   const [openModal, setOpenModal] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [recomputingOverdue, setRecomputingOverdue] = useState(false);
 
   // Health + projects
   useEffect(() => {
@@ -106,6 +107,26 @@ export default function App() {
     return { done, inprog, overdue };
   }, [tasks]);
 
+  async function handleRefreshOverdue() {
+    setRecomputingOverdue(true);
+    try {
+      const res = await api.post('/api/ops/overdue/recompute');
+      const data = await res.json();
+      if (data.ok) {
+        alert(`✓ Overdue flags updated\n${data.set_true} set to overdue\n${data.set_false} no longer overdue`);
+        // Reload tasks to reflect updated overdue badges
+        await loadTasks(projectId);
+      } else {
+        alert('Failed to refresh overdue flags');
+      }
+    } catch (err) {
+      console.error('[RefreshOverdue] Error:', err);
+      alert('Error refreshing overdue flags: ' + err.message);
+    } finally {
+      setRecomputingOverdue(false);
+    }
+  }
+
   return (
     <div className="min-h-screen">
       <header className="soft-panel mx-auto max-w-6xl mt-6 p-4 flex items-center justify-between">
@@ -130,6 +151,15 @@ export default function App() {
             disabled={!projectId}
           >
             Create Task
+          </button>
+          <button 
+            className="btn"
+            style={{background: "#f3f4f6", border: "1px solid #e5e7eb"}}
+            onClick={handleRefreshOverdue}
+            disabled={recomputingOverdue}
+            title="Recompute overdue flags for all tasks"
+          >
+            {recomputingOverdue ? "Refreshing..." : "Refresh Overdue"}
           </button>
         </div>
       </header>
