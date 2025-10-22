@@ -55,18 +55,42 @@ export default function App() {
   const [openModal, setOpenModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [recomputingOverdue, setRecomputingOverdue] = useState(false);
+  const [tasksGroupBy, setTasksGroupBy] = useState("status");
+  const [loadingPrefs, setLoadingPrefs] = useState(true);
 
-  // Health + projects
+  // Load user preferences and projects
   useEffect(() => {
     (async () => {
       const hz = await getJSON("/healthz");
       setHealth(hz || { status: "ok" });
       
+      // Load user preferences
+      try {
+        const prefs = await getJSON("/api/me/preferences");
+        if (prefs?.ok && prefs?.data) {
+          if (prefs.data.tasks_group_by) setTasksGroupBy(prefs.data.tasks_group_by);
+        }
+      } catch (err) {
+        console.log('[Preferences] Failed to load, using defaults');
+      }
+      setLoadingPrefs(false);
+      
       // Fetch projects
       const p = await getJSON("/api/projects", { limit: 50 });
       const items = Array.isArray(p?.items) ? p.items : Array.isArray(p) ? p : [];
       setProjects(items);
-      if (items.length && !projectId) setProjectId(items[0].id);
+      
+      // Set default project from preferences or first project
+      try {
+        const prefs = await getJSON("/api/me/preferences");
+        if (prefs?.ok && prefs?.data?.default_project_id && items.some(proj => proj.id === prefs.data.default_project_id)) {
+          setProjectId(prefs.data.default_project_id);
+        } else if (items.length && !projectId) {
+          setProjectId(items[0].id);
+        }
+      } catch {
+        if (items.length && !projectId) setProjectId(items[0].id);
+      }
     })();
   }, []);
 
@@ -127,6 +151,18 @@ export default function App() {
     }
   }
 
+  async function handleGroupByChange(newGroupBy) {
+    setTasksGroupBy(newGroupBy);
+    try {
+      await api.put('/api/me/preferences', {
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tasks_group_by: newGroupBy })
+      });
+    } catch (err) {
+      console.error('[Preferences] Failed to update group by:', err);
+    }
+  }
+
   return (
     <div className="min-h-screen">
       <header className="soft-panel mx-auto max-w-6xl mt-6 p-4 flex items-center justify-between">
@@ -161,6 +197,20 @@ export default function App() {
           >
             {recomputingOverdue ? "Refreshing..." : "Refresh Overdue"}
           </button>
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-gray-600">Group:</label>
+            <select
+              className="input w-32"
+              value={tasksGroupBy}
+              onChange={(e) => handleGroupByChange(e.target.value)}
+              disabled={loadingPrefs}
+              title="Group tasks by"
+            >
+              <option value="status">Status</option>
+              <option value="due">Due Date</option>
+              <option value="none">None</option>
+            </select>
+          </div>
         </div>
       </header>
 
