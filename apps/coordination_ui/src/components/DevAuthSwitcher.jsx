@@ -59,21 +59,21 @@ function DevAuthSwitcher({ onUserChange }) {
       </div>
 
       {showCustom ? (
-        <form onSubmit={handleCustomSubmit} style={{ marginTop: 'var(--space-2)' }}>
-          <div style={{ marginBottom: 'var(--space-1)' }}>
+        <form onSubmit={handleCustomSubmit} className="dev-banner-custom-form">
+          <div className="dev-banner-input-group">
             <input
               type="email"
               placeholder="Email"
               value={customEmail}
               onChange={(e) => setCustomEmail(e.target.value)}
-              style={{ width: '100%', padding: '6px', marginBottom: 'var(--space-1)', fontSize: '13px' }}
+              className="dev-banner-input"
             />
             <input
               type="text"
               placeholder="User ID (UUID)"
               value={customId}
               onChange={(e) => setCustomId(e.target.value)}
-              style={{ width: '100%', padding: '6px', marginBottom: 'var(--space-1)', fontSize: '13px' }}
+              className="dev-banner-input"
             />
           </div>
           <button type="submit" className="btn btn-success">
