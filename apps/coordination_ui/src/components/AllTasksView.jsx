@@ -57,46 +57,49 @@ export default function AllTasksView() {
       <div className="bg-white border-b">
         <div className="flex gap-1 px-4">
           <button
-            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+            className={`px-4 py-3 text-body font-medium border-b-2 transition-colors ${
               isAllTasksActive 
-                ? 'border-blue-600 text-blue-600' 
-                : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-300'
+                ? 'border-primary' 
+                : 'border-transparent text-muted hover:border-gray-300'
             }`}
+            style={isAllTasksActive ? { color: 'var(--md-primary)' } : {}}
             onClick={() => handleTabClick({ assignee: null, bic: null })}
           >
             All Tasks
             {allTasksCount > 0 && (
-              <span className="ml-2 inline-block px-2 py-0.5 bg-blue-600 text-white rounded-full text-xs font-semibold">
+              <span className="ml-2 inline-block px-2 py-0.5 bg-primary text-white rounded-full text-caption font-semibold">
                 {allTasksCount}
               </span>
             )}
           </button>
           <button
-            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+            className={`px-4 py-3 text-body font-medium border-b-2 transition-colors ${
               isMyTasksActive 
-                ? 'border-blue-600 text-blue-600' 
-                : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-300'
+                ? 'border-primary' 
+                : 'border-transparent text-muted hover:border-gray-300'
             }`}
+            style={isMyTasksActive ? { color: 'var(--md-primary)' } : {}}
             onClick={() => handleTabClick({ assignee: currentUser.id, bic: null })}
           >
             My Tasks
             {myTasksCount > 0 && (
-              <span className="ml-2 inline-block px-2 py-0.5 bg-blue-600 text-white rounded-full text-xs font-semibold">
+              <span className="ml-2 inline-block px-2 py-0.5 bg-primary text-white rounded-full text-caption font-semibold">
                 {myTasksCount}
               </span>
             )}
           </button>
           <button
-            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+            className={`px-4 py-3 text-body font-medium border-b-2 transition-colors ${
               isBallInCourtActive 
-                ? 'border-blue-600 text-blue-600' 
-                : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-300'
+                ? 'border-primary' 
+                : 'border-transparent text-muted hover:border-gray-300'
             }`}
+            style={isBallInCourtActive ? { color: 'var(--md-primary)' } : {}}
             onClick={() => handleTabClick({ bic: currentUser.id, assignee: null })}
           >
             🏀 Ball in My Court
             {bicCount > 0 && (
-              <span className="ml-2 inline-block px-2 py-0.5 bg-blue-600 text-white rounded-full text-xs font-semibold">
+              <span className="ml-2 inline-block px-2 py-0.5 bg-primary text-white rounded-full text-caption font-semibold">
                 {bicCount}
               </span>
             )}
@@ -123,11 +126,11 @@ export default function AllTasksView() {
       
       <div className="card p-5">
         <div className="flex items-center justify-between mb-4">
-          <div className="text-sm text-gray-500">
+          <div className="text-body text-muted">
             {data ? `${data.total} task${data.total !== 1 ? 's' : ''} found` : 'All Tasks'}
           </div>
           {data && data.totalPages > 1 && (
-            <div className="text-sm text-gray-500">
+            <div className="text-body text-muted">
               Page {data.page} of {data.totalPages}
             </div>
           )}
@@ -136,7 +139,7 @@ export default function AllTasksView() {
         {loading && <TaskListSkeleton />}
 
         {error && (
-          <div className="text-sm text-red-600">Error: {error}</div>
+          <div className="text-body text-red-600">Error: {error}</div>
         )}
 
         {!loading && !error && data && (
@@ -145,7 +148,7 @@ export default function AllTasksView() {
               <div className="text-center py-12">
                 <div className="text-6xl mb-4">📋</div>
                 <h3 className="text-lg font-semibold mb-2">No tasks found</h3>
-                <p className="text-gray-600 mb-4">
+                <p className="text-muted mb-4">
                   {qp.q || qp.status || qp.priority ? 
                     'Try adjusting your filters to see more tasks.' :
                     'Create your first task to get started.'
@@ -173,7 +176,7 @@ export default function AllTasksView() {
             >
               Previous
             </button>
-            <span className="text-sm text-gray-600">
+            <span className="text-body text-muted">
               Page {data.page} of {data.totalPages}
             </span>
             <button

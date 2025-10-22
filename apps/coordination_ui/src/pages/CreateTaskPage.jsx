@@ -38,8 +38,8 @@ export default function CreateTaskPage() {
   return (
     <div className="mx-auto max-w-4xl p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold">Create New Task</h1>
-        <p className="text-gray-600 text-sm mt-1">Fill in the details below to create a new task.</p>
+        <h1 className="font-semibold">Create New Task</h1>
+        <p className="text-muted text-body mt-1">Fill in the details below to create a new task.</p>
       </div>
       
       <div className="bg-white rounded-lg shadow-sm border p-6">

@@ -27,7 +27,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
+      <h1 className="font-bold">Dashboard</h1>
       
       <div className="grid grid-cols-3 gap-4">
         <SummaryCard 

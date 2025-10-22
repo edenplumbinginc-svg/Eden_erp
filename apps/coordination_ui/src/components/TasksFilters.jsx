@@ -71,10 +71,10 @@ export default function TasksFilters() {
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-lg font-medium">Filters</h3>
         <div className="flex gap-2">
-          <button className="btn text-sm px-3 py-1" onClick={clearFilters}>
+          <button className="btn text-body px-3 py-1" onClick={clearFilters}>
             Clear All
           </button>
-          <button className="btn text-sm px-3 py-1" onClick={copyViewLink}>
+          <button className="btn text-body px-3 py-1" onClick={copyViewLink}>
             📋 Copy View Link
           </button>
         </div>
@@ -82,7 +82,7 @@ export default function TasksFilters() {
 
       {/* Search */}
       <div className="mb-3">
-        <label className="block text-sm text-gray-600 mb-1">Search</label>
+        <label className="block text-body text-muted mb-1">Search</label>
         <input
           className="input w-full"
           placeholder="Search in title or description..."
@@ -93,18 +93,19 @@ export default function TasksFilters() {
 
       {/* Status chips */}
       <div className="mb-3">
-        <label className="block text-sm text-gray-600 mb-1">Status</label>
+        <label className="block text-body text-muted mb-1">Status</label>
         <div className="flex flex-wrap gap-2">
           {STATUS_OPTIONS.map(s => {
             const active = status.includes(s);
             return (
               <button
                 key={s}
-                className={`text-sm px-3 py-1 rounded-full transition-all ${
+                className={`text-body px-3 py-1 rounded-full transition-all ${
                   active
-                    ? 'bg-blue-500 text-white shadow-md'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'text-white shadow-md'
+                    : 'hover:bg-gray-200'
                 }`}
+                style={active ? { backgroundColor: 'var(--md-primary)' } : { backgroundColor: 'var(--md-surface-variant)', color: 'var(--md-on-surface)' }}
                 onClick={() => toggleStatus(s)}
               >
                 {STATUS_LABELS[s]}
@@ -123,7 +124,7 @@ export default function TasksFilters() {
             onChange={e => setOverdue(e.target.checked)}
             className="rounded"
           />
-          <span className="text-sm">Overdue only</span>
+          <span className="text-body">Overdue only</span>
         </label>
         <label className="flex items-center gap-2 cursor-pointer">
           <input
@@ -132,17 +133,17 @@ export default function TasksFilters() {
             onChange={e => setIdle(e.target.checked)}
             className="rounded"
           />
-          <span className="text-sm">Idle only</span>
+          <span className="text-body">Idle only</span>
         </label>
       </div>
 
       {/* Advanced filters - collapsible */}
       <details className="mt-3">
-        <summary className="text-sm text-gray-600 cursor-pointer mb-2">Advanced Filters</summary>
+        <summary className="text-body text-muted cursor-pointer mb-2">Advanced Filters</summary>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mt-2">
           <div>
-            <label className="block text-xs text-gray-600 mb-1">Priority</label>
-            <select className="input w-full text-sm" value={priority} onChange={e => setPriority(e.target.value)}>
+            <label className="block text-caption text-muted mb-1">Priority</label>
+            <select className="input w-full text-body" value={priority} onChange={e => setPriority(e.target.value)}>
               <option value="">All</option>
               {PRIORITY_OPTIONS.map(p => (
                 <option key={p} value={p}>
@@ -153,8 +154,8 @@ export default function TasksFilters() {
           </div>
 
           <div>
-            <label className="block text-xs text-gray-600 mb-1">Department</label>
-            <select className="input w-full text-sm" value={department} onChange={e => setDepartment(e.target.value)}>
+            <label className="block text-caption text-muted mb-1">Department</label>
+            <select className="input w-full text-body" value={department} onChange={e => setDepartment(e.target.value)}>
               <option value="">All</option>
               {DEPARTMENT_OPTIONS.map(d => (
                 <option key={d} value={d}>
@@ -165,9 +166,9 @@ export default function TasksFilters() {
           </div>
 
           <div>
-            <label className="block text-xs text-gray-600 mb-1">Project ID</label>
+            <label className="block text-caption text-muted mb-1">Project ID</label>
             <input
-              className="input w-full text-sm"
+              className="input w-full text-body"
               placeholder="UUID"
               value={project}
               onChange={e => setProject(e.target.value)}
@@ -175,9 +176,9 @@ export default function TasksFilters() {
           </div>
 
           <div>
-            <label className="block text-xs text-gray-600 mb-1">Assignee ID</label>
+            <label className="block text-caption text-muted mb-1">Assignee ID</label>
             <input
-              className="input w-full text-sm"
+              className="input w-full text-body"
               placeholder="UUID"
               value={assignee}
               onChange={e => setAssignee(e.target.value)}

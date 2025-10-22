@@ -23,8 +23,8 @@ function BallInCourt({ task }) {
   
   return (
     <div className="flex items-center gap-2">
-      <span className="text-sm font-medium">Ball in Court:</span>
-      <span className="text-xs px-2 py-0.5 rounded bg-amber-50 border border-amber-300">
+      <span className="text-body font-medium">Ball in Court:</span>
+      <span className="text-caption px-2 py-0.5 rounded bg-amber-50 border border-amber-300">
         {label}{d !== null ? ` • ${d} day${d===1?"":"s"}` : ""}
       </span>
     </div>
@@ -59,10 +59,10 @@ function Comments({ taskId }) {
       <div className="space-y-2">
         {Array.isArray(data) && data.length > 0 ? data.map(c => (
           <div key={c.id} className="p-2 border rounded">
-            <div className="text-sm">{c.body}</div>
-            <div className="text-xs text-gray-500">{new Date(c.created_at || c.createdAt).toLocaleString()}</div>
+            <div className="text-body">{c.body}</div>
+            <div className="text-caption text-muted">{new Date(c.created_at || c.createdAt).toLocaleString()}</div>
           </div>
-        )) : <div className="text-sm text-gray-500">No comments yet.</div>}
+        )) : <div className="text-body text-muted">No comments yet.</div>}
       </div>
       <div className="flex gap-2">
         <input
@@ -150,13 +150,13 @@ function Attachments({ taskId }) {
   return (
     <div className="space-y-2">
       <div className="font-semibold">Attachments</div>
-      {files.length === 0 ? <div className="text-sm text-gray-500">No files yet.</div> :
+      {files.length === 0 ? <div className="text-body text-muted">No files yet.</div> :
         <ul className="space-y-2">
           {files.map(f => (
             <li key={f.id} className="flex items-center justify-between border rounded p-2">
               <div>
-                <div className="text-sm">{f.file_name || f.fileName || f.path}</div>
-                <div className="text-xs text-gray-500">{f.mime} • {f.size_bytes || f.sizeBytes} bytes</div>
+                <div className="text-body">{f.file_name || f.fileName || f.path}</div>
+                <div className="text-caption text-muted">{f.mime} • {f.size_bytes || f.sizeBytes} bytes</div>
               </div>
             </li>
           ))}
@@ -185,7 +185,7 @@ function Attachments({ taskId }) {
               style={{ width: `${uploadPct}%`, transition: "width 120ms linear" }}
             />
           </div>
-          <div className="text-xs text-gray-600 mt-1">{uploadPct}%</div>
+          <div className="text-caption text-muted mt-1">{uploadPct}%</div>
         </div>
       )}
 
@@ -227,12 +227,12 @@ export default function TaskDetail() {
           <div className="flex items-center gap-2 mb-2">
             <h2 className="text-xl font-semibold">{task?.title || "Task"}</h2>
             {task?.origin && (
-              <span className="text-xs px-2 py-0.5 rounded bg-blue-50 border border-blue-300 text-blue-700">
+              <span className="text-caption px-2 py-0.5 rounded bg-blue-50 border border-blue-300 text-blue-700">
                 {task.origin === 'voice' ? '🎤 Voice' : task.origin === 'email' ? '📧 Email' : '💻 UI'}
               </span>
             )}
           </div>
-          <div className="text-sm text-gray-600">{task?.description}</div>
+          <div className="text-body text-muted">{task?.description}</div>
         </div>
         <div className="flex flex-col items-end gap-2">
           <BallInCourt task={task} />
@@ -248,7 +248,7 @@ export default function TaskDetail() {
       {task?.voice_transcript && (
         <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
           <div className="font-semibold text-purple-900 mb-2">🎤 Voice Note Transcript</div>
-          <p className="text-sm text-purple-800 italic">{task.voice_transcript}</p>
+          <p className="text-body text-purple-800 italic">{task.voice_transcript}</p>
           {task?.voice_url && (
             <div className="mt-3">
               <audio controls className="w-full max-w-md">
@@ -263,7 +263,7 @@ export default function TaskDetail() {
       {task?.ball_in_court_note && (
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
           <div className="font-semibold text-amber-900 mb-2">🏀 Ball-in-Court Note</div>
-          <p className="text-sm text-amber-800">{task.ball_in_court_note}</p>
+          <p className="text-body text-amber-800">{task.ball_in_court_note}</p>
         </div>
       )}
 
@@ -297,15 +297,15 @@ export default function TaskDetail() {
               >
                 {inviting ? "Generating…" : "Generate guest link"}
               </button>
-              {inviteErr && <span className="text-sm text-red-600">{inviteErr}</span>}
+              {inviteErr && <span className="text-body text-red-600">{inviteErr}</span>}
             </div>
 
             {invite && (
               <div className="card">
-                <div className="text-xs text-gray-500 mb-1">Expires in: <Countdown target={invite.expiresAt} /></div>
+                <div className="text-caption text-muted mb-1">Expires in: <Countdown target={invite.expiresAt} /></div>
                 <div className="flex items-center gap-2">
                   <input
-                    className="border p-1 rounded w-full text-sm"
+                    className="border p-1 rounded w-full text-body"
                     readOnly
                     value={invite.url}
                     onFocus={(e)=>e.target.select()}

@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { apiService } from "../services/api";
 
 const Card = ({ title, children }) => (
-  <div className="rounded-2xl shadow-sm border bg-white">
+  <div className="rounded-lg shadow-sm border bg-white">
     <div className="px-4 py-3 border-b font-semibold">{title}</div>
     <div className="p-4">{children}</div>
   </div>
@@ -37,7 +37,7 @@ export default function Reports() {
 
       <div className="grid md:grid-cols-2 gap-6">
         <Card title="Tasks by Status">
-          <table className="w-full text-sm">
+          <table className="w-full text-body">
             <thead>
               <tr>
                 <th className="text-left py-1">Status</th>
@@ -56,7 +56,7 @@ export default function Reports() {
         </Card>
 
         <Card title="Tasks by Owner">
-          <table className="w-full text-sm">
+          <table className="w-full text-body">
             <thead>
               <tr>
                 <th className="text-left py-1">Owner</th>
@@ -76,18 +76,18 @@ export default function Reports() {
 
         <Card title="Overdue Tasks">
           {overdue.length === 0 ? (
-            <div className="text-sm text-gray-500">No overdue tasks 🎉</div>
+            <div className="text-body text-muted">No overdue tasks 🎉</div>
           ) : (
-            <ul className="text-sm space-y-2">
+            <ul className="text-body space-y-2">
               {overdue.map(t => (
                 <li key={t.id} className="flex items-center justify-between">
                   <div>
                     <div className="font-medium">{t.title}</div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-caption text-muted">
                       Due {t.due_at ? new Date(t.due_at).toLocaleDateString() : "—"} • {t.priority}
                     </div>
                   </div>
-                  <Link className="px-2 py-1 border rounded text-xs hover:bg-gray-50" to={`/task/${t.id}`}>
+                  <Link className="px-2 py-1 border rounded text-caption" to={`/task/${t.id}`}>
                     Open
                   </Link>
                 </li>
@@ -98,14 +98,14 @@ export default function Reports() {
 
         <Card title="Recent Activity (7 days)">
           {activity.length === 0 ? (
-            <div className="text-sm text-gray-500">No recent activity.</div>
+            <div className="text-body text-muted">No recent activity.</div>
           ) : (
-            <ul className="text-sm space-y-2">
+            <ul className="text-body space-y-2">
               {activity.map((e, i) => (
                 <li key={i} className="flex items-center justify-between">
                   <div>
                     <div className="font-medium">{new Date(e.day).toLocaleDateString()}</div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-caption text-muted">
                       {e.tasks_created} task{e.tasks_created !== 1 ? 's' : ''} created
                     </div>
                   </div>

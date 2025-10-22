@@ -24,29 +24,29 @@ export default function ProjectDetail() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold">{project?.name || "Project"}</h1>
-          <div className="text-sm text-gray-600">Code: {project?.code}</div>
+          <div className="text-body text-muted">Code: {project?.code}</div>
         </div>
-        <button className="text-sm underline" onClick={() => navigate(-1)}>Back</button>
+        <button className="text-body underline" onClick={() => navigate(-1)}>Back</button>
       </div>
 
       <div className="space-y-2">
         <div className="font-semibold">Tasks</div>
         {isLoading ? (
-          <div className="text-sm text-gray-500">Loading…</div>
+          <div className="text-body text-muted">Loading…</div>
         ) : tasks.length === 0 ? (
-          <div className="text-sm text-gray-500">No tasks yet.</div>
+          <div className="text-body text-muted">No tasks yet.</div>
         ) : (
           <ul className="divide-y border rounded bg-white">
             {tasks.map(t => (
               <li key={t.id} className="p-3 flex items-center justify-between">
                 <div>
                   <div className="font-medium">{t.title}</div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-caption text-muted">
                     {t.status} • due {t.due_at ? new Date(t.due_at).toLocaleDateString() : "—"}
                   </div>
                 </div>
                 <Link
-                  className="px-3 py-1 rounded border text-sm"
+                  className="px-3 py-1 rounded border text-body"
                   to={`/task/${t.id}`}
                 >
                   Open
