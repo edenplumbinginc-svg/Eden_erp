@@ -112,6 +112,30 @@ GET /api/guest/resolve?token=UUID
 # Public endpoint (no auth required)
 ```
 
+### Operations (Admin)
+```bash
+# Recompute overdue flags for all tasks
+POST /api/ops/overdue/recompute
+Header: X-Dev-User-Email: test@edenplumbing.com
+Header: X-Dev-User-Id: 855546bf-f53d-4538-b8d5-cd30f5c157a2
+
+# Response:
+{
+  "ok": true,
+  "set_true": 5,    // Tasks marked as overdue
+  "set_false": 2    // Tasks cleared from overdue
+}
+
+# Example cURL:
+curl -X POST http://localhost:3000/api/ops/overdue/recompute \
+  -H "X-Dev-User-Email: test@edenplumbing.com" \
+  -H "X-Dev-User-Id: 855546bf-f53d-4538-b8d5-cd30f5c157a2"
+```
+
+**Automation:** This endpoint is automatically called daily at 3:00 AM (America/Toronto timezone) via node-cron. Manual triggers are available via the "Refresh Overdue" button in the Modern UI dashboard.
+
+**Audit Logging:** Each recompute writes an audit log entry with action `"task.overdue.recompute"`.
+
 ---
 
 ## Auto-Actions
