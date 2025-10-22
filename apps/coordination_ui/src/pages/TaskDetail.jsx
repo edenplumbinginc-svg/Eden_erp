@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiService, api } from "../services/api";
 import Countdown from "../components/Countdown";
@@ -7,6 +7,7 @@ import Alert from "../components/Alert";
 import ChecklistEditor from "../components/ChecklistEditor";
 import { useToaster } from "../components/Toaster";
 import HandoffModal from "../components/HandoffModal";
+import Breadcrumbs from "../components/Breadcrumbs";
 
 function daysSince(ts) {
   if (!ts) return null;
@@ -223,6 +224,7 @@ function Attachments({ taskId }) {
 
 export default function TaskDetail() {
   const { taskId } = useParams();
+  const navigate = useNavigate();
   const { data: task, isLoading } = useQuery({
     queryKey: ["task", taskId],
     queryFn: async () => apiService.getTask(taskId),
@@ -242,8 +244,24 @@ export default function TaskDetail() {
     return <div className="mx-auto max-w-6xl p-4">Loading task...</div>;
   }
 
+  const breadcrumbs = [
+    { label: 'All Tasks', path: '/alltasks' },
+    { label: task?.title || 'Task', path: `/task/${taskId}` }
+  ];
+
   return (
     <div className="mx-auto max-w-6xl p-4 space-y-6">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Breadcrumbs items={breadcrumbs} />
+        <button 
+          className="btn btn-secondary" 
+          onClick={() => navigate('/alltasks')}
+          style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+        >
+          ← Back to All Tasks
+        </button>
+      </div>
+
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-2">

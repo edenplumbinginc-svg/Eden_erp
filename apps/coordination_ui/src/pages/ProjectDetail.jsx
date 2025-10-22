@@ -2,6 +2,7 @@ import React from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { apiService } from "../services/api";
+import Breadcrumbs from "../components/Breadcrumbs";
 
 export default function ProjectDetail() {
   const { projectId } = useParams();
@@ -19,14 +20,27 @@ export default function ProjectDetail() {
     enabled: !!projectId
   });
 
+  const breadcrumbs = [
+    { label: 'Projects', path: '/' },
+    { label: project?.name || 'Project', path: `/project/${projectId}` }
+  ];
+
   return (
     <div className="mx-auto max-w-6xl p-4 space-y-6">
+      <Breadcrumbs items={breadcrumbs} />
+      
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold">{project?.name || "Project"}</h1>
           <div className="text-body text-muted">Code: {project?.code}</div>
         </div>
-        <button className="text-body underline" onClick={() => navigate(-1)}>Back</button>
+        <button 
+          className="btn btn-secondary" 
+          onClick={() => navigate('/')}
+          style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+        >
+          ← Back to Projects
+        </button>
       </div>
 
       <div className="space-y-2">

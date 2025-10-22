@@ -42,6 +42,7 @@ export default function EdenHeader() {
             </NavLink>
             <NavLink 
               to="/" 
+              end
               className={({ isActive }) => isActive ? 'text-body font-medium' : 'text-body text-link hover:underline'}
               style={({ isActive }) => ({
                 color: isActive ? 'var(--md-primary)' : undefined,
