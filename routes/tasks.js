@@ -215,7 +215,8 @@ router.patch('/:id', authenticate, requirePerm('tasks:write'), validate(UpdateTa
       // Insert notification within the same transaction if status changed
       if (status !== undefined && currentStatus !== null) {
         const newStatus = status === 'open' ? 'todo' : status;
-        if (currentStatus !== newStatus) {
+        // Notify task creator on status change (if not the actor)
+        if (currentStatus !== newStatus && currentTaskData.created_by && currentTaskData.created_by !== req.user?.id) {
           const { actorEmail } = actorFromHeaders(req);
           await notify(tx, {
             type: 'status_changed',
@@ -223,7 +224,7 @@ router.patch('/:id', authenticate, requirePerm('tasks:write'), validate(UpdateTa
             taskId: req.params.id,
             actorId: req.user?.id || null,
             actorEmail: actorEmail || null,
-            userId: currentTaskData.assignee_id,
+            userId: currentTaskData.created_by,
             payload: {
               title: currentTaskData.title,
               old_status: currentStatus,
