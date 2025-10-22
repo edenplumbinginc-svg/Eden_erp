@@ -221,12 +221,41 @@ export default function TaskDetail() {
   return (
     <div className="mx-auto max-w-6xl p-4 space-y-6">
       <div className="flex items-start justify-between">
-        <div>
-          <h2 className="text-xl font-semibold">{task?.title || "Task"}</h2>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-2">
+            <h2 className="text-xl font-semibold">{task?.title || "Task"}</h2>
+            {task?.origin && (
+              <span className="text-xs px-2 py-0.5 rounded bg-blue-50 border border-blue-300 text-blue-700">
+                {task.origin === 'voice' ? '🎤 Voice' : task.origin === 'email' ? '📧 Email' : '💻 UI'}
+              </span>
+            )}
+          </div>
           <div className="text-sm text-gray-600">{task?.description}</div>
         </div>
         <BallInCourt task={task} />
       </div>
+
+      {task?.voice_transcript && (
+        <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+          <div className="font-semibold text-purple-900 mb-2">🎤 Voice Note Transcript</div>
+          <p className="text-sm text-purple-800 italic">{task.voice_transcript}</p>
+          {task?.voice_url && (
+            <div className="mt-3">
+              <audio controls className="w-full max-w-md">
+                <source src={task.voice_url} type="audio/mpeg" />
+                Your browser does not support the audio element.
+              </audio>
+            </div>
+          )}
+        </div>
+      )}
+
+      {task?.ball_in_court_note && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="font-semibold text-amber-900 mb-2">🏀 Ball-in-Court Note</div>
+          <p className="text-sm text-amber-800">{task.ball_in_court_note}</p>
+        </div>
+      )}
 
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-6">
