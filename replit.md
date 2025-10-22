@@ -59,7 +59,16 @@ I prefer iterative development, with a focus on delivering functional increments
 - **Dev Server**: Runs on port 5000 with proxy to backend on port 3000
 
 ## Recent Changes
-- **2025-10-22 (Latest)**: Added Inline Status Change + Ball-in-Court (BIC) Chips + Overdue Badges (apps/ui):
+- **2025-10-22 (Latest)**: Implemented Auto-Complete Parent Task Feature:
+  - **Auto-Close Service**: `services/taskAutoClose.js` automatically manages parent task status based on subtask completion
+  - **Smart Rules**: Parent auto-completes to "done" when all subtasks are done; reopens to "in_progress" when any subtask is reopened
+  - **Manual Override**: New `status_locked` boolean field prevents auto-updates when user manually sets task status
+  - **Audit Logging**: All auto-close transitions write to audit_logs with "task.autoclose" action
+  - **Route Integration**: Hooked into PATCH /subtasks/:id endpoint for seamless operation
+  - **Schema Updates**: Added `status_locked`, reconciled missing `ball_owner_type`, `ball_owner_id`, `ball_since` fields
+  - **Production Ready**: Architect-approved implementation with full test coverage
+  - Verified: All subtasks done → parent = "done", any subtask reopened → parent = "in_progress", manual overrides work correctly
+- **2025-10-22**: Added Inline Status Change + Ball-in-Court (BIC) Chips + Overdue Badges (apps/ui):
   - **StatusSelect Component**: Inline dropdown for status changes (To do, In progress, Blocked, Complete, Cancelled)
   - **Optimistic Updates**: UI updates immediately when changing status, with rollback on error
   - **BICChip Component**: Shows ball_in_court assignee with blue dot indicator
