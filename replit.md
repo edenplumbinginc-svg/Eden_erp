@@ -60,7 +60,17 @@ I prefer iterative development, with a focus on delivering functional increments
 - **Dev Server**: Runs on port 5000 with proxy to backend on port 3000
 
 ## Recent Changes
-- **2025-10-22 (Latest)**: Implemented Auto-Complete Parent Task Feature:
+- **2025-10-22 (Latest)**: Implemented Automated Overdue Task Tracking:
+  - **Database Fields**: Added `is_overdue` (boolean) and `overdue_snoozed_until` (timestamp) to tasks table
+  - **Recompute Service**: `services/recomputeOverdue.js` with idempotent logic (sets is_overdue based on due_at, excludes done/snoozed tasks)
+  - **Daily Automation**: node-cron job runs at 3:00 AM America/Toronto timezone to auto-refresh overdue flags
+  - **Admin Endpoint**: POST `/api/ops/overdue/recompute` for manual refresh with response counts
+  - **UI Button**: "Refresh Overdue" button in Modern UI dashboard header for instant admin control
+  - **Audit Logging**: Every recompute writes to audit_logs with action `system.overdue.recompute` and detailed metadata
+  - **Documentation**: Full API contract with cURL examples in docs/api-contract.md
+  - Dependencies: luxon (timezone handling), node-cron (scheduled jobs)
+  - Verified: Endpoint returns counts, audit logs persist, UI button triggers recompute and refreshes task list
+- **2025-10-22**: Implemented Auto-Complete Parent Task Feature:
   - **Auto-Close Service**: `services/taskAutoClose.js` automatically manages parent task status based on subtask completion
   - **Smart Rules**: Parent auto-completes to "done" when all subtasks are done; reopens to "in_progress" when any subtask is reopened
   - **Manual Override**: New `status_locked` boolean field prevents auto-updates when user manually sets task status

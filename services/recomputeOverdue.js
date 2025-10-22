@@ -5,8 +5,8 @@ const { pool } = require('./database');
  * Recompute overdue flags for all tasks
  * 
  * Logic:
- * - Set is_overdue = true for tasks with due_at in the past (not done/cancelled, not snoozed)
- * - Set is_overdue = false for tasks that are done, cancelled, or no longer overdue
+ * - Set is_overdue = true for tasks with due_at in the past (excludes done/cancelled statuses, excludes snoozed tasks)
+ * - Set is_overdue = false for tasks that are done, cancelled, deleted, or no longer overdue
  * 
  * @param {string} actor - Who triggered the recompute (email or 'system' or 'cron')
  * @returns {Promise<{setTrue: number, setFalse: number}>}
@@ -20,13 +20,13 @@ async function recomputeOverdue(actor = 'system') {
   try {
     await client.query('BEGIN');
 
-    // Set is_overdue = true for past-due tasks (not done, not snoozed)
+    // Set is_overdue = true for past-due tasks (not done/cancelled, not snoozed)
     const setTrueResult = await client.query(`
       UPDATE tasks
       SET is_overdue = true
       WHERE is_overdue = false
         AND due_at IS NOT NULL
-        AND status NOT IN ('done')
+        AND status NOT IN ('done', 'cancelled')
         AND due_at < $1::timestamptz
         AND (overdue_snoozed_until IS NULL OR overdue_snoozed_until < NOW())
         AND deleted_at IS NULL
@@ -38,7 +38,7 @@ async function recomputeOverdue(actor = 'system') {
       SET is_overdue = false
       WHERE is_overdue = true AND (
         due_at IS NULL
-        OR status IN ('done')
+        OR status IN ('done', 'cancelled')
         OR due_at >= $1::timestamptz
         OR (overdue_snoozed_until IS NOT NULL AND overdue_snoozed_until >= NOW())
         OR deleted_at IS NOT NULL
@@ -50,12 +50,12 @@ async function recomputeOverdue(actor = 'system') {
 
     // Write audit log
     await client.query(`
-      INSERT INTO audit_logs (actor_email, action, details, created_at)
-      VALUES ($1, $2, $3, NOW())
+      INSERT INTO audit_logs (user_id, action, entity, meta, created_at)
+      VALUES (NULL, $1, $2, $3, NOW())
     `, [
-      actor,
       'system.overdue.recompute',
-      JSON.stringify({ set_true: setTrue, set_false: setFalse, timestamp: now })
+      'system',
+      JSON.stringify({ set_true: setTrue, set_false: setFalse, timestamp: now, actor })
     ]);
 
     await client.query('COMMIT');

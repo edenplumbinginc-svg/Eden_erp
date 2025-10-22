@@ -134,7 +134,7 @@ curl -X POST http://localhost:3000/api/ops/overdue/recompute \
 
 **Automation:** This endpoint is automatically called daily at 3:00 AM (America/Toronto timezone) via node-cron. Manual triggers are available via the "Refresh Overdue" button in the Modern UI dashboard.
 
-**Audit Logging:** Each recompute writes an audit log entry with action `"task.overdue.recompute"`.
+**Audit Logging:** Each recompute writes an audit log entry with action `"system.overdue.recompute"`.
 
 ---
 
