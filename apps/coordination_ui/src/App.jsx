@@ -11,6 +11,7 @@ import TaskDetail from './pages/TaskDetail';
 import ProjectDetail from './pages/ProjectDetail';
 import { ToasterProvider } from './components/Toaster';
 import GuestView from './pages/GuestView';
+import AllTasksView from './components/AllTasksView';
 
 const queryClient = new QueryClient();
 
@@ -75,6 +76,12 @@ function AppContent() {
           Projects
         </NavLink>
         <NavLink
+          to="/alltasks"
+          className={({ isActive }) => `tab ${isActive ? 'active' : ''}`}
+        >
+          All Tasks
+        </NavLink>
+        <NavLink
           to="/reports"
           className={({ isActive }) => `tab ${isActive ? 'active' : ''}`}
         >
@@ -108,6 +115,7 @@ function AppContent() {
               />
             }
           />
+          <Route path="/alltasks" element={<AllTasksView />} />
           <Route path="/reports" element={<Reports />} />
           <Route 
             path="/project/:projectId" 
