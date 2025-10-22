@@ -88,6 +88,7 @@ router.get('/', authenticate, requirePerm('tasks:read'), async (req, res) => {
   try {
     const filters = parseQuery(req.query);
     const result = await fetchTasks(filters);
+    res.setHeader('X-Total-Count', String(result.total ?? 0));
     res.json({ ok: true, ...result });
   } catch (e) {
     if (e.status) return res.status(e.status).json({ ok: false, error: e.message });

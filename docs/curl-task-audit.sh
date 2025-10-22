@@ -4,8 +4,12 @@ set -euo pipefail
 BASE_URL="${BASE_URL:-http://localhost:3000}"
 TOKEN="${TOKEN:-$(node -e 'try{process.stdout.write(process.env.DEV_JWT||"")}catch(e){process.stdout.write("")}')}"
 
-auth_hdr=()
-if [[ -n "${TOKEN}" ]]; then auth_hdr=(-H "Authorization: Bearer ${TOKEN}"); fi
+# Dev headers for local development
+auth_hdr=(-H "X-Dev-User-Email: test@edenplumbing.com" -H "X-Dev-User-Id: 855546bf-f53d-4538-b8d5-cd30f5c157a2")
+# If TOKEN is provided, use Bearer auth instead
+if [[ -n "${TOKEN}" && "${USE_JWT:-false}" == "true" ]]; then 
+  auth_hdr=(-H "Authorization: Bearer ${TOKEN}"); 
+fi
 
 pass() { echo "✅ $*"; }
 fail() { echo "❌ $*"; exit 1; }
@@ -20,8 +24,8 @@ curl -sS "${BASE_URL}/health" >/dev/null && pass "Health endpoint responds" || f
 code=$(curl -s -o /dev/null -w "%{http_code}" "${BASE_URL}/api/tasks")
 if [[ "$code" == "401" || "$code" == "403" ]]; then pass "Protected reads enforce auth ($code)"; else warn "Reads may be public ($code)"; fi
 
-# 3) Authenticated read (if TOKEN present)
-if [[ -n "${TOKEN}" ]]; then
+# 3) Authenticated read (with dev headers or TOKEN)
+if true; then  # Always run authenticated checks in dev mode
   body=$(curl -sS "${auth_hdr[@]}" "${BASE_URL}/api/tasks?limit=5&page=1&sort=due_date:asc&q=test")
   echo "$body" | jq -e '.items' >/dev/null 2>&1 && pass "Reads return {items,...} shape" || fail "Response is not paged {items,...}"
   # 3a) Pagination stable ordering
@@ -48,8 +52,6 @@ if [[ -n "${TOKEN}" ]]; then
   if [[ "$create_code" == "201" ]]; then pass "Create allowed for this token (has tasks:write)"; 
   elif [[ "$create_code" == "403" ]]; then pass "Create correctly blocked (RBAC enforced)"; 
   else warn "Create returned unexpected code ($create_code)"; fi
-else
-  warn "No TOKEN provided — skipping auth-only checks"
 fi
 
 echo "🧪 Audit complete."
