@@ -112,6 +112,48 @@ GET /api/guest/resolve?token=UUID
 # Public endpoint (no auth required)
 ```
 
+### User Preferences
+```bash
+# Get current user preferences
+GET /api/me/preferences
+Header: X-Dev-User-Email: test@edenplumbing.com
+Header: X-Dev-User-Id: 855546bf-f53d-4538-b8d5-cd30f5c157a2
+
+# Response:
+{
+  "ok": true,
+  "data": {
+    "user_id": "855546bf-f53d-4538-b8d5-cd30f5c157a2",
+    "default_project_id": "proj-123",
+    "tasks_group_by": "status",
+    "updated_at": "2025-10-22T15:30:00Z"
+  }
+}
+
+# Update user preferences
+PUT /api/me/preferences
+Header: X-Dev-User-Email: test@edenplumbing.com
+Header: X-Dev-User-Id: 855546bf-f53d-4538-b8d5-cd30f5c157a2
+Content-Type: application/json
+Body: {
+  "default_project_id": "proj-456",
+  "tasks_group_by": "due"
+}
+
+# Response:
+{
+  "ok": true,
+  "data": {
+    "user_id": "855546bf-f53d-4538-b8d5-cd30f5c157a2",
+    "default_project_id": "proj-456",
+    "tasks_group_by": "due",
+    "updated_at": "2025-10-22T15:35:00Z"
+  }
+}
+```
+
+**Valid `tasks_group_by` options:** `status`, `due`, `none`
+
 ### Operations (Admin)
 ```bash
 # Recompute overdue flags for all tasks
