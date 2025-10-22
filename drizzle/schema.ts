@@ -166,11 +166,14 @@ export const tasks = pgTable("tasks", {
         ballOwnerType: text("ball_owner_type"),
         ballOwnerId: uuid("ball_owner_id"),
         ballSince: timestamp("ball_since", { withTimezone: true, mode: 'string' }),
+        isOverdue: boolean("is_overdue").default(false).notNull(),
+        overdueSnoozedUntil: timestamp("overdue_snoozed_until", { withTimezone: true, mode: 'string' }),
 }, (table) => [
         index("idx_tasks_ball").using("btree", table.ballInCourt.asc().nullsLast().op("uuid_ops")),
         index("idx_tasks_project").using("btree", table.projectId.asc().nullsLast().op("uuid_ops")),
         index("idx_tasks_status").using("btree", table.status.asc().nullsLast().op("text_ops")),
         index("idx_tasks_last_activity").using("btree", table.lastActivityAt.asc().nullsLast().op("timestamptz_ops")),
+        index("idx_tasks_overdue").using("btree", table.isOverdue.asc().nullsLast()),
         foreignKey({
                         columns: [table.projectId],
                         foreignColumns: [projects.id],
