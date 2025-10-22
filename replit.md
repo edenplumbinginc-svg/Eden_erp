@@ -28,7 +28,7 @@ I prefer iterative development, with a focus on delivering functional increments
 - **Smoke Tests**: Automated API health checks.
 - **Database Safety**: Multi-layered validation and diagnostics.
 - **Automation**: Background job queue for async tasks (emails, syncs, exports).
-- **Notifications System**: Integrated job queue for `notify-user` and `daily-summary`, triggered by task events and overdue checks.
+- **In-App Notifications System**: Complete real-time notification loop that closes the coordination cycle. Automatically creates notifications for ball handoffs (all department users), comments (creator/assignee/ball-holder), and status changes (task creator). Features include `services/notifications.js` service layer, `GET /api/notifications/recent` (user-scoped, unread by default), `PATCH /api/notifications/:id/read` and mark-all-read endpoints, NotificationsBell component with unread badge and dropdown, rich emoji-based notification text (🏀 handoffs, 💬 comments, 📊 status), click-to-navigate, and 30-second polling. Includes deduplication (actors don't notify themselves) and proper error handling. Background job queue still handles `notify-user` and `daily-summary` for email digests.
 - **User Preferences System**: Database table and API endpoints for managing user settings like `default_project_id` and `tasks_group_by`.
 - **Automated Overdue Task Tracking**: `is_overdue` and `overdue_snoozed_until` fields, `recomputeOverdue` service, daily cron job at 3:00 AM, and manual admin endpoint.
 - **Automated Idle Task Reminders**: `needs_idle_reminder` and `idle_snoozed_until` fields, `recomputeIdle` service with 3-day threshold, daily cron job at 9:05 AM, snooze endpoint, and UI badge.
