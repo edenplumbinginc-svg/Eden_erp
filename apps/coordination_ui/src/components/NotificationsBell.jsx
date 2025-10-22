@@ -26,6 +26,33 @@ export default function NotificationsBell() {
 
   const unreadCount = useMemo(() => items.filter(n => !n.read_at).length, [items]);
 
+  // Group notifications by type
+  const groupedNotifications = useMemo(() => {
+    const groups = {
+      ball_handoff: [],
+      comment_added: [],
+      status_changed: [],
+      other: []
+    };
+
+    items.forEach(n => {
+      if (groups[n.type]) {
+        groups[n.type].push(n);
+      } else {
+        groups.other.push(n);
+      }
+    });
+
+    return groups;
+  }, [items]);
+
+  const groupConfig = {
+    ball_handoff: { title: '🏀 Ball Handoffs', items: groupedNotifications.ball_handoff },
+    comment_added: { title: '💬 Comments', items: groupedNotifications.comment_added },
+    status_changed: { title: '📊 Status Changes', items: groupedNotifications.status_changed },
+    other: { title: '📋 Other', items: groupedNotifications.other }
+  };
+
   const handleMarkAsRead = async (id) => {
     try {
       await apiService.markNotificationRead(id);
@@ -61,7 +88,7 @@ export default function NotificationsBell() {
       {open && (
         <div className="absolute right-0 mt-2 w-96 max-h-96 overflow-auto bg-white border rounded shadow z-40">
           <div className="flex items-center justify-between px-3 py-2 border-b">
-            <div className="font-semibold text-sm">Recent Notifications</div>
+            <div className="font-semibold text-sm">Notifications ({items.length})</div>
             <div className="flex gap-2">
               {unreadCount > 0 && (
                 <button 
@@ -74,43 +101,61 @@ export default function NotificationsBell() {
               <button className="text-xs underline" onClick={() => refetch()}>Refresh</button>
             </div>
           </div>
-          <ul className="divide-y">
-            {items.length === 0 && <li className="p-3 text-sm text-gray-500">No notifications.</li>}
-            {items.map((n) => {
-              const isUnread = !n.read_at;
-              return (
-                <li key={n.id} className={`p-3 text-sm flex items-start justify-between gap-3 ${isUnread ? 'bg-blue-50' : 'bg-white'}`}>
-                  <div className="flex-1">
-                    <div className={`${isUnread ? 'font-bold' : 'font-medium'}`}>
-                      {formatNotificationText(n)}
+          {items.length === 0 ? (
+            <div className="p-3 text-sm text-gray-500">No notifications.</div>
+          ) : (
+            <div>
+              {Object.entries(groupConfig).map(([key, { title, items: groupItems }]) => {
+                if (groupItems.length === 0) return null;
+                
+                return (
+                  <div key={key}>
+                    <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
+                      <div className="text-xs font-semibold text-gray-700">
+                        {title} ({groupItems.length})
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-600 mt-1">
-                      {new Date(n.created_at).toLocaleString()}
-                    </div>
+                    <ul className="divide-y">
+                      {groupItems.map((n) => {
+                        const isUnread = !n.read_at;
+                        return (
+                          <li key={n.id} className={`p-3 text-sm flex items-start justify-between gap-3 ${isUnread ? 'bg-blue-50' : 'bg-white'}`}>
+                            <div className="flex-1">
+                              <div className={`${isUnread ? 'font-bold' : 'font-medium'}`}>
+                                {formatNotificationText(n)}
+                              </div>
+                              <div className="text-xs text-gray-600 mt-1">
+                                {new Date(n.created_at).toLocaleString()}
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              {n.task_id && (
+                                <Link 
+                                  className="px-2 py-1 border rounded text-xs bg-white hover:bg-gray-50 text-center" 
+                                  to={`/task/${n.task_id}`}
+                                  onClick={() => setOpen(false)}
+                                >
+                                  Open
+                                </Link>
+                              )}
+                              {isUnread && (
+                                <button
+                                  className="px-2 py-1 border rounded text-xs bg-white hover:bg-gray-50"
+                                  onClick={() => handleMarkAsRead(n.id)}
+                                >
+                                  ✓ Read
+                                </button>
+                              )}
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
                   </div>
-                  <div className="flex flex-col gap-1">
-                    {n.task_id && (
-                      <Link 
-                        className="px-2 py-1 border rounded text-xs bg-white hover:bg-gray-50 text-center" 
-                        to={`/task/${n.task_id}`}
-                        onClick={() => setOpen(false)}
-                      >
-                        Open
-                      </Link>
-                    )}
-                    {isUnread && (
-                      <button
-                        className="px-2 py-1 border rounded text-xs bg-white hover:bg-gray-50"
-                        onClick={() => handleMarkAsRead(n.id)}
-                      >
-                        ✓ Read
-                      </button>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>

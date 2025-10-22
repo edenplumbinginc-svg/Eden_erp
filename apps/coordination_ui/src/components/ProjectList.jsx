@@ -1,11 +1,20 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { apiService } from '../services/api';
 
 function ProjectList({ projects, onRefresh, onSelectProject }) {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [formData, setFormData] = useState({ name: '', code: '' });
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  const { data: taskStats = [] } = useQuery({
+    queryKey: ['tasks_by_status'],
+    queryFn: () => apiService.getTasksByStatus().then(res => res.data)
+  });
+
+  const totalTasks = taskStats.reduce((sum, s) => sum + s.count, 0);
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -44,13 +53,42 @@ function ProjectList({ projects, onRefresh, onSelectProject }) {
   };
 
   return (
-    <div className="card">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h2>Projects</h2>
-        <button className="btn btn-primary" onClick={() => setShowCreateForm(!showCreateForm)}>
-          {showCreateForm ? 'Cancel' : 'New Project'}
-        </button>
-      </div>
+    <div className="space-y-4">
+      {taskStats.length > 0 && (
+        <div className="card">
+          <h3 className="font-semibold mb-3">Tasks by Status</h3>
+          <div className="space-y-2">
+            {taskStats.map(s => (
+              <div key={s.status} className="mb-2">
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="capitalize font-medium">{s.status}</span>
+                  <span className="text-gray-600">{s.count}</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded h-2 cursor-pointer hover:bg-gray-300"
+                     onClick={() => navigate(`/alltasks?status=${s.status}`)}>
+                  <div 
+                    className="bg-blue-500 h-2 rounded transition-all hover:bg-blue-600" 
+                    style={{width: totalTasks > 0 ? `${(s.count / totalTasks) * 100}%` : '0%'}}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+          {totalTasks > 0 && (
+            <div className="text-xs text-gray-500 mt-3">
+              Total: {totalTasks} task{totalTasks !== 1 ? 's' : ''} • Click a bar to filter
+            </div>
+          )}
+        </div>
+      )}
+      
+      <div className="card">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h2>Projects</h2>
+          <button className="btn btn-primary" onClick={() => setShowCreateForm(!showCreateForm)}>
+            {showCreateForm ? 'Cancel' : 'New Project'}
+          </button>
+        </div>
 
       {showCreateForm && (
         <form className="form" onSubmit={handleCreate} style={{ marginBottom: '20px' }}>
@@ -114,6 +152,7 @@ function ProjectList({ projects, onRefresh, onSelectProject }) {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }
