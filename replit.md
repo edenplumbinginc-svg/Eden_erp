@@ -63,6 +63,14 @@ I prefer iterative development, with a focus on delivering functional increments
 - **Dev Server**: Runs on port 5000 with proxy to backend on port 3000
 
 ## Recent Changes
+- **2025-10-22 (Final)**: Completed Project → Task Navigation Flow:
+  - **GET /api/projects/:id Endpoint**: Added missing backend endpoint to fetch single project details
+  - **ProjectDetail Page**: Full-featured page showing project name, code, and task list with "Open" links
+  - **API Helpers**: Added getProject() and listProjectTasks() methods to services/api.js
+  - **Navigation Flow**: Complete 3-level navigation (Projects List → Project Detail → Task Detail)
+  - **Routing**: Added /project/:projectId route to App.jsx with React Router integration
+  - **UI Integration**: Updated ProjectList "View Tasks" buttons to use Link components for seamless navigation
+  - Verified: Full navigation path works end-to-end, all RBAC permissions enforced correctly
 - **2025-10-22 (Late)**: Completed Checklist Editor Integration:
   - **API Helpers**: Added subtask CRUD methods to `services/api.js` (listSubtasks, createSubtask, updateSubtask, deleteSubtask)
   - **ChecklistEditor Component**: Full-featured checklist editor with add/toggle/delete/rename functionality using React Query
