@@ -21,6 +21,19 @@ fi
 while true; do
   cd ~/workspace 2>/dev/null || cd .
   
+  # Pull first to sync any remote changes
+  echo "[AUTOSYNC] 🔃 Checking for remote changes..."
+  git fetch origin main 2>/dev/null || git fetch origin master 2>/dev/null || true
+  
+  # Check if we're behind remote
+  LOCAL=$(git rev-parse @)
+  REMOTE=$(git rev-parse @{u} 2>/dev/null || echo "$LOCAL")
+  
+  if [ "$LOCAL" != "$REMOTE" ]; then
+    echo "[AUTOSYNC] ⬇️ Pulling changes from GitHub..."
+    git pull --rebase || echo "[AUTOSYNC] ⚠️ Pull failed (may have conflicts)"
+  fi
+  
   # Detect uncommitted changes
   if [[ -n "$(git status --porcelain)" ]]; then
     echo "[AUTOSYNC] 🔄 Changes detected — committing and pushing to GitHub..."
