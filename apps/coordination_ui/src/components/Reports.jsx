@@ -1,153 +1,120 @@
-import React, { useState, useEffect } from 'react';
-import { apiService } from '../services/api';
+import React from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import { apiService } from "../services/api";
 
-function Reports() {
-  const [reports, setReports] = useState({
-    byStatus: [],
-    byOwner: [],
-    byPriority: [],
-    overdue: [],
-    activity: []
+const Card = ({ title, children }) => (
+  <div className="rounded-2xl shadow-sm border bg-white">
+    <div className="px-4 py-3 border-b font-semibold">{title}</div>
+    <div className="p-4">{children}</div>
+  </div>
+);
+
+export default function Reports() {
+  const { data: byStatus = [] } = useQuery({ 
+    queryKey: ["r_status"], 
+    queryFn: () => apiService.getTasksByStatus().then(res => res.data) 
   });
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    loadReports();
-  }, []);
-
-  const loadReports = async () => {
-    setLoading(true);
-    try {
-      const [byStatus, byOwner, byPriority, overdue, activity] = await Promise.all([
-        apiService.getTasksByStatus(),
-        apiService.getTasksByOwner(),
-        apiService.getTasksByPriority(),
-        apiService.getOverdueTasks(),
-        apiService.getRecentActivity()
-      ]);
-
-      setReports({
-        byStatus: byStatus.data,
-        byOwner: byOwner.data,
-        byPriority: byPriority.data,
-        overdue: overdue.data,
-        activity: activity.data
-      });
-    } catch (err) {
-      console.error('Failed to load reports:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
-    return <div className="loading">Loading reports...</div>;
-  }
+  
+  const { data: byOwner = [] } = useQuery({ 
+    queryKey: ["r_owner"], 
+    queryFn: () => apiService.getTasksByOwner().then(res => res.data) 
+  });
+  
+  const { data: overdue = [] } = useQuery({ 
+    queryKey: ["r_overdue"], 
+    queryFn: () => apiService.getOverdueTasks().then(res => res.data) 
+  });
+  
+  const { data: activity = [] } = useQuery({ 
+    queryKey: ["r_activity"], 
+    queryFn: () => apiService.getRecentActivity().then(res => res.data) 
+  });
 
   return (
-    <div>
-      <div className="card">
-        <h2>Dashboard Reports</h2>
-        <button className="btn btn-primary" onClick={loadReports} style={{ marginBottom: '20px' }}>
-          Refresh Reports
-        </button>
-      </div>
+    <div className="mx-auto max-w-7xl p-4 space-y-6">
+      <h1 className="text-xl font-semibold">Coordination Reports</h1>
 
-      <div className="reports-grid">
-        <div className="report-card">
-          <h3>Tasks by Status</h3>
-          {reports.byStatus.length === 0 ? (
-            <div className="empty-state">No data</div>
-          ) : (
-            <div>
-              {reports.byStatus.map(item => (
-                <div key={item.status} className="report-item">
-                  <span className="report-label">{item.status}</span>
-                  <span className="report-value">{item.count}</span>
-                </div>
+      <div className="grid md:grid-cols-2 gap-6">
+        <Card title="Tasks by Status">
+          <table className="w-full text-sm">
+            <thead>
+              <tr>
+                <th className="text-left py-1">Status</th>
+                <th className="text-right">Count</th>
+              </tr>
+            </thead>
+            <tbody>
+              {byStatus.map(r => (
+                <tr key={r.status}>
+                  <td className="py-1 capitalize">{r.status}</td>
+                  <td className="py-1 text-right">{r.count}</td>
+                </tr>
               ))}
-            </div>
-          )}
-        </div>
+            </tbody>
+          </table>
+        </Card>
 
-        <div className="report-card">
-          <h3>Tasks by Owner</h3>
-          {reports.byOwner.length === 0 ? (
-            <div className="empty-state">No data</div>
-          ) : (
-            <div>
-              {reports.byOwner.map((item, idx) => (
-                <div key={idx} className="report-item">
-                  <span className="report-label">{item.owner}</span>
-                  <span className="report-value">{item.count}</span>
-                </div>
+        <Card title="Tasks by Owner">
+          <table className="w-full text-sm">
+            <thead>
+              <tr>
+                <th className="text-left py-1">Owner</th>
+                <th className="text-right">Count</th>
+              </tr>
+            </thead>
+            <tbody>
+              {byOwner.map(r => (
+                <tr key={r.owner || Math.random()}>
+                  <td className="py-1">{r.owner || "Unassigned"}</td>
+                  <td className="py-1 text-right">{r.count}</td>
+                </tr>
               ))}
-            </div>
-          )}
-        </div>
+            </tbody>
+          </table>
+        </Card>
 
-        <div className="report-card">
-          <h3>Tasks by Priority</h3>
-          {reports.byPriority.length === 0 ? (
-            <div className="empty-state">No data</div>
+        <Card title="Overdue Tasks">
+          {overdue.length === 0 ? (
+            <div className="text-sm text-gray-500">No overdue tasks 🎉</div>
           ) : (
-            <div>
-              {reports.byPriority.map(item => (
-                <div key={item.priority} className="report-item">
-                  <span className="report-label">{item.priority}</span>
-                  <span className="report-value">{item.count}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="report-card">
-          <h3>Recent Activity (7 days)</h3>
-          {reports.activity.length === 0 ? (
-            <div className="empty-state">No recent activity</div>
-          ) : (
-            <div>
-              {reports.activity.map((item, idx) => (
-                <div key={idx} className="report-item">
-                  <span className="report-label">
-                    {new Date(item.day).toLocaleDateString()}
-                  </span>
-                  <span className="report-value">{item.tasks_created} tasks</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {reports.overdue.length > 0 && (
-        <div className="card" style={{ marginTop: '20px' }}>
-          <h3 style={{ color: '#dc3545', marginBottom: '15px' }}>⚠️ Overdue Tasks</h3>
-          <div className="task-list">
-            {reports.overdue.map(task => (
-              <div key={task.id} className="task-item" style={{ borderLeft: '4px solid #dc3545' }}>
-                <div className="task-header">
+            <ul className="text-sm space-y-2">
+              {overdue.map(t => (
+                <li key={t.id} className="flex items-center justify-between">
                   <div>
-                    <div className="task-title">{task.title}</div>
-                    <div style={{ color: '#666', fontSize: '14px', marginTop: '4px' }}>
-                      Project: {task.project_name} | Due: {new Date(task.due_at).toLocaleDateString()}
+                    <div className="font-medium">{t.title}</div>
+                    <div className="text-xs text-gray-500">
+                      Due {t.due_at ? new Date(t.due_at).toLocaleDateString() : "—"} • {t.priority}
                     </div>
                   </div>
-                  <span className={`priority-badge priority-${task.priority}`}>
-                    {task.priority}
-                  </span>
-                </div>
-                <div className="ball-status" style={{ marginTop: '10px' }}>
-                  <span>Owner: {task.owner}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+                  <Link className="px-2 py-1 border rounded text-xs hover:bg-gray-50" to={`/task/${t.id}`}>
+                    Open
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+
+        <Card title="Recent Activity (7 days)">
+          {activity.length === 0 ? (
+            <div className="text-sm text-gray-500">No recent activity.</div>
+          ) : (
+            <ul className="text-sm space-y-2">
+              {activity.map((e, i) => (
+                <li key={i} className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium">{new Date(e.day).toLocaleDateString()}</div>
+                    <div className="text-xs text-gray-500">
+                      {e.tasks_created} task{e.tasks_created !== 1 ? 's' : ''} created
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      </div>
     </div>
   );
 }
-
-export default Reports;

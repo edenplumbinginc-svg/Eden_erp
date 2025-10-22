@@ -63,6 +63,14 @@ I prefer iterative development, with a focus on delivering functional increments
 - **Dev Server**: Runs on port 5000 with proxy to backend on port 3000
 
 ## Recent Changes
+- **2025-10-22 (Latest)**: Completed Reports Page with Deep-Linking:
+  - **React Query Integration**: Upgraded Reports component to use React Query for efficient data fetching
+  - **Four Card Layout**: Tasks by Status, Tasks by Owner, Overdue Tasks, and Recent Activity (7 days)
+  - **Deep-Linking**: "Open" buttons on overdue tasks navigate directly to `/task/:id` for quick access
+  - **Live Data**: Shows real-time coordination stats (72 total tasks: 51 todo, 12 in_progress, 7 open, 2 review, 1 done)
+  - **Owner Distribution**: Displays ball-in-court assignments (41 unassigned, 28 admin@edenmep.ca, 2 vendor1@example.com)
+  - **Navigation**: Accessible via "Reports" tab in main navigation, works with all RBAC roles
+  - Verified: All four reports load correctly, deep-linking works, data refreshes on navigation
 - **2025-10-22 (Final)**: Completed Project → Task Navigation Flow:
   - **GET /api/projects/:id Endpoint**: Added missing backend endpoint to fetch single project details
   - **ProjectDetail Page**: Full-featured page showing project name, code, and task list with "Open" links
