@@ -34,6 +34,7 @@ I prefer iterative development, with a focus on delivering functional increments
 - **Automated Idle Task Reminders**: `needs_idle_reminder` and `idle_snoozed_until` fields, `recomputeIdle` service with 3-day threshold, daily cron job at 9:05 AM, snooze endpoint, and UI badge.
 - **Auto-Complete Parent Task**: Service to auto-manage parent task status based on subtask completion, with manual override (`status_locked`).
 - **Email Summary**: Nodemailer service for daily digest with smart fallback.
+- **Coordination Phase 1A (Voice/Email Intake Prep)**: Schema extended to support future AI-powered task creation from voice and email. Added `voiceUrl`, `voiceTranscript`, and `ballInCourtNote` fields to tasks table. Multi-project linking enabled via `tasks_projects` join table. Origin tracking defaults to 'UI' for all tasks. Backward compatible with existing 80+ tasks.
 
 ### Feature Specifications
 - **Core Modules**: `coordination` (projects, tasks, comments, attachments) and `procurement`.

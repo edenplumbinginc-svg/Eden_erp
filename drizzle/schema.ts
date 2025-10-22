@@ -178,7 +178,10 @@ export const tasks = pgTable("tasks", {
         createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
         updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
         tags: text().array().default([""]),
-        origin: text(),
+        origin: text().default('UI'),
+        voiceUrl: text("voice_url"),
+        voiceTranscript: text("voice_transcript"),
+        ballInCourtNote: text("ball_in_court_note"),
         deletedAt: timestamp("deleted_at", { withTimezone: true, mode: 'string' }),
         lastActivityAt: timestamp("last_activity_at", { withTimezone: true, mode: 'string' }),
         statusLocked: boolean("status_locked").default(false),
@@ -218,6 +221,23 @@ export const tasks = pgTable("tasks", {
                         foreignColumns: [users.id],
                         name: "tasks_created_by_fkey"
                 }),
+]);
+
+export const tasksProjects = pgTable("tasks_projects", {
+        taskId: uuid("task_id").notNull(),
+        projectId: uuid("project_id").notNull(),
+}, (table) => [
+        foreignKey({
+                columns: [table.taskId],
+                foreignColumns: [tasks.id],
+                name: "tasks_projects_task_id_fkey"
+        }).onDelete("cascade"),
+        foreignKey({
+                columns: [table.projectId],
+                foreignColumns: [projects.id],
+                name: "tasks_projects_project_id_fkey"
+        }).onDelete("cascade"),
+        primaryKey({ columns: [table.taskId, table.projectId], name: "tasks_projects_pkey"}),
 ]);
 
 export const subtasks = pgTable("subtasks", {
