@@ -22,7 +22,7 @@ export default function HandoffModal({ isOpen, onClose, task }) {
 
   const handoffMutation = useMutation({
     mutationFn: async (toDepartment) => {
-      return apiService.handoffTask(task.id, toDepartment);
+      return apiService.handoffTask(task.id, toDepartment, note);
     },
     onSuccess: (data) => {
       if (data.skipped) {
