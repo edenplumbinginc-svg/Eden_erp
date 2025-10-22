@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../services/database');
 const { authenticate } = require('../middleware/auth');
+const { performanceSummary } = require('../services/performanceReport');
 
 // Tasks by status
 router.get('/tasks/status', authenticate, async (_, res) => {
@@ -91,6 +92,34 @@ router.get('/activity/recent', authenticate, async (_, res) => {
       ORDER BY day DESC
     `);
     res.json(r.rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Performance leaderboard (JSON)
+router.get('/performance', authenticate, async (req, res) => {
+  try {
+    const days = Number(req.query.days) || 7;
+    const rows = await performanceSummary({ days });
+    res.json({ ok: true, days, data: rows });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Performance leaderboard (CSV download)
+router.get('/performance.csv', authenticate, async (req, res) => {
+  try {
+    const days = Number(req.query.days) || 7;
+    const rows = await performanceSummary({ days });
+    
+    const header = 'assignee_id,done_count';
+    const body = rows.map(r => `${r.assignee_id || ''},${r.done_count}`).join('\n');
+    
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="performance_${days}d.csv"`);
+    res.send([header, body].join('\n'));
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
