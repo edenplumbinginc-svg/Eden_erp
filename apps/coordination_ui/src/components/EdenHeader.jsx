@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import NotificationsBell from "./NotificationsBell";
 
 export default function EdenHeader() {
@@ -18,11 +18,50 @@ export default function EdenHeader() {
             <img src="/logo-eden.svg" alt="EDEN" style={{height: '28px', width: 'auto'}} />
             <span className="status-badge" style={{ backgroundColor: 'var(--md-on-surface)', color: 'white' }}>Coordination • Alpha</span>
           </div>
-          <div className="flex items-center gap-4">
-            <Link to="/" className="text-body text-link hover:underline">Projects</Link>
-            <Link to="/reports" className="text-body text-link hover:underline">Reports</Link>
+          
+          <nav className="flex items-center gap-6">
+            <NavLink 
+              to="/dashboard" 
+              className={({ isActive }) => isActive ? 'text-body font-medium' : 'text-body text-link hover:underline'}
+              style={({ isActive }) => ({
+                color: isActive ? 'var(--md-primary)' : undefined,
+                fontWeight: isActive ? 500 : undefined
+              })}
+            >
+              Dashboard
+            </NavLink>
+            <NavLink 
+              to="/alltasks" 
+              className={({ isActive }) => isActive ? 'text-body font-medium' : 'text-body text-link hover:underline'}
+              style={({ isActive }) => ({
+                color: isActive ? 'var(--md-primary)' : undefined,
+                fontWeight: isActive ? 500 : undefined
+              })}
+            >
+              All Tasks
+            </NavLink>
+            <NavLink 
+              to="/" 
+              className={({ isActive }) => isActive ? 'text-body font-medium' : 'text-body text-link hover:underline'}
+              style={({ isActive }) => ({
+                color: isActive ? 'var(--md-primary)' : undefined,
+                fontWeight: isActive ? 500 : undefined
+              })}
+            >
+              Projects
+            </NavLink>
+            <NavLink 
+              to="/reports" 
+              className={({ isActive }) => isActive ? 'text-body font-medium' : 'text-body text-link hover:underline'}
+              style={({ isActive }) => ({
+                color: isActive ? 'var(--md-primary)' : undefined,
+                fontWeight: isActive ? 500 : undefined
+              })}
+            >
+              Reports
+            </NavLink>
             <NotificationsBell />
-          </div>
+          </nav>
         </div>
       </div>
     </header>

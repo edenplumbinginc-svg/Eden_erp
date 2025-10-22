@@ -70,33 +70,6 @@ function AppContent() {
           loadUsers();
         }} />
 
-      <div className="tabs">
-        <NavLink
-          to="/"
-          className={({ isActive }) => `tab ${isActive ? 'active' : ''}`}
-        >
-          Projects
-        </NavLink>
-        <NavLink
-          to="/dashboard"
-          className={({ isActive }) => `tab ${isActive ? 'active' : ''}`}
-        >
-          Dashboard
-        </NavLink>
-        <NavLink
-          to="/alltasks"
-          className={({ isActive }) => `tab ${isActive ? 'active' : ''}`}
-        >
-          All Tasks
-        </NavLink>
-        <NavLink
-          to="/reports"
-          className={({ isActive }) => `tab ${isActive ? 'active' : ''}`}
-        >
-          Reports
-        </NavLink>
-      </div>
-
       {error && <div className="error">{error}</div>}
 
       {loading && <div className="loading">Loading...</div>}
