@@ -408,6 +408,7 @@ export const handoffEvents = pgTable("handoff_events", {
         fromDepartment: text("from_department"),
         toDepartment: text("to_department").notNull(),
         actorEmail: text("actor_email").notNull(),
+        note: text(),
         createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 }, (table) => [
         index("idx_handoff_events_task").using("btree", table.taskId.asc().nullsLast()),

@@ -63,7 +63,8 @@ const CreateDependencySchema = z.object({
 });
 
 const HandoffSchema = z.object({
-  to_department: z.enum(['Operations', 'Procurement', 'Accounting', 'Service', 'Estimating', 'Scheduling'])
+  to_department: z.enum(['Operations', 'Procurement', 'Accounting', 'Service', 'Estimating', 'Scheduling']),
+  note: z.string().max(1000).optional()
 });
 
 // Status flow validation
@@ -623,9 +624,10 @@ router.post('/:id/handoff', authenticate, requirePerm('tasks:write'), validate(H
   try {
     const taskId = req.params.id;
     const toDepartment = req.body.to_department;
+    const note = req.body.note;
     const actorEmail = req.user?.email || 'unknown';
     
-    const result = await handoffTask({ taskId, toDepartment, actorEmail });
+    const result = await handoffTask({ taskId, toDepartment, actorEmail, note });
     res.json(result);
   } catch (e) {
     if (e.message === 'task not found') {

@@ -12,9 +12,10 @@ const { pool } = require('./database');
  * @param {string} params.taskId - UUID of the task
  * @param {string} params.toDepartment - Destination department
  * @param {string} params.actorEmail - Email of user performing handoff
+ * @param {string} params.note - Optional note for the handoff
  * @returns {Promise<Object>} { ok, skipped, fromDepartment, toDepartment }
  */
-async function handoffTask({ taskId, toDepartment, actorEmail }) {
+async function handoffTask({ taskId, toDepartment, actorEmail, note }) {
   if (!taskId) throw new Error('taskId required');
   if (!toDepartment) throw new Error('to_department required');
 
@@ -54,9 +55,9 @@ async function handoffTask({ taskId, toDepartment, actorEmail }) {
 
     // Insert handoff event
     await client.query(
-      `INSERT INTO handoff_events (task_id, from_department, to_department, actor_email)
-       VALUES ($1, $2, $3, $4)`,
-      [taskId, fromDepartment, toDepartment, actorEmail || 'system']
+      `INSERT INTO handoff_events (task_id, from_department, to_department, actor_email, note)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [taskId, fromDepartment, toDepartment, actorEmail || 'system', note || null]
     );
 
     // Update task department
@@ -72,7 +73,7 @@ async function handoffTask({ taskId, toDepartment, actorEmail }) {
       [
         'task.handoff',
         `task:${taskId}`,
-        JSON.stringify({ taskId, fromDepartment, toDepartment, actorEmail })
+        JSON.stringify({ taskId, fromDepartment, toDepartment, actorEmail, note })
       ]
     );
 
