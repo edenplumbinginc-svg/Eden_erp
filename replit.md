@@ -59,14 +59,15 @@ I prefer iterative development, with a focus on delivering functional increments
 - **Dev Server**: Runs on port 5000 with proxy to backend on port 3000
 
 ## Recent Changes
-- **2025-10-22 (Latest)**: Created Modern Dark UI Shell (apps/ui):
-  - **New UI Framework**: React + Vite + Tailwind CSS v3 at apps/ui (separate from coordination_ui)
-  - **Dark Theme Design**: Gray-950 background with rounded cards, modern aesthetics
-  - **Dashboard Components**: Stat cards, sidebar navigation, recent tasks section
-  - **API Integration**: Connected to backend with dev auth headers, shows health status
-  - **Responsive Layout**: Grid-based with sidebar + main content area
-  - **Development Workflow**: `npm run dev:web` runs on port 5000 with proxy to backend
-  - Ready for incremental feature development, replacing the Alpha UI pages
+- **2025-10-22 (Latest)**: Applied Soft Light (Google-ish) Theme to Modern UI (apps/ui):
+  - **Theme System**: Soft Light CSS with custom utilities (.soft-card, .soft-panel, .btn, .input)
+  - **Design Language**: Light #f7f8fa background, white cards, rounded-2xl corners, subtle shadows
+  - **Google-Style Components**: Blue #4285F4 primary buttons, smooth ease-out transitions (200ms)
+  - **Interactive Elements**: Active scale feedback, focus rings, hover states
+  - **Dashboard Layout**: Header with EDEN branding, stat cards, search input, task list
+  - **Vite Configuration**: Port 5000, allowedHosts: 'all' for Replit compatibility
+  - **API Connection**: Health check endpoint integrated, shows API status
+  - Ready to wire up real data from backend endpoints
 - **2025-10-22**: Shipped Guest View (Public Read-Only Access):
   - **Backend Route**: `/api/guest/resolve?token=UUID` for public, unauthenticated access
   - **Token Validation**: Checks expiry, returns 404 for invalid, 410 for expired tokens
