@@ -42,7 +42,6 @@ export default function NotificationsBell() {
 
   const unreadCount = useMemo(() => items.filter(n => !n.read_at).length, [items]);
 
-  // Group notifications by type
   const groupedNotifications = useMemo(() => {
     const groups = {
       ball_handoff: [],
@@ -92,36 +91,55 @@ export default function NotificationsBell() {
   };
 
   return (
-    <div className="relative">
+    <div style={{position: 'relative'}}>
       <button className="btn btn-secondary" onClick={() => setOpen(o => !o)}>
         🔔 Notifications
         {unreadCount > 0 && (
-          <span className="ml-2 inline-block text-xs bg-amber-500 text-white rounded-full px-2">
+          <span className="inline-flex text-caption text-white rounded-full" style={{
+            marginLeft: 'var(--space-1)',
+            backgroundColor: 'var(--md-warning)',
+            padding: '2px 8px'
+          }}>
             {unreadCount}
           </span>
         )}
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-96 max-h-96 overflow-auto bg-white border rounded shadow z-40 dropdown-enter dropdown-enter-active">
-          <div className="flex items-center justify-between px-3 py-2 border-b">
-            <div className="font-semibold text-sm">Notifications ({items.length})</div>
+        <div className="dropdown-enter dropdown-enter-active" style={{
+          position: 'absolute',
+          right: 0,
+          marginTop: 'var(--space-1)',
+          width: '384px',
+          maxHeight: '384px',
+          overflow: 'auto',
+          backgroundColor: 'var(--md-surface)',
+          border: '1px solid var(--md-border)',
+          borderRadius: 'var(--radius-md)',
+          boxShadow: 'var(--md-shadow-3)',
+          zIndex: 40
+        }}>
+          <div className="flex items-center justify-between" style={{
+            padding: 'var(--space-2) var(--space-3)',
+            borderBottom: '1px solid var(--md-divider)'
+          }}>
+            <div className="font-semibold text-body">Notifications ({items.length})</div>
             <div className="flex gap-2">
               {unreadCount > 0 && (
                 <button 
-                  className="text-xs underline text-blue-600 hover:text-blue-800" 
+                  className="text-caption text-link hover:underline" 
                   onClick={handleMarkAllAsRead}
                 >
                   Mark all read
                 </button>
               )}
-              <button className="text-xs underline" onClick={() => refetch()}>Refresh</button>
+              <button className="text-caption text-link hover:underline" onClick={() => refetch()}>Refresh</button>
             </div>
           </div>
           {items.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <div className="text-4xl mb-2">🎉</div>
+            <div className="text-center py-8 text-muted">
+              <div className="text-display mb-2">🎉</div>
               <p className="font-medium">All caught up!</p>
-              <p className="text-sm">No new notifications</p>
+              <p className="text-body">No new notifications</p>
             </div>
           ) : (
             <div>
@@ -130,28 +148,36 @@ export default function NotificationsBell() {
                 
                 return (
                   <div key={key}>
-                    <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
-                      <div className="text-xs font-semibold text-gray-700">
+                    <div style={{
+                      padding: 'var(--space-2) var(--space-3)',
+                      backgroundColor: 'var(--md-surface-variant)',
+                      borderBottom: '1px solid var(--md-divider)'
+                    }}>
+                      <div className="text-caption font-semibold text-muted">
                         {title} ({groupItems.length})
                       </div>
                     </div>
-                    <ul className="divide-y">
+                    <ul style={{borderTop: '1px solid var(--md-divider)'}}>
                       {groupItems.map((n) => {
                         const isUnread = !n.read_at;
                         return (
-                          <li key={n.id} className={`p-3 text-sm flex items-start justify-between gap-3 ${isUnread ? 'bg-blue-50 unread-notification' : 'bg-white'}`}>
+                          <li key={n.id} className={`text-body flex items-start justify-between gap-3 ${isUnread ? 'unread-notification' : ''}`} style={{
+                            padding: 'var(--space-3)',
+                            backgroundColor: isUnread ? 'rgba(26, 115, 232, 0.08)' : 'var(--md-surface)',
+                            borderBottom: '1px solid var(--md-divider)'
+                          }}>
                             <div className="flex-1">
-                              <div className={`${isUnread ? 'font-bold' : 'font-medium'}`}>
+                              <div className={isUnread ? 'font-bold' : 'font-medium'}>
                                 {formatNotificationText(n)}
                               </div>
-                              <div className="text-xs text-gray-500 mt-1">
+                              <div className="text-caption mt-1">
                                 {formatRelativeTime(n.created_at)}
                               </div>
                             </div>
                             <div className="flex flex-col gap-1">
                               {n.task_id && (
                                 <Link 
-                                  className="btn btn-secondary text-xs" 
+                                  className="btn btn-secondary text-caption" 
                                   to={`/task/${n.task_id}`}
                                   onClick={() => setOpen(false)}
                                 >
@@ -160,7 +186,7 @@ export default function NotificationsBell() {
                               )}
                               {isUnread && (
                                 <button
-                                  className="btn btn-secondary text-xs"
+                                  className="btn btn-secondary text-caption"
                                   onClick={() => handleMarkAsRead(n.id)}
                                 >
                                   ✓ Read

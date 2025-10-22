@@ -90,17 +90,17 @@ export default function TaskForm({ onSubmit, onCancel, initialData = {}, submitL
     <form onSubmit={handleSubmit} className="form">
       <div className="form-group">
         <label>
-          Title <span className="text-red-500">*</span>
+          Title <span style={{color: 'var(--md-error)'}}>*</span>
         </label>
         <input
           type="text"
-          className={errors.title ? 'border-red-500' : ''}
+          style={errors.title ? {borderColor: 'var(--md-error)'} : {}}
           value={formData.title}
           onChange={(e) => handleChange('title', e.target.value)}
           placeholder="Enter task title"
           autoFocus
         />
-        {errors.title && <div className="text-xs text-red-600 mt-1">{errors.title}</div>}
+        {errors.title && <div className="text-caption mt-1" style={{color: 'var(--md-error)'}}>{errors.title}</div>}
       </div>
 
       <div className="form-group">
@@ -220,12 +220,12 @@ export default function TaskForm({ onSubmit, onCancel, initialData = {}, submitL
             <label>Voice URL</label>
             <input
               type="url"
-              className={errors.voice_url ? 'border-red-500' : ''}
+              style={errors.voice_url ? {borderColor: 'var(--md-error)'} : {}}
               value={formData.voice_url}
               onChange={(e) => handleChange('voice_url', e.target.value)}
               placeholder="https://example.com/audio.mp3"
             />
-            {errors.voice_url && <div className="text-xs text-red-600 mt-1">{errors.voice_url}</div>}
+            {errors.voice_url && <div className="text-caption mt-1" style={{color: 'var(--md-error)'}}>{errors.voice_url}</div>}
           </div>
 
           <div className="form-group">

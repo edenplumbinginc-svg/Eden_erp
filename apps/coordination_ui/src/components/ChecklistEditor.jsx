@@ -39,30 +39,36 @@ export default function ChecklistEditor({ taskId, canEdit }) {
     <div className="space-y-3">
       <div className="font-semibold">Checklist</div>
 
-      {isLoading ? <div className="text-sm text-gray-500">Loading…</div> : (
+      {isLoading ? <div className="text-body text-muted">Loading…</div> : (
         <ul className="space-y-2">
-          {items.length === 0 && <li className="text-sm text-gray-500">No checklist yet.</li>}
+          {items.length === 0 && <li className="text-body text-muted">No checklist yet.</li>}
           {items.map(it => (
             <li key={it.id} className="flex items-center gap-2">
               <input
                 type="checkbox"
-                className="h-4 w-4"
+                style={{height: '16px', width: '16px'}}
                 checked={!!it.done}
                 disabled={!canEdit || mToggle.isPending}
                 onChange={e => mToggle.mutate({ id: it.id, done: e.target.checked })}
               />
               {canEdit ? (
                 <input
-                  className="border rounded px-2 py-1 flex-1"
+                  className="flex-1"
+                  style={{
+                    border: '1px solid var(--md-border)',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '4px 8px'
+                  }}
                   value={it.title || ""}
                   onChange={e => mRename.mutate({ id: it.id, title: e.target.value })}
                 />
               ) : (
-                <span className={it.done ? "line-through text-gray-500" : ""}>{it.title}</span>
+                <span className={it.done ? "text-muted" : ""} style={it.done ? {textDecoration: 'line-through'} : {}}>{it.title}</span>
               )}
               {canEdit && (
                 <button
-                  className="text-xs px-2 py-1 border rounded"
+                  className="text-caption btn btn-secondary"
+                  style={{padding: '4px 8px'}}
                   onClick={() => mDelete.mutate(it.id)}
                   disabled={mDelete.isPending}
                 >
@@ -77,13 +83,19 @@ export default function ChecklistEditor({ taskId, canEdit }) {
       {canEdit && (
         <div className="flex items-center gap-2">
           <input
-            className="border rounded px-2 py-1 flex-1"
+            className="flex-1"
+            style={{
+              border: '1px solid var(--md-border)',
+              borderRadius: 'var(--radius-sm)',
+              padding: '4px 8px'
+            }}
             placeholder="New checklist item…"
             value={title}
             onChange={e => setTitle(e.target.value)}
           />
           <button
-            className="px-3 py-1 rounded border"
+            className="btn btn-secondary"
+            style={{padding: '8px 12px'}}
             onClick={() => title.trim() && mCreate.mutate(title.trim())}
             disabled={mCreate.isPending}
           >

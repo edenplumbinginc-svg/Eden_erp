@@ -77,8 +77,8 @@ export default function HandoffModal({ isOpen, onClose, task }) {
         
         <form onSubmit={handleSubmit} className="form">
           <div>
-            <div className="text-sm text-gray-600 mb-2">
-              Current department: <span className="font-semibold text-amber-700">{currentDepartment}</span>
+            <div className="text-body text-muted mb-2">
+              Current department: <span className="font-semibold" style={{color: 'var(--md-warning)'}}>{ currentDepartment}</span>
             </div>
           </div>
 

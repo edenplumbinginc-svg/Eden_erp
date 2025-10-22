@@ -63,15 +63,18 @@ function ProjectList({ projects, onRefresh, onSelectProject }) {
           <div className="space-y-2">
             {taskStats.map(s => (
               <div key={s.status} className="mb-3">
-                <div className="flex justify-between text-sm mb-1.5">
+                <div className="flex justify-between text-body mb-1">
                   <span className="capitalize font-medium">{s.status.replace('_', ' ')}</span>
-                  <span className="text-gray-600 font-semibold">{s.count}</span>
+                  <span className="text-muted font-semibold">{s.count}</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-lg h-8 cursor-pointer hover:bg-gray-300 overflow-hidden"
+                <div className="w-full bg-surface-variant rounded-lg cursor-pointer hover:bg-surface-variant overflow-hidden"
+                     style={{height: '32px'}}
                      onClick={() => navigate(`/alltasks?status=${s.status}`)}>
                   <div 
-                    className="h-8 rounded-lg transition-all flex items-center justify-end pr-2" 
+                    className="rounded-lg transition-all flex items-center justify-end" 
                     style={{
+                      height: '32px',
+                      paddingRight: 'var(--space-1)',
                       width: totalTasks > 0 ? `${Math.max(8, (s.count / totalTasks) * 100)}%` : '8%',
                       backgroundColor: s.status === 'complete' || s.status === 'done' ? '#10b981' :
                                        s.status === 'in_progress' ? '#3b82f6' :
@@ -80,7 +83,7 @@ function ProjectList({ projects, onRefresh, onSelectProject }) {
                                        '#6b7280'
                     }}
                   >
-                    <span className="text-white text-xs font-bold">
+                    <span className="text-white text-caption font-bold">
                       {Math.round((s.count / totalTasks) * 100)}%
                     </span>
                   </div>
@@ -89,7 +92,7 @@ function ProjectList({ projects, onRefresh, onSelectProject }) {
             ))}
           </div>
           {totalTasks > 0 && (
-            <div className="text-xs text-gray-500 mt-3">
+            <div className="text-caption mt-3">
               Total: {totalTasks} task{totalTasks !== 1 ? 's' : ''} • Click a bar to filter
             </div>
           )}
@@ -133,10 +136,10 @@ function ProjectList({ projects, onRefresh, onSelectProject }) {
       )}
 
       {projects.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="text-6xl mb-4">📁</div>
-          <h3 className="text-lg font-semibold mb-2">No projects yet</h3>
-          <p className="text-gray-600 mb-4">
+        <div className="text-center" style={{padding: 'var(--space-6) 0'}}>
+          <div className="text-display mb-4" style={{fontSize: '48px'}}>📁</div>
+          <h3 className="text-large font-semibold mb-2">No projects yet</h3>
+          <p className="text-muted mb-4">
             Create your first project to get started organizing your tasks
           </p>
           <button className="btn btn-primary" onClick={() => setShowCreateForm(true)}>
@@ -150,7 +153,7 @@ function ProjectList({ projects, onRefresh, onSelectProject }) {
               <div className="project-header">
                 <div>
                   <div className="project-title">{project.name}</div>
-                  <div style={{ color: '#666', fontSize: '14px', marginTop: '4px' }}>
+                  <div className="text-muted" style={{ fontSize: '14px', marginTop: '4px' }}>
                     Code: {project.code}
                   </div>
                 </div>

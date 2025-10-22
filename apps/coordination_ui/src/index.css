@@ -521,6 +521,39 @@ button:active, .btn:active {
   font-size: 14px;
 }
 
+/* Material Design Utility Classes */
+.text-body {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--md-on-surface);
+}
+
+.text-caption {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--md-on-surface-variant);
+}
+
+.text-muted {
+  color: var(--md-on-surface-variant);
+}
+
+.bg-background {
+  background-color: var(--md-background);
+}
+
+.bg-primary {
+  background-color: var(--md-primary);
+}
+
+.border-primary {
+  border-color: var(--md-primary);
+}
+
+.rounded-lg {
+  border-radius: var(--radius-lg);
+}
+
 /* Empty State */
 .empty-state {
   text-align: center;
