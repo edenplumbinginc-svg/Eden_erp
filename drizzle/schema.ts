@@ -1,4 +1,4 @@
-import { pgTable, unique, uuid, text, foreignKey, timestamp, bigint, index, jsonb, boolean, integer, primaryKey } from "drizzle-orm/pg-core"
+import { pgTable, unique, uuid, text, foreignKey, timestamp, bigint, index, jsonb, boolean, integer, primaryKey, check } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
 
@@ -191,6 +191,7 @@ export const tasks = pgTable("tasks", {
         idleSnoozedUntil: timestamp("idle_snoozed_until", { withTimezone: true, mode: 'string' }),
         department: text(),
 }, (table) => [
+        check("department_enum_check", sql`${table.department} IS NULL OR ${table.department} IN ('Operations', 'Procurement', 'Accounting', 'Service', 'Estimating', 'Scheduling')`),
         index("idx_tasks_ball").using("btree", table.ballInCourt.asc().nullsLast().op("uuid_ops")),
         index("idx_tasks_project").using("btree", table.projectId.asc().nullsLast().op("uuid_ops")),
         index("idx_tasks_status").using("btree", table.status.asc().nullsLast().op("text_ops")),
