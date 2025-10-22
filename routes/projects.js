@@ -126,7 +126,7 @@ router.get('/:projectId/tasks', authenticate, requirePerm('tasks:read'), async (
     const q = `
       SELECT t.id, t.title, t.description, t.status, t.priority,
              t.assignee_id, t.ball_in_court, t.due_at, t.created_at, t.updated_at,
-             t.tags, t.origin,
+             t.tags, t.origin, t.department,
              CASE 
                WHEN t.status IN ('todo', 'open') AND t.ball_in_court IS NOT NULL 
                     AND t.updated_at < now() - INTERVAL '3 days'

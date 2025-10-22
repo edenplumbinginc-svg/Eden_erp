@@ -89,7 +89,7 @@ router.get('/:id', authenticate, requirePerm('tasks:read'), async (req, res) => 
       SELECT t.id, t.title, t.description, t.status, t.priority,
              t.assignee_id, t.ball_in_court, t.ball_owner_type, t.ball_owner_id, t.ball_since,
              t.due_at, t.created_at, t.updated_at,
-             t.tags, t.origin, t.project_id,
+             t.tags, t.origin, t.project_id, t.department,
              CASE 
                WHEN t.status IN ('todo', 'open') AND t.ball_in_court IS NOT NULL 
                     AND t.updated_at < now() - INTERVAL '3 days'
