@@ -30,4 +30,20 @@ router.post('/overdue/recompute', authenticate, async (req, res) => {
   }
 });
 
+router.post('/idle/recompute', authenticate, async (req, res) => {
+  try {
+    const actor = req.user?.email || 'admin';
+    const result = await recomputeIdle(actor);
+    res.json({ 
+      ok: true, 
+      set_true: result.setTrue, 
+      set_false: result.setFalse,
+      message: `Idle reminder flags recomputed: ${result.setTrue} set to true, ${result.setFalse} set to false`
+    });
+  } catch (err) {
+    console.error('[POST /api/ops/idle/recompute] Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
