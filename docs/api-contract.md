@@ -103,6 +103,15 @@ GET /api/reports/tasks/overdue
 # Recent activity (last 7 days)
 GET /api/reports/activity/recent
 # Response: [{ day: "2025-10-22", tasks_created: 8 }, ...]
+
+# Performance leaderboard (JSON)
+GET /api/reports/performance?days=7
+# Response: { ok: true, days: 7, data: [{ assignee_id: "uuid", done_count: 12 }, ...] }
+
+# Performance leaderboard (CSV download)
+GET /api/reports/performance.csv?days=30
+# Downloads CSV file with columns: assignee_id,done_count
+# Filename: performance_30d.csv
 ```
 
 ### Guest Links
