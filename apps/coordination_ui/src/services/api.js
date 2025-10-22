@@ -60,6 +60,7 @@ export const apiService = {
   // Ball Handoff
   handoffBall: (taskId, data) => api.post(`/tasks/${taskId}/ball`, data),
   getBallHistory: (taskId) => api.get(`/tasks/${taskId}/ball`),
+  handoffTask: (taskId, toDepartment) => api.post(`/tasks/${taskId}/handoff`, { to_department: toDepartment }).then(res => res.data),
 
   // Reports
   getTasksByStatus: () => api.get('/reports/tasks/status'),

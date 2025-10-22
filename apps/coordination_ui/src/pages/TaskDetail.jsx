@@ -6,6 +6,7 @@ import Countdown from "../components/Countdown";
 import Alert from "../components/Alert";
 import ChecklistEditor from "../components/ChecklistEditor";
 import { useToaster } from "../components/Toaster";
+import HandoffModal from "../components/HandoffModal";
 
 function daysSince(ts) {
   if (!ts) return null;
@@ -209,6 +210,7 @@ export default function TaskDetail() {
   const [invite, setInvite] = useState(null);
   const [inviteErr, setInviteErr] = useState(null);
   const [inviting, setInviting] = useState(false);
+  const [handoffModalOpen, setHandoffModalOpen] = useState(false);
 
   if (!taskId) {
     return <div className="mx-auto max-w-6xl p-4">No task ID provided</div>;
@@ -232,7 +234,15 @@ export default function TaskDetail() {
           </div>
           <div className="text-sm text-gray-600">{task?.description}</div>
         </div>
-        <BallInCourt task={task} />
+        <div className="flex flex-col items-end gap-2">
+          <BallInCourt task={task} />
+          <button
+            className="px-3 py-1 rounded bg-amber-500 text-white hover:bg-amber-600 text-sm font-medium"
+            onClick={() => setHandoffModalOpen(true)}
+          >
+            Pass Ball 🏀
+          </button>
+        </div>
       </div>
 
       {task?.voice_transcript && (
@@ -312,6 +322,12 @@ export default function TaskDetail() {
           </div>
         </div>
       </div>
+
+      <HandoffModal
+        isOpen={handoffModalOpen}
+        onClose={() => setHandoffModalOpen(false)}
+        task={task}
+      />
     </div>
   );
 }
