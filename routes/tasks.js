@@ -21,11 +21,14 @@ const UpdateTaskSchema = z.object({
   priority: z.string().optional(),
   assignee_id: z.string().uuid().nullable().optional(),
   ball_in_court: z.string().uuid().nullable().optional(),
+  ball_in_court_note: z.string().max(1000).nullable().optional(),
   ballOwnerType: z.enum(['user', 'vendor', 'dept', 'system']).nullable().optional(),
   ballOwnerId: z.string().uuid().nullable().optional(),
   due_at: z.string().datetime().nullable().optional(),
   tags: z.array(z.string().min(1).max(64)).max(50).optional(),
-  origin: z.string().optional()
+  origin: z.string().optional(),
+  voice_url: z.string().url().nullable().optional(),
+  voice_transcript: z.string().max(20000).nullable().optional()
 }).refine(data => Object.keys(data).length > 0, {
   message: "At least one field must be provided"
 });
@@ -101,9 +104,9 @@ router.get('/:id', authenticate, requirePerm('tasks:read'), async (req, res) => 
   try {
     const q = `
       SELECT t.id, t.title, t.description, t.status, t.priority,
-             t.assignee_id, t.ball_in_court, t.ball_owner_type, t.ball_owner_id, t.ball_since,
+             t.assignee_id, t.ball_in_court, t.ball_in_court_note, t.ball_owner_type, t.ball_owner_id, t.ball_since,
              t.due_at, t.created_at, t.updated_at,
-             t.tags, t.origin, t.project_id, t.department,
+             t.tags, t.origin, t.voice_url, t.voice_transcript, t.project_id, t.department,
              CASE 
                WHEN t.status IN ('todo', 'open') AND t.ball_in_court IS NOT NULL 
                     AND t.updated_at < now() - INTERVAL '3 days'
@@ -123,7 +126,7 @@ router.get('/:id', authenticate, requirePerm('tasks:read'), async (req, res) => 
 // Update task
 router.patch('/:id', authenticate, requirePerm('tasks:write'), validate(UpdateTaskSchema), async (req, res) => {
   try {
-    const { title, description, status, priority, assignee_id, ball_in_court, ballOwnerType, ballOwnerId, due_at, tags, origin } = req.data;
+    const { title, description, status, priority, assignee_id, ball_in_court, ball_in_court_note, ballOwnerType, ballOwnerId, due_at, tags, origin, voice_url, voice_transcript } = req.data;
     
     // Fetch current task data if needed
     let currentStatus = null;
@@ -181,12 +184,15 @@ router.patch('/:id', authenticate, requirePerm('tasks:write'), validate(UpdateTa
       if (priority !== undefined) { updates.push(`priority = $${idx++}`); values.push(priority); }
       if (assignee_id !== undefined) { updates.push(`assignee_id = $${idx++}`); values.push(assignee_id); }
       if (ball_in_court !== undefined) { updates.push(`ball_in_court = $${idx++}`); values.push(ball_in_court); }
+      if (ball_in_court_note !== undefined) { updates.push(`ball_in_court_note = $${idx++}`); values.push(ball_in_court_note); }
       if (ballOwnerType !== undefined) { updates.push(`ball_owner_type = $${idx++}`); values.push(finalBallOwnerType); }
       if (ballOwnerId !== undefined) { updates.push(`ball_owner_id = $${idx++}`); values.push(finalBallOwnerId); }
       if (setBallSince) { updates.push(`ball_since = $${idx++}`); values.push(new Date().toISOString()); }
       if (due_at !== undefined) { updates.push(`due_at = $${idx++}`); values.push(due_at); }
       if (tags !== undefined) { updates.push(`tags = $${idx++}`); values.push(tags); }
       if (origin !== undefined) { updates.push(`origin = $${idx++}`); values.push(origin); }
+      if (voice_url !== undefined) { updates.push(`voice_url = $${idx++}`); values.push(voice_url); }
+      if (voice_transcript !== undefined) { updates.push(`voice_transcript = $${idx++}`); values.push(voice_transcript); }
 
       if (updates.length === 0) throw new Error('no fields to update');
 
@@ -195,8 +201,8 @@ router.patch('/:id', authenticate, requirePerm('tasks:write'), validate(UpdateTa
       const r = await tx.query(
         `UPDATE public.tasks SET ${updates.join(', ')} 
          WHERE id = $${idx} 
-         RETURNING id, title, description, status, priority, assignee_id, ball_in_court, 
-                   ball_owner_type, ball_owner_id, ball_since, due_at, tags, origin, 
+         RETURNING id, title, description, status, priority, assignee_id, ball_in_court, ball_in_court_note,
+                   ball_owner_type, ball_owner_id, ball_since, due_at, tags, origin, voice_url, voice_transcript,
                    created_at, updated_at, project_id`,
         values
       );

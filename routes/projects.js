@@ -30,9 +30,13 @@ const CreateTaskSchema = z.object({
   priority: z.string().optional(),
   assignee_id: z.string().uuid().optional(),
   ball_in_court: z.string().uuid().optional(),
+  ball_in_court_note: z.string().max(1000).optional(),
   due_at: z.string().datetime().optional(),
   tags: z.array(z.string()).optional(),
-  origin: z.string().optional()
+  origin: z.string().optional(),
+  voice_url: z.string().url().optional(),
+  voice_transcript: z.string().max(20000).optional(),
+  linked_project_ids: z.array(z.string().uuid()).optional()
 });
 
 // List projects - RBAC protected with projects:read permission
@@ -125,8 +129,8 @@ router.get('/:projectId/tasks', authenticate, requirePerm('tasks:read'), async (
   try {
     const q = `
       SELECT t.id, t.title, t.description, t.status, t.priority,
-             t.assignee_id, t.ball_in_court, t.due_at, t.created_at, t.updated_at,
-             t.tags, t.origin, t.department,
+             t.assignee_id, t.ball_in_court, t.ball_in_court_note, t.due_at, t.created_at, t.updated_at,
+             t.tags, t.origin, t.voice_url, t.voice_transcript, t.department,
              CASE 
                WHEN t.status IN ('todo', 'open') AND t.ball_in_court IS NOT NULL 
                     AND t.updated_at < now() - INTERVAL '3 days'
@@ -146,7 +150,7 @@ router.get('/:projectId/tasks', authenticate, requirePerm('tasks:read'), async (
 // Create task in project
 router.post('/:projectId/tasks', authenticate, requirePerm('tasks:write'), validate(CreateTaskSchema), async (req, res) => {
   try {
-    const { title, description, assignee_id, ball_in_court, due_at, priority, tags, origin } = req.data;
+    const { title, description, assignee_id, ball_in_court, ball_in_court_note, due_at, priority, tags, origin, voice_url, voice_transcript, linked_project_ids } = req.data;
     
     // Default status to 'todo' instead of 'open' for new convention
     const status = req.body.status || 'todo';
@@ -155,10 +159,10 @@ router.post('/:projectId/tasks', authenticate, requirePerm('tasks:write'), valid
       console.log('[TX] Starting transaction for task creation');
       const q = `
         INSERT INTO public.tasks
-          (project_id, title, description, status, priority, assignee_id, ball_in_court, due_at, tags, origin)
+          (project_id, title, description, status, priority, assignee_id, ball_in_court, ball_in_court_note, due_at, tags, origin, voice_url, voice_transcript)
         VALUES
-          ($1::uuid, $2, $3, $4, COALESCE($5,'normal'), $6::uuid, $7::uuid, $8, $9, $10)
-        RETURNING id, title, description, status, priority, assignee_id, ball_in_court, due_at, tags, origin, created_at, updated_at`;
+          ($1::uuid, $2, $3, $4, COALESCE($5,'normal'), $6::uuid, $7::uuid, $8, $9, $10, $11, $12, $13)
+        RETURNING id, title, description, status, priority, assignee_id, ball_in_court, ball_in_court_note, due_at, tags, origin, voice_url, voice_transcript, created_at, updated_at`;
       
       console.log('[TX] Inserting task with projectId:', req.params.projectId);
       const r = await tx.query(q, [
@@ -169,13 +173,27 @@ router.post('/:projectId/tasks', authenticate, requirePerm('tasks:write'), valid
         priority ?? null,
         assignee_id ?? null,
         ball_in_court ?? null,
+        ball_in_court_note ?? null,
         due_at ?? null,
         tags ?? [],
-        origin ?? null
+        origin ?? 'UI',
+        voice_url ?? null,
+        voice_transcript ?? null
       ]);
       
       const taskData = r.rows[0];
       console.log('[TX] Task created with ID:', taskData.id);
+      
+      // Multi-project linking
+      if (linked_project_ids && linked_project_ids.length > 0) {
+        console.log('[TX] Linking task to additional projects:', linked_project_ids);
+        for (const linkedProjectId of linked_project_ids) {
+          await tx.query(
+            'INSERT INTO public.tasks_projects (task_id, project_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+            [taskData.id, linkedProjectId]
+          );
+        }
+      }
       
       // Insert notification within the same transaction
       const { actorEmail } = actorFromHeaders(req);
