@@ -42,6 +42,7 @@ I prefer iterative development, with a focus on delivering functional increments
 - **Scalable Database**: PostgreSQL with a session pooler.
 - **Observability**: Built-in comprehensive monitoring, logging, and health checks.
 - **Secure by Design**: Enforced authentication and multi-layered database configuration validation.
+- **Auto-Sync to GitHub**: Background workflow (`autosync.sh`) automatically commits and pushes changes to GitHub every 5 minutes, preventing work loss in Replit's ephemeral environment.
 
 ## External Dependencies
 ### Backend
@@ -60,7 +61,15 @@ I prefer iterative development, with a focus on delivering functional increments
 - **Dev Server**: Runs on port 5000 with proxy to backend on port 3000
 
 ## Recent Changes
-- **2025-10-22 (Latest)**: Implemented Automated Overdue Task Tracking:
+- **2025-10-22 (Latest)**: Implemented Auto-Sync to GitHub:
+  - **Auto-Sync Script**: `autosync.sh` runs as a background workflow, checking for changes every 5 minutes
+  - **GitHub Authentication**: Uses `GITHUB_TOKEN` secret stored in Replit Secrets for secure token-based authentication
+  - **Git Identity**: Commits are authored by "Eden ERP Auto-Sync <eden-erp-bot@edenplumbing.com>"
+  - **Automatic Commits**: Uncommitted changes are automatically staged, committed with timestamp, and pushed to `main` branch
+  - **Background Workflow**: Configured as "Auto-Sync" workflow that auto-starts on Replit boot
+  - **Credential Storage**: Uses Git credential helper with OAuth2 token for seamless authentication
+  - Verified: Successfully pushed 2 commits to GitHub (995e794 → a1f7bf4), no manual intervention required
+- **2025-10-22**: Implemented Automated Overdue Task Tracking:
   - **Database Fields**: Added `is_overdue` (boolean) and `overdue_snoozed_until` (timestamp) to tasks table
   - **Recompute Service**: `services/recomputeOverdue.js` with idempotent logic (sets is_overdue based on due_at, excludes done/snoozed tasks)
   - **Daily Automation**: node-cron job runs at 3:00 AM America/Toronto timezone to auto-refresh overdue flags
