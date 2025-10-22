@@ -5,6 +5,19 @@
 echo "[AUTOSYNC] Starting Git auto-sync service..."
 echo "[AUTOSYNC] Will check for changes every 5 minutes"
 
+# Configure Git identity
+git config --global user.email "eden-erp-bot@edenplumbing.com"
+git config --global user.name "Eden ERP Auto-Sync"
+
+# Configure Git to use token authentication
+if [[ -n "$GITHUB_TOKEN" ]]; then
+  git config --global credential.helper store
+  echo "https://oauth2:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
+  echo "[AUTOSYNC] ✓ GitHub token configured"
+else
+  echo "[AUTOSYNC] ⚠️ GITHUB_TOKEN not set — pushes may fail"
+fi
+
 while true; do
   cd ~/workspace 2>/dev/null || cd .
   
