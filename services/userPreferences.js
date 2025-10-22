@@ -24,39 +24,25 @@ async function updateUserPreferences(userId, { default_project_id, tasks_group_b
   try {
     await client.query('BEGIN');
 
-    const sets = [];
-    const vals = [userId];
-    let paramIndex = 2;
-
-    if (typeof default_project_id !== 'undefined') {
-      sets.push(`default_project_id = $${paramIndex++}`);
-      vals.push(default_project_id || null);
-    }
-    
     if (typeof tasks_group_by !== 'undefined') {
       const validOptions = ['status', 'due', 'none'];
       if (!validOptions.includes(tasks_group_by)) {
         throw new Error(`Invalid tasks_group_by: must be one of ${validOptions.join(', ')}`);
       }
-      sets.push(`tasks_group_by = $${paramIndex++}`);
-      vals.push(tasks_group_by);
     }
 
-    if (sets.length === 0) {
-      await client.query('ROLLBACK');
-      return getUserPreferences(userId);
-    }
-
-    sets.push(`updated_at = NOW()`);
-
-    const defaultProjectId = typeof default_project_id === 'undefined' ? null : (default_project_id || null);
-    const tasksGroupBy = typeof tasks_group_by === 'undefined' ? 'status' : tasks_group_by;
+    const currentPrefs = await getUserPreferences(userId);
+    const newDefaultProjectId = typeof default_project_id !== 'undefined' ? (default_project_id || null) : currentPrefs.default_project_id;
+    const newTasksGroupBy = typeof tasks_group_by !== 'undefined' ? tasks_group_by : currentPrefs.tasks_group_by;
 
     await client.query(
       `INSERT INTO user_preferences (user_id, default_project_id, tasks_group_by, updated_at)
        VALUES ($1, $2, $3, NOW())
-       ON CONFLICT (user_id) DO UPDATE SET ${sets.join(', ')}`,
-      [userId, defaultProjectId, tasksGroupBy]
+       ON CONFLICT (user_id) DO UPDATE SET
+         default_project_id = EXCLUDED.default_project_id,
+         tasks_group_by = EXCLUDED.tasks_group_by,
+         updated_at = EXCLUDED.updated_at`,
+      [userId, newDefaultProjectId, newTasksGroupBy]
     );
 
     await client.query(
