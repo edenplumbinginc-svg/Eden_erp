@@ -11,6 +11,7 @@ const { withTx } = require('../lib/tx');
 const { audit } = require('../utils/audit');
 const { maybeAutoCloseParent } = require('../services/taskAutoClose');
 const { handoffTask } = require('../services/handoff');
+const { parseQuery, fetchTasks } = require('../services/taskQuery');
 
 // Zod validation schemas
 const UpdateTaskSchema = z.object({
@@ -81,6 +82,18 @@ function isValidStatusTransition(currentStatus, newStatus) {
   const validNext = validStatusTransitions[currentStatus];
   return validNext && validNext.includes(newStatus);
 }
+
+// List all tasks with filtering, pagination, and sorting
+router.get('/', authenticate, requirePerm('tasks:read'), async (req, res) => {
+  try {
+    const filters = parseQuery(req.query);
+    const result = await fetchTasks(filters);
+    res.json({ ok: true, ...result });
+  } catch (e) {
+    if (e.status) return res.status(e.status).json({ ok: false, error: e.message });
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
 
 // Get single task (with computed fields)
 router.get('/:id', authenticate, requirePerm('tasks:read'), async (req, res) => {
