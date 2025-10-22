@@ -63,6 +63,14 @@ I prefer iterative development, with a focus on delivering functional increments
 - **Dev Server**: Runs on port 5000 with proxy to backend on port 3000
 
 ## Recent Changes
+- **2025-10-22**: Completed Phase 1 Polish Sprint Step 4 - File Upload Progress UI:
+  - **Alert Component**: Created reusable Alert component (`apps/coordination_ui/src/components/Alert.jsx`) with success/error variants and auto-dismiss functionality
+  - **XMLHttpRequest Integration**: Replaced React Query mutation with XMLHttpRequest for granular upload.onprogress event tracking
+  - **Progress Bar**: Real-time progress indicator with percentage display during file uploads
+  - **State Management**: Added uploadProgress (0-100) and uploadError state to Attachments component
+  - **User Feedback**: Success banner auto-dismisses after 3 seconds, error banners show friendly messages with retry option
+  - **UI Polish**: Disabled upload button during active uploads to prevent duplicate submissions
+  - Verified: UI renders correctly, progress tracking infrastructure in place
 - **2025-10-21 (Night)**: Completed Ball-in-Court Refinement with Typed Owner + Days Badge:
   - **Database Schema**: Added `ball_owner_type` (user/vendor/dept/system), `ball_owner_id` (UUID), `ball_since` (timestamp) columns to tasks table
   - **Auto-Set Logic**: Backend automatically sets `ball_since` to current timestamp whenever ball owner changes (type or id)
