@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { apiService } from '../services/api';
+import { ChartSkeleton } from './LoadingSkeleton';
 
 function ProjectList({ projects, onRefresh, onSelectProject }) {
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -9,7 +10,7 @@ function ProjectList({ projects, onRefresh, onSelectProject }) {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const { data: taskStats = [] } = useQuery({
+  const { data: taskStats = [], isLoading: statsLoading } = useQuery({
     queryKey: ['tasks_by_status'],
     queryFn: () => apiService.getTasksByStatus().then(res => res.data)
   });
@@ -54,7 +55,9 @@ function ProjectList({ projects, onRefresh, onSelectProject }) {
 
   return (
     <div className="space-y-4">
-      {taskStats.length > 0 && (
+      {statsLoading ? (
+        <ChartSkeleton />
+      ) : taskStats.length > 0 ? (
         <div className="card">
           <h3 className="font-semibold mb-3">Tasks by Status</h3>
           <div className="space-y-2">
@@ -84,7 +87,7 @@ function ProjectList({ projects, onRefresh, onSelectProject }) {
             </div>
           )}
         </div>
-      )}
+      ) : null}
       
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -123,8 +126,15 @@ function ProjectList({ projects, onRefresh, onSelectProject }) {
       )}
 
       {projects.length === 0 ? (
-        <div className="empty-state">
-          <p>No projects found. Create your first project to get started!</p>
+        <div className="text-center py-12">
+          <div className="text-6xl mb-4">📁</div>
+          <h3 className="text-lg font-semibold mb-2">No projects yet</h3>
+          <p className="text-gray-600 mb-4">
+            Create your first project to get started organizing your tasks
+          </p>
+          <button className="btn btn-primary" onClick={() => setShowCreateForm(true)}>
+            + New Project
+          </button>
         </div>
       ) : (
         <div className="project-grid">

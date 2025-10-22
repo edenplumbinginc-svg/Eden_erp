@@ -4,6 +4,22 @@ import { apiService } from "../services/api";
 import { Link } from "react-router-dom";
 import { useToaster } from "./Toaster";
 
+function formatRelativeTime(dateString) {
+  const now = new Date();
+  const then = new Date(dateString);
+  const seconds = Math.floor((now - then) / 1000);
+
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} day${days !== 1 ? 's' : ''} ago`;
+  const weeks = Math.floor(days / 7);
+  return `${weeks} week${weeks !== 1 ? 's' : ''} ago`;
+}
+
 export default function NotificationsBell() {
   const [open, setOpen] = useState(false);
   const lastSeen = useRef(0);
@@ -86,7 +102,7 @@ export default function NotificationsBell() {
         )}
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-96 max-h-96 overflow-auto bg-white border rounded shadow z-40">
+        <div className="absolute right-0 mt-2 w-96 max-h-96 overflow-auto bg-white border rounded shadow z-40 dropdown-enter dropdown-enter-active">
           <div className="flex items-center justify-between px-3 py-2 border-b">
             <div className="font-semibold text-sm">Notifications ({items.length})</div>
             <div className="flex gap-2">
@@ -102,7 +118,11 @@ export default function NotificationsBell() {
             </div>
           </div>
           {items.length === 0 ? (
-            <div className="p-3 text-sm text-gray-500">No notifications.</div>
+            <div className="text-center py-8 text-gray-500">
+              <div className="text-4xl mb-2">🎉</div>
+              <p className="font-medium">All caught up!</p>
+              <p className="text-sm">No new notifications</p>
+            </div>
           ) : (
             <div>
               {Object.entries(groupConfig).map(([key, { title, items: groupItems }]) => {
@@ -119,13 +139,13 @@ export default function NotificationsBell() {
                       {groupItems.map((n) => {
                         const isUnread = !n.read_at;
                         return (
-                          <li key={n.id} className={`p-3 text-sm flex items-start justify-between gap-3 ${isUnread ? 'bg-blue-50' : 'bg-white'}`}>
+                          <li key={n.id} className={`p-3 text-sm flex items-start justify-between gap-3 ${isUnread ? 'bg-blue-50 unread-notification' : 'bg-white'}`}>
                             <div className="flex-1">
                               <div className={`${isUnread ? 'font-bold' : 'font-medium'}`}>
                                 {formatNotificationText(n)}
                               </div>
-                              <div className="text-xs text-gray-600 mt-1">
-                                {new Date(n.created_at).toLocaleString()}
+                              <div className="text-xs text-gray-500 mt-1">
+                                {formatRelativeTime(n.created_at)}
                               </div>
                             </div>
                             <div className="flex flex-col gap-1">

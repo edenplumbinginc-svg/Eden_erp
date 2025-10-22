@@ -1,16 +1,33 @@
 import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useQueryState } from '../hooks/useQueryState';
 import { useTasksQuery } from '../hooks/useTasksQuery';
 import TasksFilters from './TasksFilters';
 import TaskItem from './TaskItem';
 import CreateTaskModal from './CreateTaskModal';
-import { devAuth } from '../services/api';
+import { apiService, devAuth } from '../services/api';
+import { TaskListSkeleton } from './LoadingSkeleton';
 
 export default function AllTasksView() {
   const { getAll, set } = useQueryState();
   const qp = getAll();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const currentUser = devAuth.getCurrentUser();
+
+  const { data: allTasksCount } = useQuery({
+    queryKey: ['tasks_count', 'all'],
+    queryFn: () => apiService.getTasks({ limit: 1 }).then(res => res.total || 0)
+  });
+
+  const { data: myTasksCount } = useQuery({
+    queryKey: ['tasks_count', 'assignee', currentUser.email],
+    queryFn: () => apiService.getTasks({ assignee: currentUser.email, limit: 1 }).then(res => res.total || 0)
+  });
+
+  const { data: bicCount } = useQuery({
+    queryKey: ['tasks_count', 'bic', currentUser.email],
+    queryFn: () => apiService.getTasks({ bic: currentUser.email, limit: 1 }).then(res => res.total || 0)
+  });
   
   const { data, loading, error } = useTasksQuery({
     status: qp.status,
@@ -48,6 +65,11 @@ export default function AllTasksView() {
             onClick={() => handleTabClick({ assignee: null, bic: null })}
           >
             All Tasks
+            {allTasksCount > 0 && (
+              <span className="ml-2 inline-block px-2 py-0.5 bg-blue-600 text-white rounded-full text-xs font-semibold">
+                {allTasksCount}
+              </span>
+            )}
           </button>
           <button
             className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
@@ -58,6 +80,11 @@ export default function AllTasksView() {
             onClick={() => handleTabClick({ assignee: currentUser.email, bic: null })}
           >
             My Tasks
+            {myTasksCount > 0 && (
+              <span className="ml-2 inline-block px-2 py-0.5 bg-blue-600 text-white rounded-full text-xs font-semibold">
+                {myTasksCount}
+              </span>
+            )}
           </button>
           <button
             className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
@@ -68,6 +95,11 @@ export default function AllTasksView() {
             onClick={() => handleTabClick({ bic: currentUser.email, assignee: null })}
           >
             🏀 Ball in My Court
+            {bicCount > 0 && (
+              <span className="ml-2 inline-block px-2 py-0.5 bg-blue-600 text-white rounded-full text-xs font-semibold">
+                {bicCount}
+              </span>
+            )}
           </button>
         </div>
       </div>
@@ -101,9 +133,7 @@ export default function AllTasksView() {
           )}
         </div>
 
-        {loading && (
-          <div className="text-sm text-gray-500">Loading tasks...</div>
-        )}
+        {loading && <TaskListSkeleton />}
 
         {error && (
           <div className="text-sm text-red-600">Error: {error}</div>
@@ -112,7 +142,22 @@ export default function AllTasksView() {
         {!loading && !error && data && (
           <div className="grid gap-3">
             {data.items.length === 0 ? (
-              <div className="text-sm text-gray-500">No tasks found. Try adjusting your filters.</div>
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">📋</div>
+                <h3 className="text-lg font-semibold mb-2">No tasks found</h3>
+                <p className="text-gray-600 mb-4">
+                  {qp.q || qp.status || qp.priority ? 
+                    'Try adjusting your filters to see more tasks.' :
+                    'Create your first task to get started.'
+                  }
+                </p>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => setIsCreateModalOpen(true)}
+                >
+                  + Create Task
+                </button>
+              </div>
             ) : (
               data.items.map(t => <TaskItem key={t.id} t={t} />)
             )}

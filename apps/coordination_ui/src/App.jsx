@@ -10,6 +10,7 @@ import EdenHeader from './components/EdenHeader';
 import TaskDetail from './pages/TaskDetail';
 import ProjectDetail from './pages/ProjectDetail';
 import CreateTaskPage from './pages/CreateTaskPage';
+import DashboardPage from './pages/DashboardPage';
 import { ToasterProvider } from './components/Toaster';
 import GuestView from './pages/GuestView';
 import AllTasksView from './components/AllTasksView';
@@ -77,6 +78,12 @@ function AppContent() {
           Projects
         </NavLink>
         <NavLink
+          to="/dashboard"
+          className={({ isActive }) => `tab ${isActive ? 'active' : ''}`}
+        >
+          Dashboard
+        </NavLink>
+        <NavLink
           to="/alltasks"
           className={({ isActive }) => `tab ${isActive ? 'active' : ''}`}
         >
@@ -106,6 +113,7 @@ function AppContent() {
               />
             }
           />
+          <Route path="/dashboard" element={<DashboardPage />} />
           <Route
             path="/tasks/:projectId"
             element={

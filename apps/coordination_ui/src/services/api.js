@@ -62,6 +62,19 @@ export const apiService = {
   getBallHistory: (taskId) => api.get(`/tasks/${taskId}/ball`),
   handoffTask: (taskId, toDepartment, note) => api.post(`/tasks/${taskId}/handoff`, { to_department: toDepartment, note }).then(res => res.data),
 
+  // Tasks Query
+  getTasks: (params = {}) => {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && value !== '') {
+        queryParams.set(key, value);
+      }
+    });
+    const queryString = queryParams.toString();
+    const url = queryString ? `/tasks?${queryString}` : '/tasks';
+    return api.get(url).then(res => res.data);
+  },
+
   // Reports
   getTasksByStatus: () => api.get('/reports/tasks/status'),
   getTasksByOwner: () => api.get('/reports/tasks/ball'),
