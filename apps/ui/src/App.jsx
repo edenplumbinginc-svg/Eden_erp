@@ -25,8 +25,35 @@ function OverdueBadge({ due_at, status }) {
   );
 }
 
+function IdleBadge({ needsIdleReminder }) {
+  if (!needsIdleReminder) return null;
+  return (
+    <span className="inline-flex items-center px-2 h-6 rounded-full bg-yellow-50 text-yellow-700 text-xs border border-yellow-200">
+      Idle
+    </span>
+  );
+}
+
 function TaskItem({ t, projectId, onChanged }) {
+  const [snoozingIdle, setSnoozingIdle] = useState(false);
   const dueISO = t.due_at ? new Date(t.due_at).toISOString().slice(0,10) : "—";
+  
+  const handleSnoozeIdle = async () => {
+    setSnoozingIdle(true);
+    try {
+      await api.put(`/api/tasks/${t.id}/snooze_idle`, {
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ days: 3 })
+      });
+      onChanged();
+    } catch (err) {
+      console.error('[SnoozeIdle] Error:', err);
+      alert('Failed to snooze idle reminder');
+    } finally {
+      setSnoozingIdle(false);
+    }
+  };
+  
   return (
     <div className="soft-panel p-4 hover:bg-gray-100 transition">
       <div className="flex items-start justify-between gap-3">
@@ -35,12 +62,26 @@ function TaskItem({ t, projectId, onChanged }) {
           <div className="mt-1 flex items-center gap-2">
             <BICChip value={t.ball_in_court || t.bic} />
             <OverdueBadge due_at={t.due_at} status={t.status} />
+            <IdleBadge needsIdleReminder={t.needs_idle_reminder} />
           </div>
           <div className="text-xs text-gray-500 mt-1">
             Due {dueISO} • {t.priority ?? "—"} • ID {t.id.slice(0,8)}
           </div>
         </div>
-        <StatusSelect task={t} projectId={projectId} onChange={onChanged} />
+        <div className="flex items-center gap-2">
+          {t.needs_idle_reminder && (
+            <button
+              className="btn text-xs px-2 py-1"
+              style={{background: "#fefce8", border: "1px solid #fde047"}}
+              onClick={handleSnoozeIdle}
+              disabled={snoozingIdle}
+              title="Snooze idle reminder for 3 days"
+            >
+              {snoozingIdle ? "..." : "Snooze 3d"}
+            </button>
+          )}
+          <StatusSelect task={t} projectId={projectId} onChange={onChanged} />
+        </div>
       </div>
     </div>
   );
