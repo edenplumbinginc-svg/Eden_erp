@@ -298,14 +298,20 @@ const { notFoundHandler, errorHandler } = require('./middleware/error-handler');
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-// --- Nightly overdue notifier ---
+// --- Nightly overdue notifier + recompute ---
+const cron = require('node-cron');
 const { enqueue } = require('./services/queue');
-
-const ONE_DAY = 24 * 60 * 60 * 1000;
+const { recomputeOverdue } = require('./services/recomputeOverdue');
 
 async function runDailyOverdue() {
   try {
     console.log('[DAILY-JOB] Running overdue check...');
+    
+    // First, recompute is_overdue flags (server-side truth)
+    const { setTrue, setFalse } = await recomputeOverdue('cron');
+    console.log(`[DAILY-JOB] Overdue flags recomputed: ${setTrue} set to true, ${setFalse} set to false`);
+    
+    // Then, send notifications for overdue tasks
     const { rows } = await pool.query(`
       SELECT t.id, t.title, t.assignee_id, t.project_id, t.due_at
       FROM tasks t
@@ -339,8 +345,16 @@ async function runDailyOverdue() {
   }
 }
 
+// Run once at startup (after 10s delay)
 setTimeout(runDailyOverdue, 10000);
-setInterval(runDailyOverdue, ONE_DAY);
+
+// Schedule daily at 3:00 AM America/Toronto timezone
+cron.schedule('0 3 * * *', runDailyOverdue, {
+  scheduled: true,
+  timezone: 'America/Toronto'
+});
+
+console.log('[CRON] Scheduled daily overdue check for 3:00 AM America/Toronto');
 
 // --- Start server ---
 const port = process.env.PORT || 3000;
