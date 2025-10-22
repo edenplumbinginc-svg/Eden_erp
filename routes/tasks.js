@@ -565,4 +565,32 @@ router.delete('/:id/soft', authenticate, requirePerm('tasks:write'), async (req,
   }
 });
 
+// Snooze idle reminder for a task
+router.put('/:id/snooze_idle', authenticate, requirePerm('tasks:write'), async (req, res) => {
+  try {
+    const days = parseInt(req.body?.days || '3', 10);
+    if (days <= 0 || days > 30) {
+      return res.status(400).json({ error: 'days must be between 1 and 30' });
+    }
+
+    const r = await pool.query(
+      `UPDATE public.tasks
+       SET idle_snoozed_until = NOW() + ($1 || ' days')::interval,
+           needs_idle_reminder = false,
+           updated_at = NOW()
+       WHERE id = $2
+       RETURNING id, idle_snoozed_until, needs_idle_reminder`,
+      [days, req.params.id]
+    );
+    
+    if (r.rowCount === 0) return res.status(404).json({ error: 'task not found' });
+    
+    await audit(req.user?.id, 'task.idle.snooze', `task:${req.params.id}`, { days });
+    
+    res.json({ ok: true, data: r.rows[0] });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 module.exports = router;
