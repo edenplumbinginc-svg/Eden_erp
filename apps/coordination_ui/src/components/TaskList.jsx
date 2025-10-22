@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
+import { getStatusLabel } from '../constants/statusLabels';
 
 function TaskList({ project, users, onBack }) {
   const [tasks, setTasks] = useState([]);
@@ -207,7 +208,7 @@ function TaskList({ project, users, onBack }) {
                     {task.priority}
                   </span>
                   <span className={`status-badge status-${task.status}`}>
-                    {task.status}
+                    {getStatusLabel(task.status)}
                   </span>
                 </div>
               </div>

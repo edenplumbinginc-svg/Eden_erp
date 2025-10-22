@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { apiService } from "../services/api";
 import Breadcrumbs from "../components/Breadcrumbs";
+import { getStatusLabel } from "../constants/statusLabels";
 
 export default function ProjectDetail() {
   const { projectId } = useParams();
@@ -61,7 +62,7 @@ export default function ProjectDetail() {
                 <div>
                   <div className="font-medium">{t.title}</div>
                   <div className="text-caption text-muted">
-                    {t.status} • due {t.due_at ? new Date(t.due_at).toLocaleDateString() : "—"}
+                    {getStatusLabel(t.status)} • due {t.due_at ? new Date(t.due_at).toLocaleDateString() : "—"}
                   </div>
                 </div>
                 <Link

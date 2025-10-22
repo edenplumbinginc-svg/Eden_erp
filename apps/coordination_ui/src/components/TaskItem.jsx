@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getStatusLabel } from '../constants/statusLabels';
 
 export default function TaskItem({ t }) {
   const navigate = useNavigate();
@@ -36,7 +37,7 @@ export default function TaskItem({ t }) {
           )}
         </div>
         <span className={`status-badge status-${t.status}`}>
-          {t.status}
+          {getStatusLabel(t.status)}
         </span>
       </div>
 
