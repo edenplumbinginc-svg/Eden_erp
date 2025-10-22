@@ -44,6 +44,21 @@ registerHandler("notify-user", async ({ userId, event, meta }) => {
 
 registerHandler("daily-summary", async ({ dateIso }) => {
   console.log(`[daily-summary] generating for ${dateIso}`);
+  
+  const { mailer, MAIL_FROM, SUMMARY_TO } = require('./mailer');
+  const { buildDailySummary } = require('./summary');
+  
+  const { text, counts } = await buildDailySummary(dateIso);
+  const subject = `Daily Summary — ${dateIso} (Overdue:${counts.overdue} • Today:${counts.dueToday})`;
+  
+  await mailer.sendMail({
+    from: MAIL_FROM,
+    to: SUMMARY_TO,
+    subject,
+    text,
+  });
+  
+  console.log("[daily-summary] email sent", { to: SUMMARY_TO, subject });
 });
 
 module.exports = {

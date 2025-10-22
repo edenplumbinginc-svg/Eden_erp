@@ -1,0 +1,139 @@
+[Mode: Execution]
+
+Step: Add **Email Summary (daily digest) scaffold** using Nodemailer with safe fallbacks (console transport if SMTP not set). Wire it into the existing `daily-summary` job.
+
+Why it matters: Managers get a single actionable email per day (overdue, due-today, recent changes). It proves the end-to-end notification loop beyond in-app toasts.
+
+Inputs needed:
+
+* Repo with `services/queue.js`, `services/database.js`
+* ENV (optional): `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `SUMMARY_TO`
+
+Command:
+
+1. Install dependency
+
+```bash
+npm i nodemailer
+```
+
+2. Create mailer with smart fallback
+
+```js
+// services/mailer.js
+import nodemailer from "nodemailer";
+
+function makeTransport() {
+  if (process.env.SMTP_HOST) {
+    return nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT ?? 587),
+      secure: false,
+      auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
+    });
+  }
+  // Dev fallback: log emails to console
+  return {
+    sendMail: async (opts) => {
+      console.log("[MAIL:DEV]", { to: opts.to, subject: opts.subject });
+      console.log(opts.text || "");
+      return { messageId: `dev-${Date.now()}` };
+    },
+  };
+}
+
+export const mailer = makeTransport();
+
+export const MAIL_FROM = process.env.SMTP_FROM || "Eden ERP <no-reply@eden.local>";
+export const SUMMARY_TO = process.env.SUMMARY_TO || process.env.SMTP_FROM || "owner@eden.local";
+```
+
+3. Implement daily summary generator
+
+```js
+// services/summary.js
+import { pool } from "./database.js";
+
+export async function buildDailySummary(dateIso) {
+  // Window: last 24h
+  const since = `${dateIso}T00:00:00.000Z`;
+  const until = `${dateIso}T23:59:59.999Z`;
+
+  const q = (sql, params=[]) => pool.query(sql, params).then(r => r.rows);
+
+  const [overdue, dueToday, recent] = await Promise.all([
+    q(`SELECT id, title, assignee_id, due_at FROM tasks
+       WHERE due_at IS NOT NULL AND due_at < now() AND status NOT IN ('done','closed')
+       ORDER BY due_at ASC LIMIT 50`),
+    q(`SELECT id, title, assignee_id, due_at FROM tasks
+       WHERE due_at::date = $1::date AND status NOT IN ('done','closed')
+       ORDER BY due_at ASC LIMIT 50`, [dateIso]),
+    q(`SELECT action, entity, created_at, task_id
+       FROM audit_logs WHERE created_at BETWEEN $1 AND $2
+       ORDER BY created_at DESC LIMIT 100`, [since, until]),
+  ]);
+
+  // Plain-text digest
+  const lines = [];
+  lines.push(`Eden Coordination — Daily Digest (${dateIso})`);
+  lines.push("");
+  lines.push("Overdue Tasks:");
+  lines.push(overdue.length ? overdue.map(t => `- ${t.title} (due ${t.due_at})`).join("\n") : "- none");
+  lines.push("");
+  lines.push("Due Today:");
+  lines.push(dueToday.length ? dueToday.map(t => `- ${t.title} (${t.id})`).join("\n") : "- none");
+  lines.push("");
+  lines.push("Recent Activity (last 24h):");
+  lines.push(recent.length ? recent.map(e => `- ${e.created_at} • ${e.action} • ${e.entity}`).join("\n") : "- none");
+  lines.push("");
+  lines.push("— Sent automatically by Eden ERP");
+
+  return { text: lines.join("\n"), counts: { overdue: overdue.length, dueToday: dueToday.length, recent: recent.length } };
+}
+```
+
+4. Wire into queue job
+
+```js
+// services/queue.js (extend existing jobs)
+import { mailer, MAIL_FROM, SUMMARY_TO } from "./mailer.js";
+import { buildDailySummary } from "./summary.js";
+
+registerJob("daily-summary", async ({ dateIso }) => {
+  const { text, counts } = await buildDailySummary(dateIso);
+  const subject = `Daily Summary — ${dateIso} (Overdue:${counts.overdue} • Today:${counts.dueToday})`;
+  await mailer.sendMail({
+    from: MAIL_FROM,
+    to: SUMMARY_TO,
+    subject,
+    text,
+  });
+  console.log("[daily-summary] email sent", { to: SUMMARY_TO, subject });
+});
+```
+
+5. Quick manual trigger endpoint (already added? if not, add)
+
+```js
+// routes/ops.js (ensure exists)
+import { Router } from "express";
+import { enqueue } from "../services/queue.js";
+const router = Router();
+
+router.post("/run-daily", async (req, res) => {
+  const dateIso = new Date().toISOString().slice(0,10);
+  await enqueue("daily-summary", { dateIso });
+  res.json({ ok: true, dateIso });
+});
+
+export default router;
+// server.js -> app.use("/api/ops", opsRouter);
+```
+
+Success check:
+
+* Dev fallback: `curl -X POST http://localhost:3000/api/ops/run-daily` → server logs show `[MAIL:DEV]` with subject and digest text.
+* With SMTP set: you receive an email with subject `Daily Summary — <YYYY-MM-DD> (Overdue:X • Today:Y)` and the three sections (Overdue, Due Today, Recent Activity).
+* No crash when SMTP envs are missing (console transport in use).
+
+Next: wait for user

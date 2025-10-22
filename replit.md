@@ -59,7 +59,15 @@ I prefer iterative development, with a focus on delivering functional increments
 - **Dev Server**: Runs on port 5000 with proxy to backend on port 3000
 
 ## Recent Changes
-- **2025-10-22 (Latest)**: Added Notifications Bell + Toast System:
+- **2025-10-22 (Latest - Phase 1 Complete)**: Added Email Summary (Daily Digest):
+  - **Mailer Service**: Nodemailer with smart fallback (console transport if no SMTP configured)
+  - **Summary Builder**: Generates plain-text digest with Overdue, Due Today, and Recent Activity sections
+  - **Daily Job Integration**: Wired into existing `daily-summary` job queue handler
+  - **Manual Trigger**: POST `/api/ops/run-daily` for testing
+  - **Dev Mode**: Logs emails to console with `[MAIL:DEV]` prefix when SMTP not configured
+  - **Production Ready**: Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM env vars for real emails
+  - Verified: Daily digest shows 1 overdue task, 0 due today, 10 recent activities
+- **2025-10-22**: Added Notifications Bell + Toast System:
   - **NotificationsBell Component**: Polls `/api/notifications/recent` every 30s, shows badge with notification count
   - **Drawer UI**: Click bell to see recent notifications with deep links to tasks
   - **Toast System**: Global ToasterProvider with success/error toasts (auto-dismiss success after 2.5s)
