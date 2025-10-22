@@ -1,13 +1,13 @@
-const { pool } = require('../server/db');
-const { audit } = require('../lib/audit');
+const { pool } = require('./database');
+const { audit } = require('../utils/audit');
 
 /**
  * Auto-close parent task when all subtasks are done
  * Guard: respects status_locked to prevent auto-updates
  * 
  * Rules:
- * - All subtasks done => parent status = 'complete'
- * - Any subtask not done + parent is complete => reopen parent to 'in_progress'
+ * - All subtasks done => parent status = 'done'
+ * - Any subtask not done + parent is done => reopen parent to 'in_progress'
  * - If parent has status_locked = true, skip all updates
  * 
  * @param {string} taskId - The parent task ID
@@ -56,13 +56,13 @@ async function maybeAutoCloseParent(taskId) {
     let nextStatus = null;
     let reason = null;
 
-    // Rule: all subtasks done => parent complete
-    if (allDone && parent.status !== 'complete') {
-      nextStatus = 'complete';
+    // Rule: all subtasks done => parent done
+    if (allDone && parent.status !== 'done') {
+      nextStatus = 'done';
       reason = 'all_subtasks_done';
     }
-    // Rule: any subtask not done + parent is complete => reopen parent
-    else if (anyNotDone && parent.status === 'complete') {
+    // Rule: any subtask not done + parent is done => reopen parent
+    else if (anyNotDone && parent.status === 'done') {
       nextStatus = 'in_progress';
       reason = 'subtask_reopened';
     }
