@@ -303,6 +303,7 @@ app.use(errorHandler);
 const cron = require('node-cron');
 const { enqueue } = require('./services/queue');
 const { recomputeOverdue } = require('./services/recomputeOverdue');
+const { recomputeIdle } = require('./services/recomputeIdle');
 
 async function runDailyOverdue() {
   try {
@@ -356,6 +357,54 @@ cron.schedule('0 3 * * *', runDailyOverdue, {
 });
 
 console.log('[CRON] Scheduled daily overdue check for 3:00 AM America/Toronto');
+
+// --- Daily idle reminder check ---
+async function runDailyIdle() {
+  try {
+    console.log('[DAILY-JOB] Running idle reminder check...');
+    
+    // Recompute needs_idle_reminder flags (server-side truth)
+    const { setTrue, setFalse } = await recomputeIdle('cron');
+    console.log(`[DAILY-JOB] Idle reminder flags recomputed: ${setTrue} set to true, ${setFalse} set to false`);
+    
+    // Optional: Send notifications for idle tasks
+    const { rows } = await pool.query(`
+      SELECT t.id, t.title, t.assignee_id, t.project_id, t.updated_at
+      FROM tasks t
+      WHERE t.needs_idle_reminder = true
+        AND t.deleted_at IS NULL
+    `);
+    
+    console.log(`[DAILY-JOB] Found ${rows.length} idle tasks`);
+    
+    for (const r of rows) {
+      if (r.assignee_id) {
+        await enqueue("notify-user", { 
+          userId: r.assignee_id, 
+          event: "task.idle", 
+          meta: { 
+            taskId: r.id, 
+            title: r.title, 
+            last_updated: r.updated_at, 
+            project_id: r.project_id 
+          } 
+        });
+      }
+    }
+    
+    console.log('[DAILY-JOB] Idle reminder check complete');
+  } catch (err) {
+    console.error('[DAILY-JOB] Error running idle reminder check:', err);
+  }
+}
+
+// Schedule idle reminder check daily at 9:05 AM America/Toronto timezone
+cron.schedule('5 9 * * *', runDailyIdle, {
+  scheduled: true,
+  timezone: 'America/Toronto'
+});
+
+console.log('[CRON] Scheduled daily idle reminder check for 9:05 AM America/Toronto');
 
 // --- Start server ---
 const port = process.env.PORT || 3000;
