@@ -3,6 +3,7 @@ const router = express.Router();
 const { enqueue } = require('../services/queue');
 const { authenticate } = require('../middleware/auth');
 const { recomputeOverdue } = require('../services/recomputeOverdue');
+const { recomputeIdle } = require('../services/recomputeIdle');
 
 router.post('/run-daily', authenticate, async (req, res) => {
   try {
