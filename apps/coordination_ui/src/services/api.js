@@ -42,6 +42,7 @@ export const apiService = {
   getTask: (id) => api.get(`/tasks/${id}`).then(res => res.data),
   getTasksByProject: (projectId) => api.get(`/projects/${projectId}/tasks`),
   createTask: (projectId, data) => api.post(`/projects/${projectId}/tasks`, data),
+  createTaskGlobal: (taskData) => api.post('/tasks', taskData).then(res => res.data),
   updateTask: (id, data) => api.patch(`/tasks/${id}`, data),
   deleteTask: (id) => api.delete(`/tasks/${id}`),
 
