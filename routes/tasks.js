@@ -59,7 +59,7 @@ const CreateDependencySchema = z.object({
 });
 
 const HandoffSchema = z.object({
-  to_department: z.string().min(1).max(100)
+  to_department: z.enum(['Operations', 'Procurement', 'Accounting', 'Service', 'Estimating', 'Scheduling'])
 });
 
 // Status flow validation

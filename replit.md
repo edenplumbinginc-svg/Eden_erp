@@ -43,6 +43,7 @@ I prefer iterative development, with a focus on delivering functional increments
 - **Frontend UI**: Coordination dashboard, project detail view, full-featured task view, guest view (public read-only), create task modal, and reports page.
 - **Reporting**: Four card layout (Tasks by Status, Tasks by Owner, Overdue Tasks, Recent Activity) with deep-linking. Performance leaderboard with 7/30-day task completion metrics and CSV export.
 - **Guest View**: Public read-only access to tasks and projects via token, with rate limiting and audit logging.
+- **Department Handoffs**: Track task ownership transitions between departments (Operations, Procurement, Accounting, Service, Estimating, Scheduling) with 24-hour duplicate guard, full audit trail in `handoff_events` table, and UI dropdown for seamless handoff workflow.
 
 ### System Design Choices
 - **Monolithic Architecture**: Single, cohesive unit.
