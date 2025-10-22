@@ -53,6 +53,59 @@ Body: { "name": "Project Name", "description": "..." }
 # List tasks for a project
 GET /api/projects/:projectId/tasks
 
+# List all tasks with filtering, pagination, and sorting
+GET /api/tasks
+Query Parameters:
+  - status: comma-separated (e.g., "open,in_progress,review")
+  - priority: comma-separated (e.g., "high,urgent")
+  - assignee: UUID of assigned user
+  - project: UUID of project
+  - department: Operations|Procurement|Accounting|Service|Estimating|Scheduling
+  - bic: UUID of ball-in-court user
+  - due_from: ISO timestamp (e.g., "2025-10-22T00:00:00Z")
+  - due_to: ISO timestamp
+  - overdue: "true" to show only overdue tasks
+  - idle: "true" to show only idle tasks
+  - q: text search in title/description
+  - page: 1-based page number (default: 1)
+  - limit: items per page (default: 20, max: 100)
+  - sort: field:direction (e.g., "due_at:asc", "updated_at:desc")
+          Available fields: created_at, updated_at, due_at, title, status, priority
+          
+# Response:
+{
+  "ok": true,
+  "items": [
+    {
+      "id": "...",
+      "title": "...",
+      "status": "in_progress",
+      "priority": "high",
+      "assignee_id": "...",
+      "department": "Operations",
+      "is_overdue": false,
+      "needs_idle_reminder": false,
+      "due_at": "2025-11-01T00:00:00Z",
+      "updated_at": "...",
+      "stalled_days": 0
+    }
+  ],
+  "total": 42,
+  "page": 1,
+  "limit": 20,
+  "totalPages": 3
+}
+
+# Example: Get overdue tasks in Operations, sorted by due date
+curl "http://localhost:3000/api/tasks?overdue=true&department=Operations&sort=due_at:asc&limit=50" \
+  -H "X-Dev-User-Email: test@edenplumbing.com" \
+  -H "X-Dev-User-Id: 855546bf-f53d-4538-b8d5-cd30f5c157a2"
+
+# Example: Search for "pump" in high-priority tasks
+curl "http://localhost:3000/api/tasks?q=pump&priority=high,urgent&limit=20&page=1" \
+  -H "X-Dev-User-Email: test@edenplumbing.com" \
+  -H "X-Dev-User-Id: 855546bf-f53d-4538-b8d5-cd30f5c157a2"
+
 # Get single task
 GET /api/tasks/:id
 
