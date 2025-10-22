@@ -59,7 +59,15 @@ I prefer iterative development, with a focus on delivering functional increments
 - **Dev Server**: Runs on port 5000 with proxy to backend on port 3000
 
 ## Recent Changes
-- **2025-10-22 (Latest)**: Applied Soft Light (Google-ish) Theme to Modern UI (apps/ui):
+- **2025-10-22 (Latest)**: Wired Create Task with Live Refresh (apps/ui):
+  - **Project Picker**: Dropdown to select from all available projects
+  - **Create Task Modal**: Soft Light themed modal with title input, Enter key support, autofocus
+  - **Live POST**: Creates tasks via `/api/projects/:id/tasks` endpoint with dev auth
+  - **Auto Refresh**: Task list automatically reloads after successful creation
+  - **Real-Time Stats**: Dashboard stats (completed, in progress, overdue) update per selected project
+  - **Error Handling**: Graceful alerts for missing project or title validation
+  - Full write-path implemented - UI now moves work, not just displays it
+- **2025-10-22**: Applied Soft Light (Google-ish) Theme to Modern UI (apps/ui):
   - **Theme System**: Soft Light CSS with custom utilities (.soft-card, .soft-panel, .btn, .input)
   - **Design Language**: Light #f7f8fa background, white cards, rounded-2xl corners, subtle shadows
   - **Google-Style Components**: Blue #4285F4 primary buttons, smooth ease-out transitions (200ms)
