@@ -1,0 +1,78 @@
+// File: apps/web/pages/tasks/[id].tsx
+// Phase 3: Task Detail Page – Coordination UI
+
+import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
+import axios from 'axios';
+
+interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  status: string;
+  origin?: string;
+  voiceUrl?: string;
+  voiceTranscript?: string;
+  ballInCourtUserId?: string;
+  ballInCourtNote?: string;
+  assigneeId?: string;
+  department?: string;
+  projectId: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export default function TaskDetailPage() {
+  const router = useRouter();
+  const { id } = router.query;
+  const [task, setTask] = useState<Task | null>(null);
+
+  useEffect(() => {
+    if (id) {
+      axios.get(`/api/tasks/${id}`)
+        .then(res => setTask(res.data))
+        .catch(err => console.error('Failed to load task', err));
+    }
+  }, [id]);
+
+  if (!task) return <div>Loading task...</div>;
+
+  return (
+    <div className="p-4 max-w-2xl mx-auto">
+      <h1 className="text-2xl font-bold mb-2">{task.title}</h1>
+      <div className="text-sm text-gray-500 mb-4">Task ID: {task.id}</div>
+
+      <div className="mb-4">
+        <label className="block font-semibold">Status:</label>
+        <p>{task.status}</p>
+      </div>
+
+      {task.description && (
+        <div className="mb-4">
+          <label className="block font-semibold">Description:</label>
+          <p>{task.description}</p>
+        </div>
+      )}
+
+      {task.voiceTranscript && (
+        <div className="mb-4">
+          <label className="block font-semibold">Voice Note Transcript:</label>
+          <p className="italic">🗣 {task.voiceTranscript}</p>
+        </div>
+      )}
+
+      {task.ballInCourtNote && (
+        <div className="mb-4">
+          <label className="block font-semibold">Ball-in-Court Note:</label>
+          <p>🏀 {task.ballInCourtNote}</p>
+        </div>
+      )}
+
+      <div className="mt-6 text-sm text-gray-400">
+        Origin: {task.origin || 'UI'}<br/>
+        Project ID: {task.projectId}<br/>
+        Assignee ID: {task.assigneeId || 'Unassigned'}
+      </div>
+    </div>
+  );
+}
