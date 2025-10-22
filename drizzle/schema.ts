@@ -187,12 +187,15 @@ export const tasks = pgTable("tasks", {
         ballSince: timestamp("ball_since", { withTimezone: true, mode: 'string' }),
         isOverdue: boolean("is_overdue").default(false).notNull(),
         overdueSnoozedUntil: timestamp("overdue_snoozed_until", { withTimezone: true, mode: 'string' }),
+        needsIdleReminder: boolean("needs_idle_reminder").default(false).notNull(),
+        idleSnoozedUntil: timestamp("idle_snoozed_until", { withTimezone: true, mode: 'string' }),
 }, (table) => [
         index("idx_tasks_ball").using("btree", table.ballInCourt.asc().nullsLast().op("uuid_ops")),
         index("idx_tasks_project").using("btree", table.projectId.asc().nullsLast().op("uuid_ops")),
         index("idx_tasks_status").using("btree", table.status.asc().nullsLast().op("text_ops")),
         index("idx_tasks_last_activity").using("btree", table.lastActivityAt.asc().nullsLast().op("timestamptz_ops")),
         index("idx_tasks_overdue").using("btree", table.isOverdue.asc().nullsLast()),
+        index("idx_tasks_idle").using("btree", table.needsIdleReminder.asc().nullsLast()),
         foreignKey({
                         columns: [table.projectId],
                         foreignColumns: [projects.id],

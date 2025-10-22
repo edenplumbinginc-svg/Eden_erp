@@ -1,0 +1,315 @@
+[Mode: Execution]
+
+**Step:** Thin slice 2.2 — **Idle Reminders** (server-truth flag + daily job + per-task snooze inline control).
+
+**Why it matters:** Quietly surfaces neglected work. Keeps momentum without manual triage. Complements Overdue (date-based) with **activity-based** nudges.
+
+**Inputs needed:** `DATABASE_URL` (Postgres). Admin JWT for job trigger. No UI design changes beyond one small inline control.
+
+**Command (paste at repo root):**
+
+````bash
+# 1) DB migration — add server flags + snooze
+mkdir -p server/migrations
+cat > server/migrations/20251022_idle_reminders.sql <<'SQL'
+ALTER TABLE tasks
+  ADD COLUMN IF NOT EXISTS needs_idle_reminder boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS idle_snooze_until timestamptz;
+
+-- For activity-based rule, we use tasks.updated_at as "last touch".
+-- If you store a separate "last_activity_at", this rule still works; swap in that field in the job.
+
+CREATE INDEX IF NOT EXISTS idx_tasks_idle_true ON tasks(needs_idle_reminder) WHERE needs_idle_reminder = true;
+SQL
+
+psql "$DATABASE_URL" -f server/migrations/20251022_idle_reminders.sql
+
+# 2) Job logic — recompute needs_idle_reminder idempotently
+mkdir -p server/jobs
+cat > server/jobs/recomputeIdle.js <<'JS'
+/**
+ * Mark tasks as needing idle reminders if they haven't changed in N days.
+ * Rule (server-truth):
+ *  - status NOT IN ('Done','Cancelled')
+ *  - updated_at < now() - interval 'N days'
+ *  - (idle_snooze_until IS NULL OR idle_snooze_until < now())
+ *  - then needs_idle_reminder = true; else false.
+ *
+ * N comes from process.env.IDLE_DAYS (default 3).
+ */
+const { pool } = require('../lib/db');
+const audit = require('../lib/audit');
+
+function daysIntervalSql(n) {
+  const d = Number.isFinite(+n) && +n > 0 ? Math.floor(+n) : 3;
+  return `${d} days`;
+}
+
+async function recomputeIdle({ actor = 'system' } = {}) {
+  const nDaysSql = daysIntervalSql(process.env.IDLE_DAYS || 3);
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Set true for idle (not snoozed)
+    const setTrue = await client.query(`
+      UPDATE tasks t
+      SET needs_idle_reminder = true
+      WHERE
+        t.needs_idle_reminder = false
+        AND t.status NOT IN ('Done','Cancelled')
+        AND t.updated_at < (NOW() - INTERVAL '${nDaysSql}')
+        AND (t.idle_snooze_until IS NULL OR t.idle_snooze_until < NOW())
+    `);
+
+    // Set false where no longer idle (updated, done, cancelled, or snoozed)
+    const setFalse = await client.query(`
+      UPDATE tasks t
+      SET needs_idle_reminder = false
+      WHERE t.needs_idle_reminder = true AND (
+        t.status IN ('Done','Cancelled')
+        OR t.updated_at >= (NOW() - INTERVAL '${nDaysSql}')
+        OR (t.idle_snooze_until IS NOT NULL AND t.idle_snooze_until >= NOW())
+      )
+    `);
+
+    await audit.log(client, {
+      actor,
+      action: 'system.idle.recompute',
+      meta: { set_true: setTrue.rowCount, set_false: setFalse.rowCount, idle_days: nDaysSql }
+    });
+
+    await client.query('COMMIT');
+    return { set_true: setTrue.rowCount, set_false: setFalse.rowCount };
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+module.exports = { recomputeIdle };
+JS
+
+# 3) Routes + daily cron (09:05 Toronto, after team’s morning check-ins)
+applypatch <<'PATCH'
+*** Begin Patch
+*** Update File: server/index.js
+@@
+ const express = require('express');
+ const app = express();
+ const cron = require('node-cron');
+ const { recomputeOverdue } = require('./jobs/recomputeOverdue');
++const { recomputeIdle } = require('./jobs/recomputeIdle');
+@@
+ // Admin-only manual trigger (overdue)
+ app.post('/jobs/overdue/recompute', requireAuth('admin'), async (req, res, next) => {
+   try {
+     const result = await recomputeOverdue({ actor: req.user?.email || 'admin' });
+     res.json({ ok: true, ...result });
+   } catch (e) { next(e); }
+ });
+ 
++// Admin-only manual trigger (idle)
++app.post('/jobs/idle/recompute', requireAuth('admin'), async (req, res, next) => {
++  try {
++    const result = await recomputeIdle({ actor: req.user?.email || 'admin' });
++    res.json({ ok: true, ...result });
++  } catch (e) { next(e); }
++});
++
+ // Daily schedule at 03:00 America/Toronto (overdue)
+ cron.schedule('0 3 * * *', async () => {
+   try {
+     await recomputeOverdue({ actor: 'cron' });
+     console.log('[cron] overdue recomputed');
+   } catch (e) {
+     console.error('[cron] overdue recompute failed', e);
+   }
+ }, { timezone: 'America/Toronto' });
+ 
++// Daily schedule at 09:05 America/Toronto (idle reminders)
++cron.schedule('5 9 * * *', async () => {
++  try {
++    await recomputeIdle({ actor: 'cron' });
++    console.log('[cron] idle reminders recomputed');
++  } catch (e) {
++    console.error('[cron] idle recompute failed', e);
++  }
++}, { timezone: 'America/Toronto' });
+*** End Patch
+PATCH
+
+# 4) Per-task inline control — "Snooze idle 3d" button on each task row
+applypatch <<'PATCH'
+*** Begin Patch
+*** Update File: client/src/components/TaskRow.tsx
+@@
+ import React from 'react';
+ 
+ export default function TaskRow({ task }) {
+   return (
+     <div className="flex items-center justify-between p-3 rounded-2xl shadow mb-2">
+       <div className="flex items-center gap-3">
+         {/* existing: status dropdown, title, etc. */}
+         <span className="text-sm opacity-70">{task.title}</span>
++        {task.needs_idle_reminder && (
++          <span className="text-xs px-2 py-0.5 rounded-2xl shadow">Idle</span>
++        )}
+       </div>
+       <div className="flex items-center gap-2">
+         {/* existing inline controls */}
++        <button
++          className="text-xs px-2 py-1 rounded-2xl shadow transition-all duration-200 hover:shadow-md focus:outline-none focus:ring"
++          onClick={async () => {
++            await fetch(`/tasks/${task.id}/snooze_idle`, {
++              method: 'PUT',
++              headers: { 'Content-Type': 'application/json' },
++              body: JSON.stringify({ days: 3 })
++            });
++            // naive refresh
++            document.dispatchEvent(new Event('tasks:refresh'));
++          }}
++          onKeyDown={(e) => { if (e.key === 'Enter') (e.currentTarget as HTMLButtonElement).click(); }}
++        >
++          Snooze idle 3d
++        </button>
+       </div>
+     </div>
+   );
+ }
+*** End Patch
+PATCH
+
+# 5) API to snooze a single task’s idle reminder
+applypatch <<'PATCH'
+*** Begin Patch
+*** Update File: server/index.js
+@@
+ // ...previous imports and routes
++app.put('/tasks/:id/snooze_idle', requireAuth(), express.json(), async (req, res, next) => {
++  const id = req.params.id;
++  const days = Number.isFinite(+req.body?.days) && +req.body.days > 0 ? Math.floor(+req.body.days) : 3;
++  try {
++    const q = await req.app.locals.db.query(`
++      UPDATE tasks
++      SET idle_snooze_until = NOW() + ($1 || ' days')::interval,
++          needs_idle_reminder = false
++      WHERE id = $2
++      RETURNING id, idle_snooze_until, needs_idle_reminder
++    `, [String(days), id]);
++    // audit
++    const audit = require('./lib/audit');
++    await audit.log(req.app.locals.db, {
++      actor: req.user?.email || 'user',
++      action: 'task.idle.snooze',
++      meta: { taskId: id, days }
++    });
++    res.json({ ok: true, data: q.rows[0] });
++  } catch (e) { next(e); }
++});
+*** End Patch
+PATCH
+
+# 6) Docs — API contract & cURL
+applypatch <<'PATCH'
+*** Begin Patch
+*** Update File: docs/api-contract.md
+@@
+ ## Jobs / Idle Reminders
+ POST `/jobs/idle/recompute` (admin)
+ 
+ **cURL**
+ ```bash
+ curl -X POST "$BASE_URL/jobs/idle/recompute" -H "Authorization: Bearer $ADMIN_TOKEN"
+````
+
+**200**
+
+```json
+{ "ok": true, "set_true": 10, "set_false": 7 }
+```
+
++## Task Idle Snooze
++PUT `/tasks/:id/snooze_idle`
++
++**Body**
++`json
++{ "days": 3 }
++`
++**cURL**
++```bash
++curl -X PUT "$BASE_URL/tasks/<TASK_ID>/snooze_idle" \
+
+* -H "Authorization: Bearer $TOKEN" \
+* -H "Content-Type: application/json" \
+* -d '{"days":3}'
+  +```
+  *** End Patch
+  PATCH
+
+# 7) Extend smoke test (optional) to ping idle recompute if admin token present
+
+applypatch <<'PATCH'
+*** Begin Patch
+*** Update File: scripts/smoke-api.js
+@@
+// Optional: if job exists, ping it (admin token usually required)
+try {
+
+* const res = await fetch(BASE + '/jobs/overdue/recompute', {
+
+- const res = await fetch(BASE + '/jobs/overdue/recompute', {
+  method: 'POST',
+  headers: TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {}
+  });
+  @@
+  } catch {
+  console.log('• skipped overdue recompute (no admin token or route absent)');
+  }
+-
+- try {
+- const res = await fetch(BASE + '/jobs/idle/recompute', {
+- ```
+   method: 'POST',
+  ```
+- ```
+   headers: TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {}
+  ```
+- });
+- if (res.ok) {
+- ```
+   const j = await res.json();
+  ```
+- ```
+   if (!j.ok) throw new Error('idle recompute not ok');
+  ```
+- ```
+   console.log('✓ idle recompute ok', j);
+  ```
+- } else {
+- ```
+   console.log('• skipped idle recompute (endpoint or auth not available)');
+  ```
+- }
+- } catch {
+- console.log('• skipped idle recompute (no admin token or route absent)');
+- }
+  *** End Patch
+  PATCH
+
+echo "✅ Idle Reminders added (DB + job + cron + snooze endpoint + UI control + docs + smoke)"
+
+```
+
+**Success check:**
+- Migration applies; `needs_idle_reminder` and `idle_snooze_until` exist.
+- `POST /jobs/idle/recompute` returns counts; audit shows `system.idle.recompute`.
+- A task with `updated_at` older than N days (default 3) flips `needs_idle_reminder=true`; recent tasks do not.
+- Per-task **Snooze idle 3d** button clears the flag and sets `idle_snooze_until` ~3 days ahead.
+- Smoke test logs include “✓ idle recompute ok …” when run with admin token.
+
+**Next:** wait for user
+```
