@@ -6,6 +6,7 @@ function DevAuthSwitcher({ onUserChange }) {
   const [showCustom, setShowCustom] = useState(false);
   const [customEmail, setCustomEmail] = useState('');
   const [customId, setCustomId] = useState('');
+  const [isMinimized, setIsMinimized] = useState(false);
 
   const handlePresetChange = (presetKey) => {
     const preset = devAuth.presets[presetKey];
@@ -25,6 +26,38 @@ function DevAuthSwitcher({ onUserChange }) {
     }
   };
 
+  if (isMinimized) {
+    return (
+      <div style={{
+        background: '#ffc107',
+        padding: '6px 12px',
+        marginBottom: '8px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        borderRadius: '4px',
+        fontSize: '12px',
+        fontWeight: '500'
+      }}>
+        <span>🔧 Dev Mode: {currentUser.email.split('@')[0]}</span>
+        <button
+          onClick={() => setIsMinimized(false)}
+          style={{
+            padding: '2px 8px',
+            fontSize: '11px',
+            background: 'rgba(0,0,0,0.1)',
+            border: 'none',
+            borderRadius: '3px',
+            cursor: 'pointer',
+            fontWeight: '500'
+          }}
+        >
+          Expand
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div style={{
       background: '#fff3cd',
@@ -40,19 +73,34 @@ function DevAuthSwitcher({ onUserChange }) {
             UUID: {currentUser.id}
           </div>
         </div>
-        <button
-          onClick={() => setShowCustom(!showCustom)}
-          style={{
-            padding: '4px 12px',
-            fontSize: '12px',
-            background: '#ffc107',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          {showCustom ? 'Cancel' : 'Custom User'}
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={() => setIsMinimized(true)}
+            style={{
+              padding: '4px 12px',
+              fontSize: '12px',
+              background: '#e9ecef',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            Minimize
+          </button>
+          <button
+            onClick={() => setShowCustom(!showCustom)}
+            style={{
+              padding: '4px 12px',
+              fontSize: '12px',
+              background: '#ffc107',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            {showCustom ? 'Cancel' : 'Custom User'}
+          </button>
+        </div>
       </div>
 
       {showCustom ? (
