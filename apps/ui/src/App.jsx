@@ -1,53 +1,63 @@
 import { useEffect, useState } from "react";
 
-function Stat({label,value,sub}) {
+function Stat({label, value, sub}) {
   return (
-    <div className="rounded-2xl p-5 bg-gray-900 shadow">
-      <div className="text-sm text-gray-400">{label}</div>
-      <div className="text-3xl font-semibold mt-1">{value}</div>
-      {sub && <div className="text-xs text-gray-500 mt-1">{sub}</div>}
+    <div className="soft-panel p-4">
+      <div className="text-sm text-gray-500">{label}</div>
+      <div className="text-2xl mt-1">{value}</div>
+      {sub && <div className="text-xs text-gray-400 mt-1">{sub}</div>}
     </div>
   );
 }
 
-export default function App(){
+export default function App() {
   const [health, setHealth] = useState(null);
-  useEffect(()=>{
-    fetch("/api/healthz").then(r=>r.ok?r.json():null).then(setHealth).catch(()=>{});
-  },[]);
+  useEffect(() => {
+    fetch("/api/healthz").then(r => r.ok ? r.json() : null).then(setHealth).catch(() => {});
+  }, []);
+
   return (
-    <div className="min-h-screen grid grid-cols-[260px_1fr]">
-      <aside className="bg-gray-900/70 border-r border-gray-800 p-4">
-        <div className="text-lg font-bold mb-6">EDEN MEP</div>
-        <nav className="space-y-2 text-sm">
-          <a href="#" className="block px-3 py-2 rounded-lg hover:bg-gray-800">Dashboard</a>
-          <a href="#" className="block px-3 py-2 rounded-lg hover:bg-gray-800">Projects</a>
-          <a href="#" className="block px-3 py-2 rounded-lg hover:bg-gray-800">Tasks</a>
-          <a href="#" className="block px-3 py-2 rounded-lg hover:bg-gray-800">Reports</a>
-          <a href="#" className="block px-3 py-2 rounded-lg hover:bg-gray-800">Settings</a>
-        </nav>
-        <div className="mt-8 text-xs text-gray-500">
-          {health ? `API: ${health.status}` : "API: probing..."}
+    <div className="min-h-screen">
+      <header className="soft-panel mx-auto max-w-6xl mt-6 p-4 flex items-center justify-between">
+        <div className="text-lg font-medium">EDEN • Coordination</div>
+        <div className="space-x-2">
+          <button className="btn">Secondary</button>
+          <button className="btn btn-primary">Create Task</button>
         </div>
-      </aside>
+      </header>
 
-      <main className="p-6 space-y-6">
-        <header className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold">Coordination Dashboard</h1>
-          <button className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500">Create Task</button>
-        </header>
+      <main className="mx-auto max-w-6xl p-4 space-y-4">
+        <div className="soft-card p-5">
+          <div className="text-sm text-gray-500">Dashboard</div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+            <Stat label="Tasks Completed" value="5" sub="last 7 days" />
+            <Stat label="In Progress" value="1" sub="now" />
+            <Stat label="Overdue" value="0" sub="past due" />
+            <Stat label="AI Created" value="0" sub="beta" />
+          </div>
+        </div>
 
-        <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Stat label="Tasks Completed" value="0" sub="last 7 days"/>
-          <Stat label="In Progress" value="0" sub="now"/>
-          <Stat label="Overdue" value="0" sub="past due"/>
-          <Stat label="AI Created" value="0" sub="beta"/>
-        </section>
+        <div className="soft-card p-5">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-500">Recent Tasks</div>
+            <input className="input w-64" placeholder="Search tasks..." />
+          </div>
+          <div className="hr my-4"></div>
+          <div className="grid gap-3">
+            <div className="soft-panel p-4 hover:bg-gray-100 transition">
+              <div className="text-[15px]">send price to raza</div>
+              <div className="text-xs text-gray-500 mt-1">Due 2025-10-22 • Coordination • High</div>
+            </div>
+            <div className="soft-panel p-4 hover:bg-gray-100 transition">
+              <div className="text-[15px]">book lift with Solid Hook</div>
+              <div className="text-xs text-gray-500 mt-1">Due 2025-10-25 • Field • Normal</div>
+            </div>
+          </div>
+        </div>
 
-        <section className="rounded-2xl bg-gray-900 p-5 shadow">
-          <div className="text-sm text-gray-400 mb-3">Recent Tasks</div>
-          <div className="text-gray-500 text-sm">Wire up to /api/tasks next.</div>
-        </section>
+        <div className="text-xs text-gray-500">
+          API status: {health?.status ?? "probing..."}
+        </div>
       </main>
     </div>
   );

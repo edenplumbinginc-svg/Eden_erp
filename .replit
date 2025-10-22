@@ -39,13 +39,13 @@ waitForPort = 3000
 name = "Modern UI"
 author = "agent"
 
+[workflows.workflow.metadata]
+outputType = "webview"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm run dev:web"
 waitForPort = 5000
-
-[workflows.workflow.metadata]
-outputType = "webview"
 
 [[ports]]
 localPort = 3000
@@ -60,7 +60,7 @@ localPort = 5001
 externalPort = 3002
 
 [[ports]]
-localPort = 32877
+localPort = 39613
 externalPort = 3003
 
 [[ports]]
