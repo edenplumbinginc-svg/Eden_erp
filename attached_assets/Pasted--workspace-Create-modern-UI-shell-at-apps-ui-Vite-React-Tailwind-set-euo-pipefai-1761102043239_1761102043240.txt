@@ -1,0 +1,81 @@
+~/workspace$ # === Create modern UI shell at apps/ui (Vite + React + Tailwind) ===
+set -euo pipefail
+
+# 0) Create app
+npm create vite@latest apps/ui -- --template react >/dev/null <<EOF
+y
+EOF
+
+# 1) Install deps
+cd apps/ui
+npm i
+npm i -D tailwindcss postcss autoprefixer
+npx tailwindcss init -p
+
+# 2) Tailwind config
+cat > tailwind.config.js <<'EOF'
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ["./index.html","./src/**/*.{js,ts,jsx,tsx}"],
+  theme: { extend: {} },
+  plugins: [],
+};
+EOF
+
+# 3) Base styles
+cat > src/index.css <<'EOF'
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* App theming */
+:root { --card: #0f172a; --panel: #111827; }
+body { @apply bg-gray-950 text-gray-100; }
+EOF
+
+# 4) Minimal dashboard shell
+cat > src/App.jsx <<'EOF'
+import { useEffect, useState } from "react";
+
+function Stat({label,value,sub}) {
+  return (
+    <div className="rounded-2xl p-5 bg-gray-900 shadow">
+      <div className="text-sm text-gray-400">{label}</div>
+      <div className="text-3xl font-semibold mt-1">{value}</div>
+      {sub && <div className="text-xs text-gray-500 mt-1">{sub}</div>}
+echo "✅ New UI ready. Start it with: npm run dev:web"ll,2));api/tasks next.</div>0">Create Task</button>
+
+up to date, audited 248 packages in 745ms
+
+60 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+
+up to date, audited 248 packages in 1s
+
+60 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+
+tailwind.config.js already exists.
+postcss.config.js already exists.
+Added root script: dev:web
+✅ New UI ready. Start it with: npm run dev:web
+~/workspace$ npm run dev:web
+
+> eden_erp@0.1.0 dev:web
+> npm --prefix apps/ui run dev
+
+
+> ui@0.0.0 dev
+> vite
+
+Port 5173 is in use, trying another one...
+
+  VITE v7.1.11  ready in 240 ms
+
+  ➜  Local:   http://localhost:5174/
+  ➜  Network: use --host to expose
+  ➜  press h + enter to show help
