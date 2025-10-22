@@ -9,6 +9,7 @@ import DevAuthSwitcher from './components/DevAuthSwitcher';
 import EdenHeader from './components/EdenHeader';
 import TaskDetail from './pages/TaskDetail';
 import ProjectDetail from './pages/ProjectDetail';
+import { ToasterProvider } from './components/Toaster';
 
 const queryClient = new QueryClient();
 
@@ -146,7 +147,9 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
-        <AppContent />
+        <ToasterProvider>
+          <AppContent />
+        </ToasterProvider>
       </Router>
     </QueryClientProvider>
   );

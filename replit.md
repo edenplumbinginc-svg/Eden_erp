@@ -57,3 +57,32 @@ I prefer iterative development, with a focus on delivering functional increments
 - **HTTP Client**: Axios
 - **Styling**: TailwindCSS 3
 - **Dev Server**: Runs on port 5000 with proxy to backend on port 3000
+
+## Recent Changes
+- **2025-10-22 (Latest)**: Added Notifications Bell + Toast System:
+  - **NotificationsBell Component**: Polls `/api/notifications/recent` every 30s, shows badge with notification count
+  - **Drawer UI**: Click bell to see recent notifications with deep links to tasks
+  - **Toast System**: Global ToasterProvider with success/error toasts (auto-dismiss success after 2.5s)
+  - **Comment Toasts**: "Comment posted" on success, error message on failure
+  - **Upload Toasts**: "File uploaded successfully" on success, error message on failure
+  - **Auto-refresh**: Toasts appear when new notifications arrive ("New notifications received")
+  - **Header Integration**: Bell appears in EdenHeader with Projects/Reports navigation links
+  - All notification types (task_created, task_assigned, status_changed, task_overdue, comment_added) display with proper labels
+- **2025-10-22**: Wired Notifications System Backend:
+  - **Job Queue**: Extended `services/queue.js` with fire-and-forget job handlers for `notify-user` and `daily-summary`
+  - **Notification Helper**: Updated `lib/notify.js` to insert notifications and enqueue jobs automatically
+  - **Task Events**: Added notifications for task creation, status changes, and assignee changes in `routes/tasks.js`
+  - **Overdue Checker**: Added nightly job (runs every 24h, first check at 10s after startup) to notify assignees of overdue tasks
+  - **Daily Summary**: Scaffold for daily digest emails (currently logs to console, ready for email integration)
+  - **Manual Trigger**: Added POST /api/ops/run-daily endpoint to manually trigger daily summary
+  - Verified: Status changes, assignments, and overdue checks all trigger notifications; daily summary runs successfully
+- **2025-10-22**: Completed Reports Page with Deep-Linking:
+  - **React Query Integration**: Upgraded Reports component to use React Query for efficient data fetching
+  - **Four Card Layout**: Tasks by Status, Tasks by Owner, Overdue Tasks, and Recent Activity (7 days)
+  - **Deep-Linking**: "Open" buttons on overdue tasks navigate directly to `/task/:id` for quick access
+  - **Live Data**: Shows real-time coordination stats
+- **2025-10-22**: Completed Project → Task Navigation Flow:
+  - **GET /api/projects/:id**: New endpoint to fetch single project details
+  - **ProjectDetail Page**: Shows project info and task list with direct links to task details
+  - **3-Level Navigation**: Projects List → Project Detail → Task Detail with back navigation
+  - **React Query Integration**: All data fetching uses React Query for caching and automatic refetching

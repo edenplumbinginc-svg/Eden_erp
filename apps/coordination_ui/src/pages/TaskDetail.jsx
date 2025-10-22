@@ -5,6 +5,7 @@ import { apiService, api } from "../services/api";
 import Countdown from "../components/Countdown";
 import Alert from "../components/Alert";
 import ChecklistEditor from "../components/ChecklistEditor";
+import { useToaster } from "../components/Toaster";
 
 function daysSince(ts) {
   if (!ts) return null;
@@ -31,6 +32,7 @@ function BallInCourt({ task }) {
 
 function Comments({ taskId }) {
   const qc = useQueryClient();
+  const { push } = useToaster();
   const { data } = useQuery({
     queryKey: ["comments", taskId],
     queryFn: async () => apiService.getTaskComments(taskId),
@@ -40,7 +42,14 @@ function Comments({ taskId }) {
 
   const createComment = useMutation({
     mutationFn: async ({ body }) => apiService.createTaskComment(taskId, { body }),
-    onSuccess: () => { setBody(""); qc.invalidateQueries({ queryKey: ["comments", taskId] }); }
+    onSuccess: () => { 
+      setBody(""); 
+      qc.invalidateQueries({ queryKey: ["comments", taskId] }); 
+      push("success", "Comment posted");
+    },
+    onError: (error) => {
+      push("error", error?.response?.data?.error?.message || "Failed to post comment");
+    }
   });
 
   return (
@@ -72,6 +81,7 @@ function Comments({ taskId }) {
 
 function Attachments({ taskId }) {
   const qc = useQueryClient();
+  const { push } = useToaster();
   const uploadRef = useRef();
   const [file, setFile] = useState(null);
   const [uploadPct, setUploadPct] = useState(0);
@@ -125,10 +135,12 @@ function Attachments({ taskId }) {
       setFile(null);
       setUploadPct(0);
       qc.invalidateQueries({ queryKey: ["attachments", taskId] });
+      push("success", "File uploaded successfully");
     },
     onError: (e) => {
       const msg = e?.response?.data?.error?.message || e.message || "Upload failed";
       setUploadErr(msg);
+      push("error", msg);
     }
   });
 

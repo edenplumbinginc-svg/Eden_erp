@@ -1,4 +1,6 @@
 import React from "react";
+import { Link } from "react-router-dom";
+import NotificationsBell from "./NotificationsBell";
 
 export default function EdenHeader() {
   return (
@@ -8,8 +10,10 @@ export default function EdenHeader() {
           <img src="/logo-eden.svg" alt="EDEN" className="h-7 w-auto" />
           <span className="text-sm px-2 py-0.5 rounded bg-black text-white">Coordination • Alpha</span>
         </div>
-        <div className="text-xs text-gray-500">
-          <span className="hidden sm:inline">Dev headers on — switch roles via DevAuth</span>
+        <div className="flex items-center gap-4">
+          <Link to="/" className="text-sm underline">Projects</Link>
+          <Link to="/reports" className="text-sm underline">Reports</Link>
+          <NotificationsBell />
         </div>
       </div>
     </header>

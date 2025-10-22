@@ -1,0 +1,209 @@
+[Mode: Execution]
+
+Step: Add a **Notifications Bell + Drawer** (polling `/api/notifications/recent`) and lightweight **success/error toasts** so you can see task-created/assigned/status/overdue events in the UI.
+
+Why it matters: You just wired notifications on the backend; this makes them visible without leaving the page and gives instant feedback on actions.
+
+Inputs needed:
+
+* Frontend app at `apps/coordination_ui`
+* Backend endpoint: `GET /api/notifications/recent` (already exists in your routes)
+
+Command (copy-paste exactly):
+
+1. API helpers
+
+```js
+// apps/coordination_ui/src/api.js
+// …existing exports…
+export async function listRecentNotifications() {
+  const { data } = await api.get('/notifications/recent');
+  return Array.isArray(data) ? data : [];
+}
+```
+
+2. Minimal Toaster (global success/error)
+
+```jsx
+// apps/coordination_ui/src/components/Toaster.jsx
+import { createContext, useContext, useState, useCallback } from "react";
+
+const ToastCtx = createContext(null);
+
+export function ToasterProvider({ children }) {
+  const [toasts, setToasts] = useState([]); // { id, type, msg }
+  const push = useCallback((type, msg) => {
+    const id = Math.random().toString(36).slice(2);
+    setToasts(t => [...t, { id, type, msg }]);
+    if (type === "success") setTimeout(() => dismiss(id), 2500);
+  }, []);
+  const dismiss = useCallback((id) => setToasts(t => t.filter(x => x.id !== id)), []);
+  return (
+    <ToastCtx.Provider value={{ push }}>
+      {children}
+      <div className="fixed bottom-4 right-4 space-y-2 z-50">
+        {toasts.map(t => (
+          <div key={t.id} className={`px-3 py-2 rounded shadow border text-sm ${t.type === "error" ? "bg-red-50 border-red-300" : "bg-green-50 border-green-300"}`}>
+            <div className="flex items-center gap-3">
+              <span>{t.msg}</span>
+              <button className="text-xs underline" onClick={() => dismiss(t.id)}>Close</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </ToastCtx.Provider>
+  );
+}
+export function useToaster(){ const ctx = useContext(ToastCtx); if(!ctx) throw new Error("Wrap app in <ToasterProvider>"); return ctx; }
+```
+
+3. Notifications Bell + Drawer (poll every 30s, diff by newest `created_at`)
+
+```jsx
+// apps/coordination_ui/src/components/NotificationsBell.jsx
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { listRecentNotifications } from "../api";
+import { Link } from "react-router-dom";
+import { useToaster } from "./Toaster";
+
+export default function NotificationsBell() {
+  const [open, setOpen] = useState(false);
+  const lastSeen = useRef(0);
+  const { push } = useToaster();
+
+  const { data: items = [], refetch } = useQuery({
+    queryKey: ["recent_notifications"],
+    queryFn: listRecentNotifications,
+    refetchInterval: 30_000,  // poll every 30s
+  });
+
+  // toast on new items
+  useEffect(() => {
+    if (!items.length) return;
+    const latestTs = Math.max(...items.map(n => +new Date(n.created_at)));
+    if (lastSeen.current && latestTs > lastSeen.current) {
+      push("success", "New notifications received");
+    }
+    lastSeen.current = latestTs;
+  }, [items, push]);
+
+  const unreadCount = useMemo(() => items.filter(n => !n.read_at).length, [items]);
+
+  return (
+    <div className="relative">
+      <button className="relative px-3 py-1 border rounded text-sm" onClick={() => setOpen(o => !o)}>
+        🔔 Notifications
+        {unreadCount > 0 && (
+          <span className="ml-2 inline-block text-xs bg-amber-500 text-white rounded-full px-2">
+            {unreadCount}
+          </span>
+        )}
+      </button>
+      {open && (
+        <div className="absolute right-0 mt-2 w-96 max-h-96 overflow-auto bg-white border rounded shadow z-40">
+          <div className="flex items-center justify-between px-3 py-2 border-b">
+            <div className="font-semibold text-sm">Recent</div>
+            <button className="text-xs underline" onClick={() => refetch()}>Refresh</button>
+          </div>
+          <ul className="divide-y">
+            {items.length === 0 && <li className="p-3 text-sm text-gray-500">No notifications.</li>}
+            {items.map((n, i) => (
+              <li key={n.id || i} className="p-3 text-sm flex items-start justify-between gap-3">
+                <div>
+                  <div className="font-medium">{labelFor(n.event_code)}</div>
+                  <div className="text-xs text-gray-600">
+                    {n.entity || n.task_id || n.project_id} • {new Date(n.created_at).toLocaleString()}
+                  </div>
+                  {n.payload?.title && <div className="text-xs mt-1">{n.payload.title}</div>}
+                </div>
+                {n.task_id && (
+                  <Link className="px-2 py-1 border rounded text-xs" to={`/task/${n.task_id}`}>Open</Link>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function labelFor(code){
+  switch(code){
+    case "task.created": return "Task created";
+    case "task.assigned": return "Task assigned";
+    case "task.status_changed": return "Status changed";
+    case "task.overdue": return "Task overdue";
+    default: return code || "Notification";
+  }
+}
+```
+
+4. Mount the Toaster + Bell in the app shell
+
+```jsx
+// apps/coordination_ui/src/App.jsx (or your root component with Router)
+import { ToasterProvider } from "./components/Toaster";
+import NotificationsBell from "./components/NotificationsBell";
+// …
+export default function App(){
+  return (
+    <ToasterProvider>
+      {/* existing layout */}
+      {/* In your header component, add <NotificationsBell /> */}
+    </ToasterProvider>
+  );
+}
+```
+
+```jsx
+// apps/coordination_ui/src/components/EdenHeader.jsx
+// …imports…
+import NotificationsBell from "./NotificationsBell";
+// …
+export default function EdenHeader(){
+  return (
+    <div className="w-full bg-white border-b">
+      <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+        {/* left: logo/title */}
+        <div className="flex items-center gap-3">
+          {/* existing Eden logo + badge */}
+        </div>
+        {/* right: nav */}
+        <div className="flex items-center gap-4">
+          <a href="/" className="text-sm underline">Projects</a>
+          <a href="/reports" className="text-sm underline">Reports</a>
+          <NotificationsBell />
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+5. Use toasts on common actions (example: comment create success/error)
+
+```jsx
+// apps/coordination_ui/src/pages/TaskDetail.jsx
+import { useToaster } from "../components/Toaster";
+// inside component:
+const { push } = useToaster();
+// wherever you handle comment create / upload success:
+onCommentSuccess?.(() => push("success", "Comment posted"));
+onCommentError?.(e => push("error", e?.response?.data?.error?.message || "Failed to post comment"));
+```
+
+Success check:
+
+* Open the app; header shows a 🔔 with a badge when unread exist.
+* Perform actions:
+
+  * Create a task → within 30s you get a “New notifications received” toast; bell count increments.
+  * Change status / reassign → toast + bell update; drawer shows entries with deep links to `/task/:id`.
+  * Set a task overdue (past due_at) → daily job logs and appears after next poll; manual `/api/ops/run-daily` triggers immediately.
+* Toaster shows green success on good actions and red error on failures.
+
+Next: wait for user
+
+Once this is green, the final Phase-1 tick is **email summary scaffolding** (dummy transporter + plain-text digest), then you can run a live pilot with real projects and outside guests.

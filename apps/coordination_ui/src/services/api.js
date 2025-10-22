@@ -73,6 +73,9 @@ export const apiService = {
   // Guest Links
   createGuestLink: ({ scope, id, expiresIn = "7d" }) => api.post('/guest-links', { scope, id, expiresIn }).then(res => res.data),
 
+  // Notifications
+  listRecentNotifications: () => api.get('/notifications/recent').then(res => Array.isArray(res.data) ? res.data : []),
+
   // Subtasks
   listSubtasks: (taskId) => api.get(`/tasks/${taskId}/subtasks`).then(res => res.data),
   createSubtask: (taskId, payload) => api.post(`/tasks/${taskId}/subtasks`, payload).then(res => res.data),
