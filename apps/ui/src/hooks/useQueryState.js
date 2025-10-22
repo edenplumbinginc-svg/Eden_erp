@@ -1,5 +1,11 @@
 import { useState, useEffect } from 'react';
 
+const subscribers = new Set();
+
+function notifyAll() {
+  subscribers.forEach(fn => fn());
+}
+
 export function useQueryState() {
   const [, forceUpdate] = useState(0);
 
@@ -31,13 +37,23 @@ export function useQueryState() {
     } else {
       window.history.pushState(null, '', next);
     }
-    forceUpdate(x => x + 1);
+    notifyAll();
   }
 
   useEffect(() => {
-    const onPop = () => forceUpdate(x => x + 1);
+    const updateFn = () => forceUpdate(x => x + 1);
+    subscribers.add(updateFn);
+    
+    const onPop = () => {
+      forceUpdate(x => x + 1);
+      notifyAll();
+    };
     window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
+    
+    return () => {
+      subscribers.delete(updateFn);
+      window.removeEventListener('popstate', onPop);
+    };
   }, []);
 
   return { getAll, set };

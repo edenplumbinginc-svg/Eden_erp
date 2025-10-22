@@ -4,7 +4,7 @@ import { useTasksQuery } from '../hooks/useTasksQuery';
 import TasksFilters from './TasksFilters';
 
 export default function AllTasksView({ TaskItemComponent }) {
-  const { getAll } = useQueryState();
+  const { getAll, set } = useQueryState();
   const qp = getAll();
   
   const { data, loading, error } = useTasksQuery({
@@ -70,11 +70,7 @@ export default function AllTasksView({ TaskItemComponent }) {
             <button
               className="btn text-sm px-3 py-1"
               disabled={data.page === 1}
-              onClick={() => {
-                const url = new URL(window.location.href);
-                url.searchParams.set('page', String(data.page - 1));
-                window.location.href = url.toString();
-              }}
+              onClick={() => set({ page: String(data.page - 1) })}
             >
               Previous
             </button>
@@ -84,11 +80,7 @@ export default function AllTasksView({ TaskItemComponent }) {
             <button
               className="btn text-sm px-3 py-1"
               disabled={data.page === data.totalPages}
-              onClick={() => {
-                const url = new URL(window.location.href);
-                url.searchParams.set('page', String(data.page + 1));
-                window.location.href = url.toString();
-              }}
+              onClick={() => set({ page: String(data.page + 1) })}
             >
               Next
             </button>
