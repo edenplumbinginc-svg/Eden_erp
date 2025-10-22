@@ -200,6 +200,9 @@ app.get('/diag/db', async (req, res) => {
   }
 });
 
+// --- Public guest view routes (MUST be before auth middleware) ---
+app.use('/api/guest', require('./routes/guestView'));
+
 // --- Enforce authentication on all /api/* routes ---
 const { requireAuth } = require('./middleware/auth');
 app.use('/api', requireAuth);

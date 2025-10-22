@@ -10,6 +10,7 @@ import EdenHeader from './components/EdenHeader';
 import TaskDetail from './pages/TaskDetail';
 import ProjectDetail from './pages/ProjectDetail';
 import { ToasterProvider } from './components/Toaster';
+import GuestView from './pages/GuestView';
 
 const queryClient = new QueryClient();
 
@@ -115,6 +116,10 @@ function AppContent() {
           <Route 
             path="/task/:taskId" 
             element={<TaskDetail />} 
+          />
+          <Route 
+            path="/guest" 
+            element={<GuestView />} 
           />
         </Routes>
       )}

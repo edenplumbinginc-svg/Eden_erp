@@ -59,7 +59,17 @@ I prefer iterative development, with a focus on delivering functional increments
 - **Dev Server**: Runs on port 5000 with proxy to backend on port 3000
 
 ## Recent Changes
-- **2025-10-22 (Latest - Phase 1 Complete)**: Added Email Summary (Daily Digest):
+- **2025-10-22 (Latest - Complete)**: Shipped Guest View (Public Read-Only Access):
+  - **Backend Route**: `/api/guest/resolve?token=UUID` for public, unauthenticated access
+  - **Token Validation**: Checks expiry, returns 404 for invalid, 410 for expired tokens
+  - **Task Scope**: Returns task details, comments (up to 100), and attachments with metadata
+  - **Project Scope**: Returns project info and recent tasks (up to 200)
+  - **Rate Limiting**: 60 requests per minute to prevent abuse
+  - **Audit Logging**: Every guest view writes to audit_logs with tokenPreview
+  - **Frontend Page**: `/guest?token=...` shows read-only view with expiry timestamp
+  - **Clean UI**: Rounded cards for task info, attachments list, and comments with timestamps
+  - Verified: Backend returns full data, audit logs record guest.view events, error handling works
+- **2025-10-22**: Added Email Summary (Daily Digest):
   - **Mailer Service**: Nodemailer with smart fallback (console transport if no SMTP configured)
   - **Summary Builder**: Generates plain-text digest with Overdue, Due Today, and Recent Activity sections
   - **Daily Job Integration**: Wired into existing `daily-summary` job queue handler
