@@ -32,6 +32,8 @@ api.interceptors.request.use((config) => {
 export const apiService = {
   // Projects
   getProjects: () => api.get('/projects'),
+  getProject: (projectId) => api.get(`/projects/${projectId}`).then(res => res.data),
+  listProjectTasks: (projectId) => api.get(`/projects/${projectId}/tasks`).then(res => Array.isArray(res.data) ? res.data : (res.data?.tasks || [])),
   createProject: (data) => api.post('/projects', data),
   updateProject: (id, data) => api.patch(`/projects/${id}`, data),
   deleteProject: (id) => api.delete(`/projects/${id}`),
