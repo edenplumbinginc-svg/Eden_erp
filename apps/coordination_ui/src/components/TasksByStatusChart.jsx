@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { getStatusLabel } from '../constants/statusLabels';
 
 const STATUS_COLORS = {
   'done': '#10b981',
@@ -52,7 +53,7 @@ export default function TasksByStatusChart({ data = [], loading = false }) {
           return (
             <div key={s.status} className="mb-3">
               <div className="flex justify-between text-body mb-1">
-                <span className="capitalize font-medium">{s.status.replace('_', ' ')}</span>
+                <span className="capitalize font-medium">{getStatusLabel(s.status)}</span>
                 <span className="text-muted font-semibold">{s.count}</span>
               </div>
               <div 
