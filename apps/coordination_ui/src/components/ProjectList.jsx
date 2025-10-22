@@ -59,17 +59,21 @@ function ProjectList({ projects, onRefresh, onSelectProject }) {
           <h3 className="font-semibold mb-3">Tasks by Status</h3>
           <div className="space-y-2">
             {taskStats.map(s => (
-              <div key={s.status} className="mb-2">
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="capitalize font-medium">{s.status}</span>
-                  <span className="text-gray-600">{s.count}</span>
+              <div key={s.status} className="mb-3">
+                <div className="flex justify-between text-sm mb-1.5">
+                  <span className="capitalize font-medium">{s.status.replace('_', ' ')}</span>
+                  <span className="text-gray-600 font-semibold">{s.count}</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded h-2 cursor-pointer hover:bg-gray-300"
+                <div className="w-full bg-gray-200 rounded-lg h-6 cursor-pointer hover:bg-gray-300 overflow-hidden"
                      onClick={() => navigate(`/alltasks?status=${s.status}`)}>
                   <div 
-                    className="bg-blue-500 h-2 rounded transition-all hover:bg-blue-600" 
-                    style={{width: totalTasks > 0 ? `${(s.count / totalTasks) * 100}%` : '0%'}}
-                  />
+                    className="bg-blue-500 h-6 rounded-lg transition-all hover:bg-blue-600 flex items-center justify-end pr-2" 
+                    style={{width: totalTasks > 0 ? `${Math.max(5, (s.count / totalTasks) * 100)}%` : '5%'}}
+                  >
+                    <span className="text-white text-xs font-semibold">
+                      {Math.round((s.count / totalTasks) * 100)}%
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}
