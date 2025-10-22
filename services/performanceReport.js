@@ -1,4 +1,4 @@
-const { pool } = require('../lib/db');
+const { pool } = require('./database');
 
 /**
  * Performance leaderboard over last N days by assignee_id.
