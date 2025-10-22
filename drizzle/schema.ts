@@ -145,6 +145,25 @@ export const users = pgTable("users", {
         unique("users_email_key").on(table.email),
 ]);
 
+export const userPreferences = pgTable("user_preferences", {
+        userId: uuid("user_id").primaryKey().notNull(),
+        defaultProjectId: uuid("default_project_id"),
+        tasksGroupBy: text("tasks_group_by").default('status').notNull(),
+        updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+        foreignKey({
+                columns: [table.userId],
+                foreignColumns: [users.id],
+                name: "user_preferences_user_id_fkey"
+        }).onDelete("cascade"),
+        foreignKey({
+                columns: [table.defaultProjectId],
+                foreignColumns: [projects.id],
+                name: "user_preferences_default_project_id_fkey"
+        }).onDelete("set null"),
+        index("idx_user_prefs_default_project").using("btree", table.defaultProjectId.asc().nullsLast()).where(sql`${table.defaultProjectId} IS NOT NULL`),
+]);
+
 export const tasks = pgTable("tasks", {
         id: uuid().defaultRandom().primaryKey().notNull(),
         projectId: uuid("project_id").notNull(),

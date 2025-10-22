@@ -1,0 +1,303 @@
+Thought for 4 seconds
+
+[Mode: Execution]
+
+Step: Add minimal User Preferences (server-truth) for two settings: default_project_id and tasks_group_by with an inline UI control.
+
+Why it matters: Locks in sticky, per-user behavior (startup project; list grouping) without hacks. Small surface, high daily payoff.
+
+Inputs needed: DATABASE_URL (Postgres). Your app’s auth already exposes req.user.id and role.
+
+Command (paste at repo root):
+
+# 1) DB: user_preferences (1 row per user, upsert-on-write)
+mkdir -p server/migrations
+cat > server/migrations/20251022_user_preferences.sql <<'SQL'
+CREATE TABLE IF NOT EXISTS user_preferences (
+  user_id uuid PRIMARY KEY,
+  default_project_id uuid NULL,
+  tasks_group_by text NOT NULL DEFAULT 'status', -- 'status' | 'due' | 'none'
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT tasks_group_by_valid CHECK (tasks_group_by IN ('status','due','none'))
+);
+
+-- Optional FK if your users/projects are UUID tables with these names:
+-- ALTER TABLE user_preferences ADD CONSTRAINT fk_up_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+-- ALTER TABLE user_preferences ADD CONSTRAINT fk_up_project FOREIGN KEY (default_project_id) REFERENCES projects(id) ON DELETE SET NULL;
+
+-- Helpful partial index if many nulls on default_project_id
+CREATE INDEX IF NOT EXISTS idx_user_prefs_default_project ON user_preferences(default_project_id) WHERE default_project_id IS NOT NULL;
+SQL
+
+psql "$DATABASE_URL" -f server/migrations/20251022_user_preferences.sql
+
+# 2) Service: read/write with idempotent upsert + audit
+mkdir -p server/services
+cat > server/services/userPreferences.js <<'JS'
+const { pool } = require('../lib/db');
+const audit = require('../lib/audit');
+
+async function getUserPreferences(userId) {
+  const { rows } = await pool.query(
+    `SELECT user_id, default_project_id, tasks_group_by, updated_at
+     FROM user_preferences WHERE user_id = $1`,
+    [userId]
+  );
+  if (rows.length === 0) {
+    // lazy default view; don’t insert yet
+    return { user_id: userId, default_project_id: null, tasks_group_by: 'status', updated_at: null };
+  }
+  return rows[0];
+}
+
+async function updateUserPreferences(userId, { default_project_id, tasks_group_by }, actorEmail = 'system') {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Build dynamic set list
+    const sets = [];
+    const vals = [userId];
+    let i = 2;
+
+    if (typeof default_project_id !== 'undefined') {
+      sets.push(`default_project_id = $${i++}`);
+      vals.push(default_project_id || null);
+    }
+    if (typeof tasks_group_by !== 'undefined') {
+      if (!['status','due','none'].includes(tasks_group_by)) {
+        throw new Error('invalid tasks_group_by');
+      }
+      sets.push(`tasks_group_by = $${i++}`);
+      vals.push(tasks_group_by);
+    }
+
+    if (sets.length === 0) {
+      await client.query('ROLLBACK');
+      return getUserPreferences(userId);
+    }
+
+    sets.push(`updated_at = now()`);
+
+    await client.query(
+      `
+      INSERT INTO user_preferences (user_id, default_project_id, tasks_group_by)
+      VALUES ($1, $2, COALESCE($3, 'status'))
+      ON CONFLICT (user_id) DO UPDATE SET
+        ${sets.join(', ')}
+      `,
+      [
+        userId,
+        typeof default_project_id === 'undefined' ? null : (default_project_id || null),
+        typeof tasks_group_by === 'undefined' ? null : tasks_group_by
+      ]
+    );
+
+    await audit.log(client, {
+      actor: actorEmail,
+      action: 'user.preferences.update',
+      meta: { userId, default_project_id, tasks_group_by }
+    });
+
+    await client.query('COMMIT');
+    return getUserPreferences(userId);
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+module.exports = { getUserPreferences, updateUserPreferences };
+JS
+
+# 3) Routes: GET/PUT /me/preferences (auth required)
+applypatch <<'PATCH'
+*** Begin Patch
+*** Update File: server/index.js
+@@
+ const express = require('express');
+ const app = express();
+@@
+ const requireAuth = require('./lib/requireAuth'); // existing helper assumed
++const { getUserPreferences, updateUserPreferences } = require('./services/userPreferences');
+ 
+ // ...existing routes
+ 
++// ---- User Preferences
++app.get('/me/preferences', requireAuth(), async (req, res, next) => {
++  try {
++    const prefs = await getUserPreferences(req.user.id);
++    res.json({ ok: true, data: prefs });
++  } catch (e) { next(e); }
++});
++
++app.put('/me/preferences', requireAuth(), express.json(), async (req, res, next) => {
++  try {
++    const prefs = await updateUserPreferences(
++      req.user.id,
++      { default_project_id: req.body.default_project_id, tasks_group_by: req.body.tasks_group_by },
++      req.user?.email || 'user'
++    );
++    res.json({ ok: true, data: prefs });
++  } catch (e) { next(e); }
++});
+*** End Patch
+PATCH
+
+# 4) Client: inline control in header (grouping select) + default project bootstrap
+# If you already have a TasksHeader.tsx / component, we extend it; otherwise adjust the path accordingly.
+applypatch <<'PATCH'
+*** Begin Patch
+*** Update File: client/src/components/TasksHeader.tsx
+@@
+ import React from 'react';
+ import { useState } from 'react';
+ import { useSession } from '../hooks/useSession';
+ 
+ export default function TasksHeader() {
+   const { user } = useSession();
+   const [busy, setBusy] = useState(false);
++  const [groupBy, setGroupBy] = useState<'status' | 'due' | 'none'>('status');
++  const [loadingPrefs, setLoadingPrefs] = useState(true);
++
++  React.useEffect(() => {
++    (async () => {
++      try {
++        const r = await fetch('/me/preferences');
++        const j = await r.json();
++        if (j?.ok && j?.data?.tasks_group_by) setGroupBy(j.data.tasks_group_by);
++      } catch {}
++      setLoadingPrefs(false);
++    })();
++  }, []);
+ 
+   return (
+     <div className="flex items-center justify-between p-4">
+       <h1 className="text-xl font-medium">Tasks</h1>
+       {user?.role === 'admin' && (
+         <button
+           aria-label="Refresh overdue flags"
+           className="px-3 py-2 rounded-2xl shadow transition-all duration-200 hover:shadow-md focus:outline-none focus:ring"
+           disabled={busy}
+           onClick={async () => {
+             setBusy(true);
+             try {
+               const r = await fetch('/jobs/overdue/recompute', { method: 'POST' });
+               const j = await r.json();
+               alert(j.ok ? `Overdue recomputed (set_true=${j.set_true}, set_false=${j.set_false})` : 'Failed');
+             } finally { setBusy(false); }
+           }}
+           onKeyDown={(e) => { if (e.key === 'Enter') (e.currentTarget as HTMLButtonElement).click(); }}
+         >
+           {busy ? 'Recomputing…' : 'Refresh Overdue'}
+         </button>
+       )}
++
++      {/* Inline control: tasks grouping preference (sticky via server) */}
++      <div className="ml-4 flex items-center gap-2">
++        <label className="text-sm opacity-70">Group:</label>
++        <select
++          aria-label="Tasks group by"
++          className="px-2 py-1 rounded-2xl shadow focus:outline-none focus:ring"
++          disabled={loadingPrefs}
++          value={groupBy}
++          onChange={async (e) => {
++            const val = e.target.value as 'status' | 'due' | 'none';
++            setGroupBy(val);
++            // Persist to server
++            await fetch('/me/preferences', {
++              method: 'PUT',
++              headers: { 'Content-Type': 'application/json' },
++              body: JSON.stringify({ tasks_group_by: val })
++            });
++            // Optionally trigger a refresh of the list rendering
++            document.dispatchEvent(new CustomEvent('tasks:groupByChanged', { detail: { val } }));
++          }}
++          onKeyDown={(e) => { if (e.key === 'Enter') (e.currentTarget as HTMLSelectElement).blur(); }}
++        >
++          <option value="status">Status</option>
++          <option value="due">Due Date</option>
++          <option value="none">None</option>
++        </select>
++      </div>
+     </div>
+   );
+ }
+*** End Patch
+PATCH
+
+# 5) (Optional) Default project bootstrap on app load
+applypatch <<'PATCH'
+*** Begin Patch
+*** Update File: client/src/App.tsx
+@@
+ import React from 'react';
++// Assuming you have a project store or context with setActiveProject
++import { useProjects } from './hooks/useProjects';
+ 
+ export default function App() {
++  const { setActiveProject } = useProjects?.() || { setActiveProject: () => {} };
++
++  React.useEffect(() => {
++    (async () => {
++      try {
++        const r = await fetch('/me/preferences');
++        const j = await r.json();
++        if (j?.ok && j?.data?.default_project_id && setActiveProject) {
++          setActiveProject(j.data.default_project_id);
++        }
++      } catch {}
++    })();
++  }, []);
+*** End Patch
+PATCH
+
+# 6) Docs: API contract for preferences + cURL
+applypatch <<'PATCH'
+*** Begin Patch
+*** Update File: docs/api-contract.md
+@@
++## User Preferences
++
++### GET `/me/preferences`
++Returns the current user's preferences.
++
++**200**
++```json
++{ "ok": true, "data": { "user_id":"uuid", "default_project_id":"uuid|null", "tasks_group_by":"status|due|none", "updated_at":"ts|null" } }
++```
++
++### PUT `/me/preferences`
++Upserts user preferences (idempotent).
++
++**Body**
++```json
++{ "default_project_id":"uuid|null", "tasks_group_by":"status|due|none" }
++```
++
++**cURL**
++```bash
++curl -X PUT "$BASE_URL/me/preferences" \
++  -H "Authorization: Bearer $TOKEN" \
++  -H "Content-Type: application/json" \
++  -d '{"tasks_group_by":"due"}'
++```
+*** End Patch
+PATCH
+
+echo "✅ User preferences added (DB + service + routes + inline control + docs)"
+
+
+Success check:
+
+Migration applies cleanly; table user_preferences exists.
+
+GET /me/preferences returns defaults; PUT /me/preferences updates and audit logs user.preferences.update.
+
+Header shows Group select; changing it persists and affects list rendering logic you already have (via the emitted tasks:groupByChanged or your store).
+
+If you have a projects context, the app sets active project from default_project_id on load.
+
+Next: wait for user
