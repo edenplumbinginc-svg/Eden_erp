@@ -59,7 +59,15 @@ I prefer iterative development, with a focus on delivering functional increments
 - **Dev Server**: Runs on port 5000 with proxy to backend on port 3000
 
 ## Recent Changes
-- **2025-10-22 (Latest - Complete)**: Shipped Guest View (Public Read-Only Access):
+- **2025-10-22 (Latest)**: Created Modern Dark UI Shell (apps/ui):
+  - **New UI Framework**: React + Vite + Tailwind CSS v3 at apps/ui (separate from coordination_ui)
+  - **Dark Theme Design**: Gray-950 background with rounded cards, modern aesthetics
+  - **Dashboard Components**: Stat cards, sidebar navigation, recent tasks section
+  - **API Integration**: Connected to backend with dev auth headers, shows health status
+  - **Responsive Layout**: Grid-based with sidebar + main content area
+  - **Development Workflow**: `npm run dev:web` runs on port 5000 with proxy to backend
+  - Ready for incremental feature development, replacing the Alpha UI pages
+- **2025-10-22**: Shipped Guest View (Public Read-Only Access):
   - **Backend Route**: `/api/guest/resolve?token=UUID` for public, unauthenticated access
   - **Token Validation**: Checks expiry, returns 404 for invalid, 410 for expired tokens
   - **Task Scope**: Returns task details, comments (up to 100), and attachments with metadata

@@ -21,7 +21,7 @@ args = "Backend"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Frontend"
+args = "Modern UI"
 
 [[workflows.workflow]]
 name = "Backend"
@@ -36,12 +36,12 @@ args = "export HEALTH_TLS_RELAX=1 && export DB_SSL_REJECT_UNAUTHORIZED=false && 
 waitForPort = 3000
 
 [[workflows.workflow]]
-name = "Frontend"
+name = "Modern UI"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd apps/coordination_ui && npm run dev"
+args = "npm run dev:web"
 waitForPort = 5000
 
 [workflows.workflow.metadata]
@@ -56,7 +56,11 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 5002
+localPort = 5001
+externalPort = 3002
+
+[[ports]]
+localPort = 32877
 externalPort = 3003
 
 [[ports]]

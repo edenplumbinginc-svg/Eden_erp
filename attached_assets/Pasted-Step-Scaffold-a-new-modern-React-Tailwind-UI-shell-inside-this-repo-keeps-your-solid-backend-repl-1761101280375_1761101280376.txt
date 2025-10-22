@@ -1,0 +1,141 @@
+Step: Scaffold a new modern React+Tailwind UI shell inside this repo (keeps your solid backend, replaces the “ugly” Alpha pages).
+
+Why it matters: You’ll get the fast, clean dashboard shell here—no hopping to the old repo.
+
+Inputs needed:
+
+Replit Shell in this workspace
+
+Backend already running on http://localhost:3000
+
+Command (paste in Shell):
+
+# === Create modern UI shell at apps/ui (Vite + React + Tailwind) ===
+set -euo pipefail
+
+# 0) Create app
+npm create vite@latest apps/ui -- --template react >/dev/null <<EOF
+y
+EOF
+
+# 1) Install deps
+cd apps/ui
+npm i
+npm i -D tailwindcss postcss autoprefixer
+npx tailwindcss init -p
+
+# 2) Tailwind config
+cat > tailwind.config.js <<'EOF'
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ["./index.html","./src/**/*.{js,ts,jsx,tsx}"],
+  theme: { extend: {} },
+  plugins: [],
+};
+EOF
+
+# 3) Base styles
+cat > src/index.css <<'EOF'
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* App theming */
+:root { --card: #0f172a; --panel: #111827; }
+body { @apply bg-gray-950 text-gray-100; }
+EOF
+
+# 4) Minimal dashboard shell
+cat > src/App.jsx <<'EOF'
+import { useEffect, useState } from "react";
+
+function Stat({label,value,sub}) {
+  return (
+    <div className="rounded-2xl p-5 bg-gray-900 shadow">
+      <div className="text-sm text-gray-400">{label}</div>
+      <div className="text-3xl font-semibold mt-1">{value}</div>
+      {sub && <div className="text-xs text-gray-500 mt-1">{sub}</div>}
+    </div>
+  );
+}
+
+export default function App(){
+  const [health, setHealth] = useState(null);
+  useEffect(()=>{
+    fetch("/api/healthz").then(r=>r.ok?r.json():null).then(setHealth).catch(()=>{});
+  },[]);
+  return (
+    <div className="min-h-screen grid grid-cols-[260px_1fr]">
+      <aside className="bg-gray-900/70 border-r border-gray-800 p-4">
+        <div className="text-lg font-bold mb-6">EDEN MEP</div>
+        <nav className="space-y-2 text-sm">
+          <a href="#" className="block px-3 py-2 rounded-lg hover:bg-gray-800">Dashboard</a>
+          <a href="#" className="block px-3 py-2 rounded-lg hover:bg-gray-800">Projects</a>
+          <a href="#" className="block px-3 py-2 rounded-lg hover:bg-gray-800">Tasks</a>
+          <a href="#" className="block px-3 py-2 rounded-lg hover:bg-gray-800">Reports</a>
+          <a href="#" className="block px-3 py-2 rounded-lg hover:bg-gray-800">Settings</a>
+        </nav>
+        <div className="mt-8 text-xs text-gray-500">
+          {health ? `API: ${health.status}` : "API: probing..."}
+        </div>
+      </aside>
+
+      <main className="p-6 space-y-6">
+        <header className="flex items-center justify-between">
+          <h1 className="text-2xl font-semibold">Coordination Dashboard</h1>
+          <button className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500">Create Task</button>
+        </header>
+
+        <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Stat label="Tasks Completed" value="0" sub="last 7 days"/>
+          <Stat label="In Progress" value="0" sub="now"/>
+          <Stat label="Overdue" value="0" sub="past due"/>
+          <Stat label="AI Created" value="0" sub="beta"/>
+        </section>
+
+        <section className="rounded-2xl bg-gray-900 p-5 shadow">
+          <div className="text-sm text-gray-400 mb-3">Recent Tasks</div>
+          <div className="text-gray-500 text-sm">Wire up to /api/tasks next.</div>
+        </section>
+      </main>
+    </div>
+  );
+}
+EOF
+
+# 5) Vite dev proxy to backend on 3000
+# (so /api/* hits your existing server)
+cat > vite.config.js <<'EOF'
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 5173,
+    proxy: { '/api': 'http://localhost:3000' }
+  }
+})
+EOF
+
+# 6) Add top-level script to run the web quickly
+cd ../..
+node - <<'EOF'
+const fs=require('fs');
+const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+pkg.scripts = pkg.scripts || {};
+pkg.scripts["dev:web"] = "npm --prefix apps/ui run dev";
+fs.writeFileSync('package.json', JSON.stringify(pkg,null,2));
+console.log("Added root script: dev:web");
+EOF
+
+echo "✅ New UI ready. Start it with: npm run dev:web"
+
+
+Success check:
+
+Run npm run dev:web, open the preview: you should see the dark dashboard shell.
+
+The top-left footer shows API: ok once /api/healthz returns.
+
+Next: wait for user
