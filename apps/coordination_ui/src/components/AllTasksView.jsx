@@ -20,13 +20,13 @@ export default function AllTasksView() {
   });
 
   const { data: myTasksCount } = useQuery({
-    queryKey: ['tasks_count', 'assignee', currentUser.email],
-    queryFn: () => apiService.getTasks({ assignee: currentUser.email, limit: 1 }).then(res => res.total || 0)
+    queryKey: ['tasks_count', 'assignee', currentUser.id],
+    queryFn: () => apiService.getTasks({ assignee: currentUser.id, limit: 1 }).then(res => res.total || 0)
   });
 
   const { data: bicCount } = useQuery({
-    queryKey: ['tasks_count', 'bic', currentUser.email],
-    queryFn: () => apiService.getTasks({ bic: currentUser.email, limit: 1 }).then(res => res.total || 0)
+    queryKey: ['tasks_count', 'bic', currentUser.id],
+    queryFn: () => apiService.getTasks({ bic: currentUser.id, limit: 1 }).then(res => res.total || 0)
   });
   
   const { data, loading, error } = useTasksQuery({
@@ -49,8 +49,8 @@ export default function AllTasksView() {
   };
 
   const isAllTasksActive = !qp.assignee && !qp.bic;
-  const isMyTasksActive = qp.assignee === currentUser.email;
-  const isBallInCourtActive = qp.bic === currentUser.email;
+  const isMyTasksActive = qp.assignee === currentUser.id;
+  const isBallInCourtActive = qp.bic === currentUser.id;
 
   return (
     <div className="space-y-4">
@@ -77,7 +77,7 @@ export default function AllTasksView() {
                 ? 'border-blue-600 text-blue-600' 
                 : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-300'
             }`}
-            onClick={() => handleTabClick({ assignee: currentUser.email, bic: null })}
+            onClick={() => handleTabClick({ assignee: currentUser.id, bic: null })}
           >
             My Tasks
             {myTasksCount > 0 && (
@@ -92,7 +92,7 @@ export default function AllTasksView() {
                 ? 'border-blue-600 text-blue-600' 
                 : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-300'
             }`}
-            onClick={() => handleTabClick({ bic: currentUser.email, assignee: null })}
+            onClick={() => handleTabClick({ bic: currentUser.id, assignee: null })}
           >
             🏀 Ball in My Court
             {bicCount > 0 && (
