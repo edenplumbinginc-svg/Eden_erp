@@ -23,14 +23,21 @@ export default function HandoffModal({ isOpen, onClose, task }) {
 
   const currentDepartment = task?.department || 'Unknown';
 
-  const { data: users = [], isLoading: usersLoading } = useQuery({
+  const { data: users = [], isLoading: usersLoading, isError: usersError } = useQuery({
     queryKey: ['users'],
     queryFn: async () => {
       const response = await apiService.getUsers();
       const userData = response?.data || response;
-      return Array.isArray(userData) ? userData : [];
+      
+      if (!Array.isArray(userData)) {
+        console.error('Invalid user data format:', userData);
+        throw new Error('Failed to load users - invalid data format');
+      }
+      
+      return userData;
     },
-    enabled: isOpen && handoffType === 'user'
+    enabled: isOpen && handoffType === 'user',
+    retry: 1
   });
 
   const departmentHandoffMutation = useMutation({
@@ -181,6 +188,14 @@ export default function HandoffModal({ isOpen, onClose, task }) {
               <label>Select user:</label>
               {usersLoading ? (
                 <div className="text-body text-muted">Loading users...</div>
+              ) : usersError ? (
+                <div className="text-body" style={{ color: 'var(--md-error)', padding: '8px' }}>
+                  ⚠️ Failed to load users. Please try again or contact support.
+                </div>
+              ) : users.length === 0 ? (
+                <div className="text-body text-muted" style={{ padding: '8px' }}>
+                  No users available
+                </div>
               ) : (
                 <select
                   value={selectedUser}
