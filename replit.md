@@ -63,6 +63,15 @@ I prefer iterative development, with a focus on delivering functional increments
 - **Dev Server**: Runs on port 5000 with proxy to backend on port 3000
 
 ## Recent Changes
+- **2025-10-22 (Late)**: Completed Checklist Editor Integration:
+  - **API Helpers**: Added subtask CRUD methods to `services/api.js` (listSubtasks, createSubtask, updateSubtask, deleteSubtask)
+  - **ChecklistEditor Component**: Full-featured checklist editor with add/toggle/delete/rename functionality using React Query
+  - **Task Detail Integration**: Replaced read-only Checklist component with interactive ChecklistEditor
+  - **Real-time Updates**: Live UI updates with optimistic cache invalidation on create/toggle/delete
+  - **Inline Editing**: Rename checklist items with instant persisting on keystroke
+  - **RBAC**: All operations require `tasks:write` permission (enforced on backend)
+  - **Audit Trail**: All operations (`subtask.create`, `subtask.update`, `subtask.delete`) logged to audit_logs
+  - Verified: Create, toggle, rename, delete all work correctly; VIEWER users get 403 Forbidden; audit logs capture full history
 - **2025-10-22**: Completed Phase 1 Polish Sprint Step 4 - File Upload Progress UI:
   - **Alert Component**: Created reusable Alert component (`apps/coordination_ui/src/components/Alert.jsx`) with success/error variants and auto-dismiss functionality
   - **XMLHttpRequest Integration**: Replaced React Query mutation with XMLHttpRequest for granular upload.onprogress event tracking

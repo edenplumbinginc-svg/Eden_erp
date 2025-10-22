@@ -29,25 +29,6 @@ function BallInCourt({ task }) {
   );
 }
 
-function Checklist({ task }) {
-  const items = Array.isArray(task?.checklist) ? task.checklist : [];
-  return (
-    <div className="space-y-2">
-      <div className="font-semibold">Checklist</div>
-      {items.length === 0 ? <div className="text-sm text-gray-500">No checklist yet.</div> :
-        <ul className="space-y-2">
-          {items.map((it, i) => (
-            <li key={i} className="flex items-center gap-2">
-              <input type="checkbox" checked={!!it.done} readOnly className="h-4 w-4" />
-              <span className={it.done ? "line-through text-gray-500" : ""}>{it.title || `Item ${i+1}`}</span>
-            </li>
-          ))}
-        </ul>
-      }
-    </div>
-  );
-}
-
 function Comments({ taskId }) {
   const qc = useQueryClient();
   const { data } = useQuery({
