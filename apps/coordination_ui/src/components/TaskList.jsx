@@ -158,7 +158,7 @@ function TaskList({ project, users, onBack }) {
             </select>
           </div>
           <div className="form-group">
-            <label>Ball In Court</label>
+            <label>Ball in Court</label>
             <select
               value={formData.ball_in_court}
               onChange={(e) => setFormData({ ...formData, ball_in_court: e.target.value })}

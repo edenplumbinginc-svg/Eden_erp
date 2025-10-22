@@ -3,7 +3,7 @@ import { useQueryState } from '../hooks/useQueryState';
 
 const STATUS_OPTIONS = ['open', 'todo', 'in_progress', 'review', 'done'];
 const STATUS_LABELS = {
-  'open': 'Open',
+  'open': 'New',
   'todo': 'To Do',
   'in_progress': 'In Progress',
   'review': 'Review',

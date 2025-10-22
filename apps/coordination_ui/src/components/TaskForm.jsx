@@ -4,7 +4,7 @@ import { apiService } from '../services/api';
 
 const STATUS_OPTIONS = ['open', 'todo', 'in_progress', 'review', 'done'];
 const STATUS_LABELS = {
-  'open': 'Open',
+  'open': 'New',
   'todo': 'To Do',
   'in_progress': 'In Progress',
   'review': 'Review',
@@ -185,7 +185,7 @@ export default function TaskForm({ onSubmit, onCancel, initialData = {}, submitL
       </div>
 
       <div className="form-group">
-        <label>Department (Ball-in-Court)</label>
+        <label>Department (Ball in Court)</label>
         <select
           value={formData.ball_owner_department}
           onChange={(e) => handleChange('ball_owner_department', e.target.value)}
@@ -239,12 +239,12 @@ export default function TaskForm({ onSubmit, onCancel, initialData = {}, submitL
           </div>
 
           <div className="form-group">
-            <label>Ball-in-Court Note</label>
+            <label>Ball in Court Note</label>
             <textarea
               rows={2}
               value={formData.ball_in_court_note}
               onChange={(e) => handleChange('ball_in_court_note', e.target.value)}
-              placeholder="Note about current ball-in-court status"
+              placeholder="Note about current ball in court status"
             />
           </div>
         </div>

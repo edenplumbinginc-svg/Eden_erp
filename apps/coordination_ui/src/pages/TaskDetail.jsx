@@ -302,7 +302,7 @@ export default function TaskDetail() {
 
       {task?.ball_in_court_note && (
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-          <div className="font-semibold text-amber-900 mb-2">🏀 Ball-in-Court Note</div>
+          <div className="font-semibold text-amber-900 mb-2">🏀 Ball in Court Note</div>
           <p className="text-body text-amber-800">{task.ball_in_court_note}</p>
         </div>
       )}
