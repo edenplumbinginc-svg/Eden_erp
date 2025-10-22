@@ -162,6 +162,7 @@ export const tasks = pgTable("tasks", {
         origin: text(),
         deletedAt: timestamp("deleted_at", { withTimezone: true, mode: 'string' }),
         lastActivityAt: timestamp("last_activity_at", { withTimezone: true, mode: 'string' }),
+        statusLocked: boolean("status_locked").default(false),
 }, (table) => [
         index("idx_tasks_ball").using("btree", table.ballInCourt.asc().nullsLast().op("uuid_ops")),
         index("idx_tasks_project").using("btree", table.projectId.asc().nullsLast().op("uuid_ops")),

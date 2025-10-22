@@ -1,0 +1,152 @@
+Step: Implement auto-complete parent task when all subtasks are Done (with a manual override).
+
+Why it matters: Parents flip to Done automatically when every child is Done, so you stop babysitting checklists.
+
+Inputs needed:
+
+Your backend routes folder path (where subtask PATCH lives)
+
+DB layer (Prisma or SQL). If yours differs, paste your current models after this step and I’ll align.
+
+Command (copy–paste):
+
+A) Prisma version (Node/Express)
+Create a tiny service and call it from your subtask update route.
+
+// src/services/taskAutoClose.js
+import { prisma } from "../db.js"; // adjust import
+
+// Guard: allow manual lock to prevent auto-updates on parent
+export async function maybeAutoCloseParent(parentTaskId) {
+  if (!parentTaskId) return;
+
+  const parent = await prisma.tasks.findUnique({
+    where: { id: parentTaskId },
+    select: { id: true, status: true, status_locked: true },
+  });
+  if (!parent || parent.status_locked) return;
+
+  const agg = await prisma.subtasks.groupBy({
+    by: ["parent_task_id", "status"],
+    where: { parent_task_id: parentTaskId },
+    _count: { _all: true }
+  });
+
+  const counts = agg.reduce((m, r) => {
+    m[r.status?.toLowerCase?.() ?? ""] = r._count._all;
+    return m;
+  }, {});
+
+  const total = Object.values(counts).reduce((a,b)=>a+b,0);
+  const done = counts["done"] ?? 0;
+  const blocked = counts["blocked"] ?? 0;
+
+  const allDone = total > 0 && done === total;
+  const anyActive = (counts["in_progress"] ?? 0) > 0 || (counts["todo"] ?? 0) > 0;
+
+  // Rule: all subtasks Done => parent Done; if any child reopens, parent -> In Progress (unless locked)
+  let next = null;
+  if (allDone && parent.status !== "done") next = "done";
+  else if (!allDone && anyActive && parent.status === "done") next = "in_progress";
+
+  if (!next) return;
+
+  await prisma.tasks.update({
+    where: { id: parentTaskId },
+    data: { status: next },
+  });
+
+  // Optional: audit log
+  try {
+    await prisma.audit_logs.create({
+      data: {
+        event: "task.autoclose",
+        entity_type: "task",
+        entity_id: parentTaskId,
+        meta: { next, reason: "subtasks_state_changed" }
+      }
+    });
+  } catch {}
+}
+
+
+Call it from your subtask PATCH/PUT route after saving the child.
+
+// src/routes/subtasks.js (or wherever you update a subtask)
+import { maybeAutoCloseParent } from "../services/taskAutoClose.js";
+
+// ... inside PATCH /api/subtasks/:id (after updating subtask):
+const sub = await prisma.subtasks.update({
+  where: { id: req.params.id },
+  data: { ...req.body }, // status etc.
+  select: { id: true, parent_task_id: true }
+});
+
+// Kick the auto-close check (fire-and-forget or await)
+await maybeAutoCloseParent(sub.parent_task_id);
+
+res.json({ ok: true, id: sub.id });
+
+
+Add manual override column if missing (Prisma migration):
+
+# prisma/schema.prisma -> model Task { status_locked Boolean @default(false) }
+# then:
+npx prisma generate && npx prisma migrate dev -n add_status_locked_to_tasks
+
+
+B) SQL (pg/knex) version
+Use two small queries and the same rule; call from your subtask update handler.
+
+// src/services/taskAutoClose.sql.js
+import { pool } from "../db.js"; // adjust to your pg/knex
+
+export async function maybeAutoCloseParentSQL(parentTaskId) {
+  if (!parentTaskId) return;
+
+  const { rows: [parent] } = await pool.query(
+    `select id, status, coalesce(status_locked,false) as status_locked
+     from tasks where id = $1`, [parentTaskId]);
+  if (!parent || parent.status_locked) return;
+
+  const { rows: [agg] } = await pool.query(
+    `select 
+        count(*)::int as total,
+        sum(case when lower(status)='done' then 1 else 0 end)::int as done,
+        sum(case when lower(status) in ('in_progress','todo') then 1 else 0 end)::int as active
+     from subtasks where parent_task_id = $1`, [parentTaskId]);
+
+  const allDone = agg.total > 0 && agg.done === agg.total;
+  const anyActive = agg.active > 0;
+
+  let next = null;
+  if (allDone && parent.status !== 'done') next = 'done';
+  else if (!allDone && anyActive && parent.status === 'done') next = 'in_progress';
+  if (!next) return;
+
+  await pool.query(`update tasks set status = $1 where id = $2`, [next, parentTaskId]);
+  // optional audit insert
+}
+
+
+Patch your subtask update handler:
+
+// after updating subtask:
+await maybeAutoCloseParentSQL(updated.parent_task_id);
+
+
+Success check:
+
+Create a parent with 2 subtasks (todo).
+
+Set first subtask → done (parent stays not-done).
+
+Set second subtask → done → parent flips to done.
+
+Flip one child back to in_progress → parent reopens to in_progress.
+
+Set status_locked=true on parent → children changes no longer move parent.
+
+Next: wait for user
+
+Mini coaching: this is a service-layer hook—portable and testable. Triggers are tempting, but app-level logic keeps audit trails and “lock” semantics simple. Paste your current Task/Subtask schema (or route code) next and I’ll tailor the exact fields/endpoints to your repo.
