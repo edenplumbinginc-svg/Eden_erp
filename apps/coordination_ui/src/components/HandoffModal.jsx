@@ -28,7 +28,7 @@ export default function HandoffModal({ isOpen, onClose, task }) {
       if (data.skipped) {
         push('info', 'Already passed to this department recently');
       } else {
-        push('success', `Ball passed to ${data.to_department}`);
+        push('success', `Ball passed to ${data.toDepartment}`);
         queryClient.invalidateQueries({ queryKey: ['task', task.id] });
         queryClient.invalidateQueries({ queryKey: ['tasks'] });
       }
