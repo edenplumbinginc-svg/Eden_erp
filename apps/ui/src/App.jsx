@@ -98,6 +98,7 @@ export default function App() {
   const [recomputingOverdue, setRecomputingOverdue] = useState(false);
   const [tasksGroupBy, setTasksGroupBy] = useState("status");
   const [loadingPrefs, setLoadingPrefs] = useState(true);
+  const [perfDays, setPerfDays] = useState(7);
 
   // Load user preferences and projects
   useEffect(() => {
@@ -204,6 +205,10 @@ export default function App() {
     }
   }
 
+  function handleDownloadPerformanceCSV() {
+    window.open(`/api/reports/performance.csv?days=${perfDays}`, '_blank');
+  }
+
   return (
     <div className="min-h-screen">
       <header className="soft-panel mx-auto max-w-6xl mt-6 p-4 flex items-center justify-between">
@@ -238,6 +243,26 @@ export default function App() {
           >
             {recomputingOverdue ? "Refreshing..." : "Refresh Overdue"}
           </button>
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-gray-600">Perf:</label>
+            <select
+              className="input w-20"
+              value={perfDays}
+              onChange={(e) => setPerfDays(Number(e.target.value))}
+              title="Performance report period"
+            >
+              <option value="7">7d</option>
+              <option value="30">30d</option>
+            </select>
+            <button
+              className="btn text-xs px-2 py-1"
+              style={{background: "#f3f4f6", border: "1px solid #e5e7eb"}}
+              onClick={handleDownloadPerformanceCSV}
+              title="Download performance CSV"
+            >
+              CSV
+            </button>
+          </div>
           <div className="flex items-center gap-2">
             <label className="text-sm text-gray-600">Group:</label>
             <select
