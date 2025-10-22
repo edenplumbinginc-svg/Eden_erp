@@ -10,12 +10,12 @@ I prefer iterative development, with a focus on delivering functional increments
 
 ### UI/UX Decisions
 - **Frontend Framework**: React 18 with Vite.
-- **Styling**: TailwindCSS for utility-first responsive design.
+- **Styling**: 100% Google Material Design with custom CSS (Tailwind removed October 2025). Professional Google Workspace aesthetic with Roboto font, Material color palette, 4-level elevation system, 8px spacing grid, and smooth transitions.
 - **Development Authentication**: `DevAuthSwitcher` for quick user role switching.
 - **API Integration**: Axios-based client with interceptors for development auth headers.
 - **Project Structure**: Monorepo with frontend in `apps/coordination_ui/`. Vite proxies `/api` to backend on port 3000.
-- **Theming**: Soft Light (Google-ish) theme with custom utilities, active scale feedback, and focus rings.
-- **Components**: StatusSelect, BICChip, Overdue Badge, Idle Badge, Notifications Bell, Toast System.
+- **Material Design System**: Complete implementation with color variables (--md-primary: #1a73e8), elevation shadows (4 levels), spacing tokens (8/16/24/32/40/48px), typography scale (Roboto 300/400/500/700), button styles (raised, outlined, danger, success), form inputs with focus states, navigation tabs, cards with proper shadows, loading skeletons, and Material animations.
+- **Components**: StatusSelect, BICChip, Overdue Badge, Idle Badge, Notifications Bell, Toast System, SummaryCard, TasksByStatusChart, TasksByAssigneeChart, RecentActivityFeed.
 
 ### Technical Implementations
 - **Backend Framework**: Express.js.
@@ -72,6 +72,6 @@ I prefer iterative development, with a focus on delivering functional increments
 - **Framework**: React 18
 - **Build Tool**: Vite 5
 - **HTTP Client**: Axios
-- **Styling**: TailwindCSS 3
+- **Styling**: Google Material Design (custom CSS, Tailwind removed October 2025)
 - **Data Fetching**: React Query
 - **Dev Server**: Runs on port 5000 with proxy to backend on port 3000
