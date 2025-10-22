@@ -1,0 +1,63 @@
+[Mode: Execution]
+
+**Step:** Open a **new thread** and paste the migration prompt below to continue Phase-2 at the same pace (thin slices + automation), then run the bootstrap snippet.
+
+**Why it matters:** This locks in the working context (Soft Light UI, live API, inline controls, auto-parent completion, docs) and resumes with the next implementation slice without dragging legacy noise.
+
+**Inputs needed:**
+
+* Same Replit workspace (backend on :3000, UI on :5000)
+* Dev headers already used
+
+**Command (paste this as your new-thread prompt):**
+
+```
+Title: 🧠 Continue EDEN ERP – Coordination App (Phase 2 Sprint · Soft Light UI)
+
+Prompt:
+We’re resuming EDEN ERP (Coordination). Current state is loaded and stable:
+
+✅ Backend: healthy (/healthz), RBAC + audit logs, guest links, tasks/projects routes
+✅ Frontend: Soft Light (Google-ish) shell live on port 5000, proxied to :3000
+✅ Live data: Projects dropdown, Recent Tasks (read), Create Task (write), inline Status control (optimistic)
+✅ UX tokens: rounded-2xl, soft shadows, 150–200ms ease-out
+✅ Docs: docs/api-contract.md, docs/ui-definition-of-done.md, docs/iteration-cadence.md
+✅ Automation: parent auto-complete when all subtasks are Done, with status_locked override
+✅ Smoke: npm run smoke:api is green
+
+Mission now: Phase-2 “Automation & Reinforcement” (thin slices; no breaking routes)
+1) Idle Reminders job (X days since last update) + snooze per task
+2) Overdue badge already in UI → add daily idempotent job to set is_overdue (server truth)
+3) Leaderboard/Performance cards (7/30-day) + CSV export
+4) Department Handoff rules (A → B) with duplicate-fire guard and visible audit entry
+5) Reporting tabs: Stuck > X days, Upcoming 7 days, Guest usage
+
+Constraints:
+- Keep Soft Light tokens; avoid sharp edges, keep motion subtle
+- Additive changes only; preserve existing endpoints where possible
+- Every shipped screen must pass the UI DoD (6-point checklist)
+- Each feature ships as: read + write + inline control + audit visibility + cURL in docs/api-contract.md
+
+Start by: proposing the next thin slice with exact file diffs and tests (no broad refactors). Then implement.
+```
+
+**Then run (in Replit Shell):**
+
+```bash
+# Quick bootstrap so the new agent lands on a healthy dev env
+bash -lc '
+set -e
+npm run smoke:api
+# ensure UI running on 5000 with permissive hosts in dev
+cd apps/ui && pkill -f vite || true
+npm run dev --silent >/dev/null 2>&1 & disown
+echo "✅ Env ready: API ok, UI on :5000"
+'
+```
+
+**Success check:**
+
+* New thread spins up with this context and proposes the next thin slice (Idle Reminders job).
+* `npm run smoke:api` passes; UI preview on port 5000 loads normally.
+
+**Next:** wait for user
