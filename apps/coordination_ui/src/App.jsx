@@ -8,6 +8,7 @@ import Reports from './components/Reports';
 import DevAuthSwitcher from './components/DevAuthSwitcher';
 import EdenHeader from './components/EdenHeader';
 import TaskDetail from './pages/TaskDetail';
+import ProjectDetail from './pages/ProjectDetail';
 
 const queryClient = new QueryClient();
 
@@ -106,6 +107,10 @@ function AppContent() {
             }
           />
           <Route path="/reports" element={<Reports />} />
+          <Route 
+            path="/project/:projectId" 
+            element={<ProjectDetail />} 
+          />
           <Route 
             path="/task/:taskId" 
             element={<TaskDetail />} 
