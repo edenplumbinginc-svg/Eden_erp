@@ -15,11 +15,33 @@ function daysSince(ts) {
 }
 
 function BallInCourt({ task }) {
+  const { data: users = [] } = useQuery({
+    queryKey: ['users'],
+    queryFn: async () => {
+      const response = await apiService.getUsers();
+      return response.data || response;
+    }
+  });
+
   const type = task?.ball_owner_type || (task?.ballOwnerType ?? null);
   const id   = task?.ball_owner_id   || (task?.ballOwnerId   ?? null);
   const since= task?.ball_since      || (task?.ballSince     ?? null);
-  const label = type && id ? `${type}:${id.substring(0, 8)}` : (task?.ball_in_court ? `user:${task.ball_in_court.substring(0, 8)}` : "—");
   const d = daysSince(since);
+  
+  let label = "—";
+  if (type && id) {
+    if (type === 'user') {
+      const user = users.find(u => u.id === id);
+      label = user ? (user.name || user.email) : `User (${id.substring(0, 8)})`;
+    } else {
+      label = `${type}:${id.substring(0, 8)}`;
+    }
+  } else if (task?.ball_in_court) {
+    const user = users.find(u => u.id === task.ball_in_court);
+    label = user ? (user.name || user.email) : `User (${task.ball_in_court.substring(0, 8)})`;
+  } else if (task?.department) {
+    label = task.department;
+  }
   
   return (
     <div className="flex items-center gap-2">

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiService } from '../services/api';
 import { useToaster } from './Toaster';
 
@@ -15,12 +15,24 @@ const DEPARTMENTS = [
 export default function HandoffModal({ isOpen, onClose, task }) {
   const queryClient = useQueryClient();
   const { push } = useToaster();
+  
+  const [handoffType, setHandoffType] = useState('department');
   const [selectedDepartment, setSelectedDepartment] = useState('');
+  const [selectedUser, setSelectedUser] = useState('');
   const [note, setNote] = useState('');
 
   const currentDepartment = task?.department || 'Unknown';
 
-  const handoffMutation = useMutation({
+  const { data: users = [], isLoading: usersLoading } = useQuery({
+    queryKey: ['users'],
+    queryFn: async () => {
+      const response = await apiService.getUsers();
+      return response;
+    },
+    enabled: isOpen && handoffType === 'user'
+  });
+
+  const departmentHandoffMutation = useMutation({
     mutationFn: async (toDepartment) => {
       return apiService.handoffTask(task.id, toDepartment, note);
     },
@@ -32,9 +44,26 @@ export default function HandoffModal({ isOpen, onClose, task }) {
         queryClient.invalidateQueries({ queryKey: ['task', task.id] });
         queryClient.invalidateQueries({ queryKey: ['tasks'] });
       }
-      onClose();
-      setSelectedDepartment('');
-      setNote('');
+      resetAndClose();
+    },
+    onError: (error) => {
+      const errorMsg = error?.response?.data?.error?.message || error.message || 'Failed to handoff task';
+      push('error', errorMsg);
+    }
+  });
+
+  const userHandoffMutation = useMutation({
+    mutationFn: async (toUserId) => {
+      return apiService.handoffBall(task.id, {
+        to_user_id: toUserId,
+        note: note
+      });
+    },
+    onSuccess: () => {
+      push('success', 'Ball passed to user');
+      queryClient.invalidateQueries({ queryKey: ['task', task.id] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      resetAndClose();
     },
     onError: (error) => {
       const errorMsg = error?.response?.data?.error?.message || error.message || 'Failed to handoff task';
@@ -44,66 +73,139 @@ export default function HandoffModal({ isOpen, onClose, task }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!selectedDepartment) {
-      push('error', 'Please select a department');
-      return;
+    
+    if (handoffType === 'department') {
+      if (!selectedDepartment) {
+        push('error', 'Please select a department');
+        return;
+      }
+      departmentHandoffMutation.mutate(selectedDepartment);
+    } else {
+      if (!selectedUser) {
+        push('error', 'Please select a user');
+        return;
+      }
+      userHandoffMutation.mutate(selectedUser);
     }
-    handoffMutation.mutate(selectedDepartment);
+  };
+
+  const resetAndClose = () => {
+    setHandoffType('department');
+    setSelectedDepartment('');
+    setSelectedUser('');
+    setNote('');
+    onClose();
   };
 
   const handleClose = () => {
-    if (!handoffMutation.isPending) {
-      setSelectedDepartment('');
-      setNote('');
-      onClose();
+    if (!departmentHandoffMutation.isPending && !userHandoffMutation.isPending) {
+      resetAndClose();
     }
   };
+
+  const isPending = departmentHandoffMutation.isPending || userHandoffMutation.isPending;
 
   if (!isOpen) return null;
 
   return (
     <div className="modal-overlay">
-      <div className="modal" style={{ maxWidth: '500px' }}>
+      <div className="modal" style={{ maxWidth: '550px' }}>
         <div className="modal-header">
           <h2>Pass Ball 🏀</h2>
           <button
             className="modal-close"
             onClick={handleClose}
-            disabled={handoffMutation.isPending}
+            disabled={isPending}
           >
             &times;
           </button>
         </div>
         
         <form onSubmit={handleSubmit} className="form">
-          <div>
-            <div className="text-body text-muted mb-2">
-              Current department: <span className="font-semibold" style={{color: 'var(--md-warning)'}}>{ currentDepartment}</span>
+          <div className="form-group">
+            <label>Hand off to:</label>
+            <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  value="department"
+                  checked={handoffType === 'department'}
+                  onChange={(e) => setHandoffType(e.target.value)}
+                  disabled={isPending}
+                  style={{ marginRight: '6px' }}
+                />
+                <span className="text-body">Department</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  value="user"
+                  checked={handoffType === 'user'}
+                  onChange={(e) => setHandoffType(e.target.value)}
+                  disabled={isPending}
+                  style={{ marginRight: '6px' }}
+                />
+                <span className="text-body">Specific User</span>
+              </label>
             </div>
           </div>
 
-          <div className="form-group">
-            <label>Hand off to department:</label>
-            <select
-              value={selectedDepartment}
-              onChange={(e) => setSelectedDepartment(e.target.value)}
-              disabled={handoffMutation.isPending}
-            >
-              <option value="">Select department...</option>
-              {DEPARTMENTS.map(dept => (
-                <option key={dept} value={dept}>{dept}</option>
-              ))}
-            </select>
-          </div>
+          {handoffType === 'department' && (
+            <>
+              <div className="text-body text-muted" style={{ marginBottom: '12px' }}>
+                Current department: <span className="font-semibold" style={{color: 'var(--md-warning)'}}>
+                  {currentDepartment}
+                </span>
+              </div>
+
+              <div className="form-group">
+                <label>Select department:</label>
+                <select
+                  value={selectedDepartment}
+                  onChange={(e) => setSelectedDepartment(e.target.value)}
+                  disabled={isPending}
+                  className="form-select"
+                >
+                  <option value="">Choose a department...</option>
+                  {DEPARTMENTS.map(dept => (
+                    <option key={dept} value={dept}>{dept}</option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
+
+          {handoffType === 'user' && (
+            <div className="form-group">
+              <label>Select user:</label>
+              {usersLoading ? (
+                <div className="text-body text-muted">Loading users...</div>
+              ) : (
+                <select
+                  value={selectedUser}
+                  onChange={(e) => setSelectedUser(e.target.value)}
+                  disabled={isPending}
+                  className="form-select"
+                >
+                  <option value="">Choose a user...</option>
+                  {users.map(user => (
+                    <option key={user.id} value={user.id}>
+                      {user.name || user.email}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
 
           <div className="form-group">
             <label>Note (optional):</label>
             <textarea
-              placeholder="Optional: reason for handoff"
+              placeholder={`Why are you handing this to ${handoffType === 'department' ? 'this department' : 'this person'}?`}
               rows="3"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              disabled={handoffMutation.isPending}
+              disabled={isPending}
             />
           </div>
 
@@ -112,16 +214,16 @@ export default function HandoffModal({ isOpen, onClose, task }) {
               type="button"
               className="btn btn-secondary"
               onClick={handleClose}
-              disabled={handoffMutation.isPending}
+              disabled={isPending}
             >
               Cancel
             </button>
             <button
               type="submit"
               className="btn btn-primary"
-              disabled={handoffMutation.isPending || !selectedDepartment}
+              disabled={isPending || (handoffType === 'department' ? !selectedDepartment : !selectedUser)}
             >
-              {handoffMutation.isPending ? 'Passing...' : 'Confirm Handoff'}
+              {isPending ? 'Passing...' : 'Confirm Handoff'}
             </button>
           </div>
         </form>
