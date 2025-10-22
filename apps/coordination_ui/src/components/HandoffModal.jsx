@@ -27,7 +27,8 @@ export default function HandoffModal({ isOpen, onClose, task }) {
     queryKey: ['users'],
     queryFn: async () => {
       const response = await apiService.getUsers();
-      return response;
+      const userData = response?.data || response;
+      return Array.isArray(userData) ? userData : [];
     },
     enabled: isOpen && handoffType === 'user'
   });
