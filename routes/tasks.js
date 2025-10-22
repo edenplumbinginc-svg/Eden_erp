@@ -9,6 +9,7 @@ const { validate } = require('../middleware/validate');
 const { notify, actorFromHeaders } = require('../lib/notify');
 const { withTx } = require('../lib/tx');
 const { audit } = require('../utils/audit');
+const { maybeAutoCloseParent } = require('../services/taskAutoClose');
 
 // Zod validation schemas
 const UpdateTaskSchema = z.object({
@@ -450,7 +451,11 @@ router.patch('/subtasks/:id', authenticate, requirePerm('tasks:write'), validate
     
     await audit(req.user?.id, 'subtask.update', `subtask:${req.params.id}`, { title, done, order_index });
     
-    res.json(r.rows[0]);
+    // Auto-close parent task if all subtasks are done
+    const subtask = r.rows[0];
+    await maybeAutoCloseParent(subtask.task_id);
+    
+    res.json(subtask);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
