@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiService, api } from "../services/api";
 import Countdown from "../components/Countdown";
 import Alert from "../components/Alert";
+import ChecklistEditor from "../components/ChecklistEditor";
 
 function daysSince(ts) {
   if (!ts) return null;
@@ -236,7 +237,7 @@ export default function TaskDetail() {
 
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-6">
-          <Checklist task={task} />
+          <ChecklistEditor taskId={taskId} canEdit={true} />
           <Comments taskId={taskId} />
         </div>
         <div className="space-y-6">
