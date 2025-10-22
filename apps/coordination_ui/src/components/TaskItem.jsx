@@ -26,7 +26,13 @@ export default function TaskItem({ t }) {
             )}
           </div>
           {t.description && (
-            <p className="text-sm text-gray-600 mt-1 line-clamp-2">{t.description}</p>
+            <p className="text-body text-muted mt-1" style={{
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical'
+            }}>{t.description}</p>
           )}
         </div>
         <span className={`status-badge status-${t.status}`}>
@@ -34,15 +40,15 @@ export default function TaskItem({ t }) {
         </span>
       </div>
 
-      <div className="flex items-center gap-3 text-xs text-gray-500 mt-2">
+      <div className="flex items-center gap-3 text-caption mt-2">
         {t.department && <span>📋 {t.department}</span>}
         {t.priority && (
           <span className={`priority-badge priority-${t.priority}`}>
             {t.priority === 'urgent' ? '🔴' : ''} {t.priority}
           </span>
         )}
-        {t.is_overdue && <span className="text-red-600 font-medium">⏰ Overdue</span>}
-        {t.needs_idle_reminder && <span className="text-amber-600 font-medium">😴 Idle</span>}
+        {t.is_overdue && <span style={{color: 'var(--md-error)', fontWeight: 500}}>⏰ Overdue</span>}
+        {t.needs_idle_reminder && <span style={{color: 'var(--md-warning)', fontWeight: 500}}>😴 Idle</span>}
       </div>
 
       {t.ball_in_court_note && (
@@ -52,7 +58,14 @@ export default function TaskItem({ t }) {
       )}
 
       {t.voice_transcript && (
-        <div className="mt-2 text-xs text-purple-700 bg-purple-50 border border-purple-200 rounded p-2 italic">
+        <div className="mt-2 text-caption" style={{
+          backgroundColor: '#f3e8ff',
+          border: '1px solid #d8b4fe',
+          color: '#7c3aed',
+          borderRadius: 'var(--radius-sm)',
+          padding: 'var(--space-1)',
+          fontStyle: 'italic'
+        }}>
           🎤 {t.voice_transcript.substring(0, 100)}{t.voice_transcript.length > 100 ? '...' : ''}
         </div>
       )}

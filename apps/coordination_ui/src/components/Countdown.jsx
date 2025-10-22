@@ -8,7 +8,7 @@ export default function Countdown({ target }) {
     return () => clearInterval(t);
   }, [target]);
   
-  if (left <= 0) return <span className="text-red-600">expired</span>;
+  if (left <= 0) return <span style={{color: 'var(--md-error)'}}>expired</span>;
   
   const s = Math.floor(left / 1000);
   const d = Math.floor(s / 86400);

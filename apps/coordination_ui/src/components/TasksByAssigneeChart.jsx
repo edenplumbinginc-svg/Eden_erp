@@ -10,11 +10,11 @@ export default function TasksByAssigneeChart({ data = [], loading = false }) {
 
   if (loading) {
     return (
-      <div className="card animate-pulse">
-        <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
+      <div className="card">
+        <div className="skeleton mb-4" style={{width: '25%', height: '20px'}}></div>
         {[1, 2, 3].map(i => (
           <div key={i} className="mb-3">
-            <div className="h-6 bg-gray-200 rounded"></div>
+            <div className="skeleton" style={{width: '100%', height: '32px'}}></div>
           </div>
         ))}
       </div>
@@ -28,9 +28,9 @@ export default function TasksByAssigneeChart({ data = [], loading = false }) {
     return (
       <div className="card">
         <h3 className="font-semibold mb-3">Tasks by Assignee</h3>
-        <div className="text-center py-8 text-gray-500">
-          <div className="text-4xl mb-2">👥</div>
-          <p className="text-sm">No assigned tasks</p>
+        <div className="text-center py-8 text-muted">
+          <div className="text-display mb-2">👥</div>
+          <p className="text-body">No assigned tasks</p>
         </div>
       </div>
     );
@@ -50,12 +50,13 @@ export default function TasksByAssigneeChart({ data = [], loading = false }) {
           
           return (
             <div key={assignee.owner} className="mb-3">
-              <div className="flex justify-between text-sm mb-1.5">
+              <div className="flex justify-between text-body mb-1">
                 <span className="font-medium truncate">{displayName}</span>
-                <span className="text-gray-600 font-semibold">{assignee.count}</span>
+                <span className="text-muted font-semibold">{assignee.count}</span>
               </div>
               <div 
-                className="w-full bg-gray-200 rounded-lg h-8 cursor-pointer hover:bg-gray-300 overflow-hidden transition-colors"
+                className="w-full bg-surface-variant rounded-lg cursor-pointer hover:bg-surface-variant overflow-hidden transition-colors"
+                style={{height: '32px'}}
                 onClick={() => {
                   if (assignee.owner !== 'unassigned') {
                     navigate(`/alltasks?bic=${assignee.owner}`);
@@ -63,13 +64,14 @@ export default function TasksByAssigneeChart({ data = [], loading = false }) {
                 }}
               >
                 <div 
-                  className="h-8 rounded-lg transition-all hover:opacity-80 flex items-center justify-end pr-3" 
+                  className="rounded-lg transition-all hover:opacity-80 flex items-center justify-end pr-3" 
                   style={{
                     width: `${barWidth}%`,
-                    backgroundColor: color
+                    backgroundColor: color,
+                    height: '32px'
                   }}
                 >
-                  <span className="text-white text-sm font-semibold">
+                  <span className="text-white text-body font-semibold">
                     {percentage}%
                   </span>
                 </div>
@@ -78,7 +80,7 @@ export default function TasksByAssigneeChart({ data = [], loading = false }) {
           );
         })}
       </div>
-      <div className="text-xs text-gray-500 mt-3">
+      <div className="text-caption mt-3">
         Showing top {sortedData.length} assignee{sortedData.length !== 1 ? 's' : ''} • Click to filter
       </div>
     </div>

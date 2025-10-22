@@ -63,14 +63,14 @@ export default function RecentActivityFeed() {
 
   if (isLoading) {
     return (
-      <div className="card animate-pulse">
-        <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
+      <div className="card">
+        <div className="skeleton mb-4" style={{width: '25%', height: '20px'}}></div>
         {[1, 2, 3].map(i => (
           <div key={i} className="flex gap-3 mb-3">
-            <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+            <div className="skeleton rounded-full" style={{width: '32px', height: '32px'}}></div>
             <div className="flex-1">
-              <div className="h-3 bg-gray-200 rounded w-3/4 mb-2"></div>
-              <div className="h-2 bg-gray-200 rounded w-1/4"></div>
+              <div className="skeleton mb-2" style={{width: '75%', height: '16px'}}></div>
+              <div className="skeleton" style={{width: '25%', height: '12px'}}></div>
             </div>
           </div>
         ))}
@@ -82,9 +82,9 @@ export default function RecentActivityFeed() {
     return (
       <div className="card">
         <h3 className="font-semibold mb-3">Recent Activity</h3>
-        <div className="text-center py-8 text-gray-500">
-          <div className="text-4xl mb-2">🎉</div>
-          <p className="text-sm">No recent activity</p>
+        <div className="text-center py-8 text-muted">
+          <div className="text-display mb-2">🎉</div>
+          <p className="text-body">No recent activity</p>
         </div>
       </div>
     );
@@ -94,25 +94,25 @@ export default function RecentActivityFeed() {
     <div className="card">
       <h3 className="font-semibold mb-4">Recent Activity</h3>
       <div className="space-y-3">
-        {recentActivities.map((activity, idx) => (
+        {recentActivities.map((activity) => (
           <div key={activity.id} className="flex gap-3 items-start">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-lg">
+            <div className="flex-shrink-0 rounded-full bg-primary-light flex items-center justify-center text-large" style={{width: '32px', height: '32px'}}>
               {getActivityIcon(activity.type)}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm text-gray-900">
+              <p className="text-body">
                 {formatActivityText(activity)}
               </p>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs text-gray-500">
+                <span className="text-caption">
                   {formatRelativeTime(activity.created_at)}
                 </span>
                 {activity.task_id && (
                   <>
-                    <span className="text-xs text-gray-400">•</span>
+                    <span className="text-caption">•</span>
                     <Link 
                       to={`/task/${activity.task_id}`}
-                      className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                      className="text-caption text-link hover:underline"
                     >
                       View task
                     </Link>
