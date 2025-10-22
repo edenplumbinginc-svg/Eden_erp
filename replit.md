@@ -38,10 +38,10 @@ I prefer iterative development, with a focus on delivering functional increments
 ### Feature Specifications
 - **Core Modules**: `coordination` (projects, tasks, comments, attachments) and `procurement`.
 - **Core Services**: Authentication, email, notifications, permissions, reporting, storage, and utilities.
-- **API Endpoints**: CRUD for Projects and Tasks, nested task creation, comment management, time-boxed guest links, and specialized reporting endpoints.
+- **API Endpoints**: CRUD for Projects and Tasks, nested task creation, comment management, time-boxed guest links, and specialized reporting endpoints (status, priority, overdue, performance leaderboard).
 - **Notifications**: Supports `in_app`, `email`, and `push` channels.
 - **Frontend UI**: Coordination dashboard, project detail view, full-featured task view, guest view (public read-only), create task modal, and reports page.
-- **Reporting**: Four card layout (Tasks by Status, Tasks by Owner, Overdue Tasks, Recent Activity) with deep-linking.
+- **Reporting**: Four card layout (Tasks by Status, Tasks by Owner, Overdue Tasks, Recent Activity) with deep-linking. Performance leaderboard with 7/30-day task completion metrics and CSV export.
 - **Guest View**: Public read-only access to tasks and projects via token, with rate limiting and audit logging.
 
 ### System Design Choices
