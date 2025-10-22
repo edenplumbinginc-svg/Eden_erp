@@ -1,0 +1,174 @@
+[Mode: Execution]
+
+**Step:** Wire the new Soft Light UI to your real backend (dev headers + health check + Recent Tasks feed) and lock Vite to **port 5000** as required.
+
+**Why it matters:** Right now the UI looks right but shows “probing…” and fake tasks. This step makes it a real, living dashboard against your Phase-1 backend.
+
+**Inputs needed:**
+
+* Replit Shell in this workspace
+* Dev-user headers you already use elsewhere:
+
+  * `X-Dev-User-Email: test@edenplumbing.com`
+  * `X-Dev-User-Id: 855546bf-f53d-4538-b8d5-cd30f5c157a2`
+
+**Command (paste in Shell):**
+
+```bash
+# Go to the modern UI
+cd ~/workspace/apps/ui
+
+# 1) Force Vite to run as webview on port 5000 (and proxy /api → backend:3000)
+cat > vite.config.js <<'EOF'
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 5000,
+    host: true,
+    strictPort: true,
+    proxy: { '/api': 'http://localhost:3000' }
+  }
+})
+EOF
+
+# 2) Small dev API client with default headers (so health + tasks work in dev)
+mkdir -p src/lib
+cat > src/lib/api.js <<'EOF'
+import axios from "axios";
+
+// DEV-ONLY headers so the backend trusts our requests in this shell.
+// Replace/remove for production login.
+export const api = axios.create({
+  baseURL: "/api",
+  headers: {
+    "X-Dev-User-Email": "test@edenplumbing.com",
+    "X-Dev-User-Id": "855546bf-f53d-4538-b8d5-cd30f5c157a2",
+    "Content-Type": "application/json",
+  },
+  withCredentials: false,
+});
+EOF
+
+# 3) Replace App.jsx to fetch real health + tasks and render them in the soft UI
+cat > src/App.jsx <<'EOF'
+import { useEffect, useMemo, useState } from "react";
+import { api } from "./lib/api";
+
+function Stat({label, value, sub}) {
+  return (
+    <div className="soft-panel p-4">
+      <div className="text-sm text-gray-500">{label}</div>
+      <div className="text-2xl mt-1">{value}</div>
+      {sub && <div className="text-xs text-gray-400 mt-1">{sub}</div>}
+    </div>
+  );
+}
+
+function TaskItem({ t }) {
+  const due = t.due_at ? new Date(t.due_at).toISOString().slice(0,10) : "—";
+  return (
+    <div className="soft-panel p-4 hover:bg-gray-100 transition">
+      <div className="text-[15px]">{t.title}</div>
+      <div className="text-xs text-gray-500 mt-1">
+        Due {due} • {t.department ?? "—"} • {t.priority ?? "—"} • {t.status ?? "—"}
+      </div>
+    </div>
+  );
+}
+
+export default function App() {
+  const [health, setHealth] = useState(null);
+  const [tasks, setTasks] = useState([]);
+  const [q, setQ] = useState("");
+
+  useEffect(() => {
+    // Prefer unauth health if you exposed /healthz publicly; else dev headers via api client.
+    api.get("/healthz").then(r => setHealth(r.data)).catch(() => setHealth({ status: "error" }));
+    // Fetch recent tasks (tweak query to match your API; common shape shown)
+    api.get("/tasks", { params: { limit: 20, order: "desc" } })
+      .then(r => Array.isArray(r.data?.items) ? setTasks(r.data.items) : setTasks(r.data ?? []))
+      .catch(() => setTasks([]));
+  }, []);
+
+  const filtered = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    if (!s) return tasks;
+    return tasks.filter(t =>
+      (t.title || "").toLowerCase().includes(s) ||
+      (t.id || "").toLowerCase().includes(s)
+    );
+  }, [q, tasks]);
+
+  const stats = useMemo(() => {
+    const done = tasks.filter(t => (t.status || "").toLowerCase() === "done").length;
+    const inprog = tasks.filter(t => (t.status || "").toLowerCase().includes("progress")).length;
+    const overdue = tasks.filter(t => t.due_at && new Date(t.due_at) < new Date() && (t.status||"").toLowerCase() !== "done").length;
+    return { done, inprog, overdue };
+  }, [tasks]);
+
+  return (
+    <div className="min-h-screen">
+      <header className="soft-panel mx-auto max-w-6xl mt-6 p-4 flex items-center justify-between">
+        <div className="text-lg font-medium">EDEN • Coordination</div>
+        <div className="space-x-2">
+          <button className="btn">Secondary</button>
+          <button className="btn btn-primary" onClick={() => alert("Hook to /api/tasks (POST)")}>Create Task</button>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-6xl p-4 space-y-4">
+        <div className="soft-card p-5">
+          <div className="text-sm text-gray-500">Dashboard</div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+            <Stat label="Tasks Completed" value={stats.done} sub="(all time, demo)" />
+            <Stat label="In Progress" value={stats.inprog} sub="now" />
+            <Stat label="Overdue" value={stats.overdue} sub="past due" />
+            <Stat label="API" value={health?.status || "probing…"} sub="/api/healthz" />
+          </div>
+        </div>
+
+        <div className="soft-card p-5">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="text-sm text-gray-500">Recent Tasks</div>
+            <input className="input w-64" placeholder="Search tasks or ID…" value={q} onChange={e=>setQ(e.target.value)} />
+          </div>
+          <div className="hr my-4"></div>
+          <div className="grid gap-3">
+            {filtered.length === 0 ? (
+              <div className="text-sm text-gray-500">No tasks found.</div>
+            ) : (
+              filtered.map(t => <TaskItem key={t.id} t={t} />)
+            )}
+          </div>
+        </div>
+
+        <div className="text-xs text-gray-500">
+          API status: {health?.status ?? "probing…"}
+        </div>
+      </main>
+    </div>
+  );
+}
+EOF
+
+# 4) Restart on port 5000 (webview requirement)
+pkill -f "vite" || true
+npm run dev --silent >/dev/null 2>&1 & disown
+echo "✅ UI wired to backend. Open the Webview on port 5000."
+```
+
+**Success check:**
+
+* The app runs in the Replit webview on **port 5000**.
+* The dashboard shows **real counts** (Done / In Progress / Overdue) and **Recent Tasks** from your API.
+* Bottom-left reads `API status: ok` (not “probing…”).
+* Typing in the search filters the task list locally.
+
+**Next:** wait for user
+
+---
+
+Mini dev lesson (to keep momentum): the “Google-ish” vibe is 80% tokens and motion curves. You now have soft neutrals, big radii, and short ease-out transitions. Next passes can add micro-interactions: 8–16px elevation steps on modals, 150–200ms color fades, and a single brand hue applied sparingly.
