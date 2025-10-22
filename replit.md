@@ -59,7 +59,15 @@ I prefer iterative development, with a focus on delivering functional increments
 - **Dev Server**: Runs on port 5000 with proxy to backend on port 3000
 
 ## Recent Changes
-- **2025-10-22 (Latest)**: Wired Create Task with Live Refresh (apps/ui):
+- **2025-10-22 (Latest)**: Added Inline Status Change + Ball-in-Court (BIC) Chips + Overdue Badges (apps/ui):
+  - **StatusSelect Component**: Inline dropdown for status changes (To do, In progress, Blocked, Complete, Cancelled)
+  - **Optimistic Updates**: UI updates immediately when changing status, with rollback on error
+  - **BICChip Component**: Shows ball_in_court assignee with blue dot indicator
+  - **Overdue Badge**: Red badge appears on tasks past due date and not complete
+  - **Live Stats**: Dashboard stats update automatically as you change task statuses
+  - **PATCH /api/tasks/:id**: Inline status changes persist to backend instantly
+  - Control where you read - no drill-down needed to update tasks
+- **2025-10-22**: Wired Create Task with Live Refresh (apps/ui):
   - **Project Picker**: Dropdown to select from all available projects
   - **Create Task Modal**: Soft Light themed modal with title input, Enter key support, autofocus
   - **Live POST**: Creates tasks via `/api/projects/:id/tasks` endpoint with dev auth

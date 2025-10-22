@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, getJSON } from "./lib/api";
 import CreateTaskModal from "./components/CreateTaskModal";
+import StatusSelect from "./components/StatusSelect";
+import BICChip from "./components/BICChip";
 
 function Stat({label, value, sub}) {
   return (
@@ -12,13 +14,33 @@ function Stat({label, value, sub}) {
   );
 }
 
-function TaskItem({ t }) {
-  const due = t.due_at ? new Date(t.due_at).toISOString().slice(0,10) : "—";
+function OverdueBadge({ due_at, status }) {
+  if (!due_at) return null;
+  const overdue = new Date(due_at) < new Date() && String(status).toLowerCase() !== "complete";
+  if (!overdue) return null;
   return (
-    <div className="soft-panel p-4 hover:bg-gray-100 transition cursor-pointer">
-      <div className="text-[15px]">{t.title}</div>
-      <div className="text-xs text-gray-500 mt-1">
-        Due {due} • {t.priority ?? "—"} • {t.status ?? "—"}
+    <span className="inline-flex items-center px-2 h-6 rounded-full bg-red-50 text-red-700 text-xs border border-red-200">
+      Overdue
+    </span>
+  );
+}
+
+function TaskItem({ t, projectId, onChanged }) {
+  const dueISO = t.due_at ? new Date(t.due_at).toISOString().slice(0,10) : "—";
+  return (
+    <div className="soft-panel p-4 hover:bg-gray-100 transition">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1">
+          <div className="text-[15px]">{t.title}</div>
+          <div className="mt-1 flex items-center gap-2">
+            <BICChip value={t.ball_in_court || t.bic} />
+            <OverdueBadge due_at={t.due_at} status={t.status} />
+          </div>
+          <div className="text-xs text-gray-500 mt-1">
+            Due {dueISO} • {t.priority ?? "—"} • ID {t.id.slice(0,8)}
+          </div>
+        </div>
+        <StatusSelect task={t} projectId={projectId} onChange={onChanged} />
       </div>
     </div>
   );
@@ -141,7 +163,20 @@ export default function App() {
               {filtered.length === 0 ? (
                 <div className="text-sm text-gray-500">No tasks found.</div>
               ) : (
-                filtered.map(t => <TaskItem key={t.id} t={t} />)
+                filtered.map(t => (
+                  <TaskItem
+                    key={t.id}
+                    t={t}
+                    projectId={projectId}
+                    onChanged={(updated) => {
+                      setTasks(prev => prev.map(x => 
+                        x.id === (updated?.id || t.id) 
+                          ? { ...x, ...(updated || {}) } 
+                          : x
+                      ));
+                    }}
+                  />
+                ))
               )}
             </div>
           )}
