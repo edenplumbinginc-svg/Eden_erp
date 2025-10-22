@@ -47,6 +47,20 @@ router.get('/', authenticate, requirePerm('projects:read'), async (req, res) => 
   }
 });
 
+// Get single project by ID
+router.get('/:id', authenticate, requirePerm('projects:read'), async (req, res) => {
+  try {
+    const r = await pool.query(
+      'SELECT id, name, code, status, created_at FROM public.projects WHERE id = $1',
+      [req.params.id]
+    );
+    if (r.rowCount === 0) return res.status(404).json({ error: 'project not found' });
+    res.json(r.rows[0]);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Create project
 router.post('/', authenticate, requirePerm('projects:write'), validate(CreateProjectSchema), async (req, res) => {
   try {
