@@ -3,6 +3,7 @@ import { api, getJSON } from "./lib/api";
 import CreateTaskModal from "./components/CreateTaskModal";
 import StatusSelect from "./components/StatusSelect";
 import BICChip from "./components/BICChip";
+import AllTasksView from "./components/AllTasksView";
 
 function Stat({label, value, sub}) {
   return (
@@ -155,6 +156,7 @@ export default function App() {
   const [tasksGroupBy, setTasksGroupBy] = useState("status");
   const [loadingPrefs, setLoadingPrefs] = useState(true);
   const [perfDays, setPerfDays] = useState(7);
+  const [view, setView] = useState("project"); // "project" or "all"
 
   // Load user preferences and projects
   useEffect(() => {
@@ -268,37 +270,71 @@ export default function App() {
   return (
     <div className="min-h-screen">
       <header className="soft-panel mx-auto max-w-6xl mt-6 p-4 flex items-center justify-between">
-        <div className="text-lg font-medium">EDEN • Coordination</div>
+        <div className="flex items-center gap-4">
+          <div className="text-lg font-medium">EDEN • Coordination</div>
+          <div className="flex gap-1">
+            <button
+              className={`btn text-sm px-3 py-1 ${view === 'project' ? 'bg-blue-500 text-white' : 'bg-gray-100'}`}
+              onClick={() => setView('project')}
+            >
+              Project View
+            </button>
+            <button
+              className={`btn text-sm px-3 py-1 ${view === 'all' ? 'bg-blue-500 text-white' : 'bg-gray-100'}`}
+              onClick={() => setView('all')}
+            >
+              All Tasks
+            </button>
+          </div>
+        </div>
         <div className="flex items-center gap-2">
-          <select
-            className="input w-64"
-            value={projectId}
-            onChange={e=>setProjectId(e.target.value)}
-            title="Select Project"
-          >
-            <option value="" disabled>Select a project…</option>
-            {projects.map(p => (
-              <option key={p.id} value={p.id}>
-                {p.name || p.code || p.id}
-              </option>
-            ))}
-          </select>
-          <button 
-            className="btn btn-primary" 
-            onClick={()=>setOpenModal(true)}
-            disabled={!projectId}
-          >
-            Create Task
-          </button>
-          <button 
-            className="btn"
-            style={{background: "#f3f4f6", border: "1px solid #e5e7eb"}}
-            onClick={handleRefreshOverdue}
-            disabled={recomputingOverdue}
-            title="Recompute overdue flags for all tasks"
-          >
-            {recomputingOverdue ? "Refreshing..." : "Refresh Overdue"}
-          </button>
+          {view === 'project' && (
+            <>
+              <select
+                className="input w-64"
+                value={projectId}
+                onChange={e=>setProjectId(e.target.value)}
+                title="Select Project"
+              >
+                <option value="" disabled>Select a project…</option>
+                {projects.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.name || p.code || p.id}
+                  </option>
+                ))}
+              </select>
+              <button 
+                className="btn btn-primary" 
+                onClick={()=>setOpenModal(true)}
+                disabled={!projectId}
+              >
+                Create Task
+              </button>
+              <button 
+                className="btn"
+                style={{background: "#f3f4f6", border: "1px solid #e5e7eb"}}
+                onClick={handleRefreshOverdue}
+                disabled={recomputingOverdue}
+                title="Recompute overdue flags for all tasks"
+              >
+                {recomputingOverdue ? "Refreshing..." : "Refresh Overdue"}
+              </button>
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-gray-600">Group:</label>
+                <select
+                  className="input w-32"
+                  value={tasksGroupBy}
+                  onChange={(e) => handleGroupByChange(e.target.value)}
+                  disabled={loadingPrefs}
+                  title="Group tasks by"
+                >
+                  <option value="status">Status</option>
+                  <option value="due">Due Date</option>
+                  <option value="none">None</option>
+                </select>
+              </div>
+            </>
+          )}
           <div className="flex items-center gap-2">
             <label className="text-sm text-gray-600">Perf:</label>
             <select
@@ -319,74 +355,66 @@ export default function App() {
               CSV
             </button>
           </div>
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600">Group:</label>
-            <select
-              className="input w-32"
-              value={tasksGroupBy}
-              onChange={(e) => handleGroupByChange(e.target.value)}
-              disabled={loadingPrefs}
-              title="Group tasks by"
-            >
-              <option value="status">Status</option>
-              <option value="due">Due Date</option>
-              <option value="none">None</option>
-            </select>
-          </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-6xl p-4 space-y-4">
-        <div className="soft-card p-5">
-          <div className="text-sm text-gray-500">Dashboard</div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
-            <Stat label="Tasks Completed" value={stats.done} sub="(current project)" />
-            <Stat label="In Progress" value={stats.inprog} sub="now" />
-            <Stat label="Overdue" value={stats.overdue} sub="past due" />
-            <Stat label="API" value={health?.status || "ok"} sub="/healthz" />
-          </div>
-        </div>
+        {view === 'project' ? (
+          <>
+            <div className="soft-card p-5">
+              <div className="text-sm text-gray-500">Dashboard</div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+                <Stat label="Tasks Completed" value={stats.done} sub="(current project)" />
+                <Stat label="In Progress" value={stats.inprog} sub="now" />
+                <Stat label="Overdue" value={stats.overdue} sub="past due" />
+                <Stat label="API" value={health?.status || "ok"} sub="/healthz" />
+              </div>
+            </div>
 
-        <div className="soft-card p-5">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="text-sm text-gray-500">Recent Tasks</div>
-            <input 
-              className="input w-64" 
-              placeholder="Search tasks or ID…" 
-              value={q} 
-              onChange={e=>setQ(e.target.value)} 
-            />
-          </div>
-          <div className="hr my-4"></div>
-          {loading ? (
-            <div className="text-sm text-gray-500">Loading tasks...</div>
-          ) : (
-            <div className="grid gap-3">
-              {filtered.length === 0 ? (
-                <div className="text-sm text-gray-500">No tasks found.</div>
+            <div className="soft-card p-5">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="text-sm text-gray-500">Recent Tasks</div>
+                <input 
+                  className="input w-64" 
+                  placeholder="Search tasks or ID…" 
+                  value={q} 
+                  onChange={e=>setQ(e.target.value)} 
+                />
+              </div>
+              <div className="hr my-4"></div>
+              {loading ? (
+                <div className="text-sm text-gray-500">Loading tasks...</div>
               ) : (
-                filtered.map(t => (
-                  <TaskItem
-                    key={t.id}
-                    t={t}
-                    projectId={projectId}
-                    onChanged={(updated) => {
-                      setTasks(prev => prev.map(x => 
-                        x.id === (updated?.id || t.id) 
-                          ? { ...x, ...(updated || {}) } 
-                          : x
-                      ));
-                    }}
-                  />
-                ))
+                <div className="grid gap-3">
+                  {filtered.length === 0 ? (
+                    <div className="text-sm text-gray-500">No tasks found.</div>
+                  ) : (
+                    filtered.map(t => (
+                      <TaskItem
+                        key={t.id}
+                        t={t}
+                        projectId={projectId}
+                        onChanged={(updated) => {
+                          setTasks(prev => prev.map(x => 
+                            x.id === (updated?.id || t.id) 
+                              ? { ...x, ...(updated || {}) } 
+                              : x
+                          ));
+                        }}
+                      />
+                    ))
+                  )}
+                </div>
               )}
             </div>
-          )}
-        </div>
 
-        <div className="text-xs text-gray-500">
-          API status: {health?.status ?? "ok"} • {tasks.length} tasks loaded
-        </div>
+            <div className="text-xs text-gray-500">
+              API status: {health?.status ?? "ok"} • {tasks.length} tasks loaded
+            </div>
+          </>
+        ) : (
+          <AllTasksView TaskItemComponent={TaskItem} />
+        )}
       </main>
 
       <CreateTaskModal

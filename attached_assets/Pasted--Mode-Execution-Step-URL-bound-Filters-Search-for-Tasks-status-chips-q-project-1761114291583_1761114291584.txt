@@ -1,0 +1,285 @@
+[Mode: Execution]
+
+**Step:** URL-bound **Filters & Search** for Tasks (status chips + q= + project/assignee params) with debounced fetch and a “Copy View Link” button.
+
+**Why it matters:** This locks shareable views now. Bulk actions, reports, and automations can all reuse the exact URL state—no rewires later.
+
+**Inputs needed:** None (uses your existing `/tasks` endpoint you just shipped).
+
+**Command (paste at repo root):**
+
+````bash
+# 1) Hook: tiny URL query-state manager
+mkdir -p client/src/hooks
+cat > client/src/hooks/useQueryState.ts <<'TS'
+import * as React from 'react';
+
+export function useQueryState<T extends Record<string,string | null | undefined>>() {
+  const [_, force] = React.useState(0);
+
+  function getAll(): Record<string,string> {
+    const sp = new URLSearchParams(window.location.search);
+    const out: Record<string,string> = {};
+    sp.forEach((v,k)=> { out[k]=v; });
+    return out;
+  }
+
+  function set(partial: T, { replace = false }: { replace?: boolean } = {}) {
+    const url = new URL(window.location.href);
+    const sp = url.searchParams;
+    Object.entries(partial).forEach(([k, v]) => {
+      if (v === null || v === undefined || v === '') sp.delete(k);
+      else sp.set(k, String(v));
+    });
+    const next = `${url.pathname}?${sp.toString()}${url.hash || ''}`;
+    if (replace) window.history.replaceState(null, '', next);
+    else window.history.pushState(null, '', next);
+    force(x=>x+1);
+  }
+
+  React.useEffect(() => {
+    const onPop = () => force(x=>x+1);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  return { getAll, set };
+}
+TS
+
+# 2) Hook: debounced fetcher for tasks that respects URL params
+cat > client/src/hooks/useTasksQuery.ts <<'TS'
+import * as React from 'react';
+
+type Task = {
+  id: string;
+  title: string;
+  status: string;
+  assignee_id?: string | null;
+  project_id?: string | null;
+  due_date?: string | null;
+  updated_at?: string | null;
+  is_overdue?: boolean;
+};
+
+type Result = {
+  items: Task[];
+  total: number;
+  page: number;
+  limit: number;
+};
+
+function toQuery(params: Record<string,string|undefined>) {
+  const sp = new URLSearchParams();
+  Object.entries(params).forEach(([k,v]) => {
+    if (v && v.length) sp.set(k, v);
+  });
+  return sp.toString();
+}
+
+export function useTasksQuery(params: Record<string,string|undefined>) {
+  const [data, setData] = React.useState<Result | null>(null);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    setError(null);
+    const q = toQuery(params);
+    const url = q ? `/tasks?${q}` : '/tasks';
+
+    const handle = setTimeout(async () => {
+      try {
+        const r = await fetch(url);
+        if (!r.ok) throw new Error(`${r.status}`);
+        const j = await r.json();
+        if (alive) setData({ items: j.items || [], total: j.total || 0, page: j.page || 1, limit: j.limit || 20 });
+      } catch (e:any) {
+        if (alive) setError(e?.message || 'fetch error');
+      } finally {
+        if (alive) setLoading(false);
+      }
+    }, 200); // debounce
+
+    return () => { alive = false; clearTimeout(handle); };
+  }, [JSON.stringify(params)]);
+
+  return { data, loading, error };
+}
+TS
+
+# 3) Component: compact filter bar (Soft Light tokens)
+mkdir -p client/src/components
+cat > client/src/components/TasksFilters.tsx <<'TSX'
+import * as React from 'react';
+import { useQueryState } from '../hooks/useQueryState';
+
+const STATUS = ['Backlog','In Progress','Blocked','Review','Done','Cancelled','overdue'] as const;
+
+export default function TasksFilters() {
+  const { getAll, set } = useQueryState();
+  const qp = getAll();
+
+  const [q, setQ] = React.useState(qp.q || '');
+  const [assignee, setAssignee] = React.useState(qp.assignee || '');
+  const [project, setProject] = React.useState(qp.project || '');
+  const [status, setStatus] = React.useState<string[]>( (qp.status?.split(',').filter(Boolean) || []) );
+
+  React.useEffect(() => {
+    set({ q, assignee, project, status: status.join(',') }, { replace: true });
+  }, [q, assignee, project, status.join(',')]);
+
+  function toggleStatus(s: string) {
+    setStatus(prev => prev.includes(s) ? prev.filter(x=>x!==s) : [...prev, s]);
+  }
+
+  return (
+    <div className="p-3 rounded-2xl shadow mb-3 flex flex-wrap items-center gap-2">
+      {/* Search */}
+      <input
+        aria-label="Search tasks"
+        className="px-3 py-2 rounded-2xl shadow focus:outline-none focus:ring"
+        placeholder="Search title/description…"
+        value={q}
+        onChange={(e)=> setQ(e.target.value)}
+      />
+
+      {/* Project */}
+      <input
+        aria-label="Project ID"
+        className="px-3 py-2 rounded-2xl shadow focus:outline-none focus:ring"
+        placeholder="project UUID"
+        value={project}
+        onChange={(e)=> setProject(e.target.value)}
+      />
+
+      {/* Assignee */}
+      <input
+        aria-label="Assignee ID"
+        className="px-3 py-2 rounded-2xl shadow focus:outline-none focus:ring"
+        placeholder="assignee UUID"
+        value={assignee}
+        onChange={(e)=> setAssignee(e.target.value)}
+      />
+
+      {/* Status chips */}
+      <div className="flex items-center gap-1 flex-wrap">
+        {STATUS.map(s => {
+          const active = status.includes(s);
+          return (
+            <button
+              key={s}
+              className={`text-xs px-2 py-1 rounded-2xl shadow transition-all duration-200 focus:outline-none focus:ring ${active ? '' : 'opacity-60'}`}
+              onClick={()=> toggleStatus(s)}
+              onKeyDown={(e) => { if (e.key === 'Enter') toggleStatus(s); }}
+              aria-pressed={active}
+            >
+              {s}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Copy view link */}
+      <button
+        className="ml-auto px-3 py-2 rounded-2xl shadow transition-all duration-200 hover:shadow-md focus:outline-none focus:ring"
+        onClick={async () => {
+          await navigator.clipboard.writeText(window.location.href);
+          alert('View link copied');
+        }}
+      >
+        Copy View Link
+      </button>
+    </div>
+  );
+}
+TSX
+
+# 4) Wire filters into Tasks page/list rendering
+applypatch <<'PATCH'
+*** Begin Patch
+*** Update File: client/src/App.tsx
+@@
+-import React from 'react';
++import React from 'react';
+ import Reports from './pages/Reports';
++import TasksFilters from './components/TasksFilters';
++import { useQueryState } from './hooks/useQueryState';
++import { useTasksQuery } from './hooks/useTasksQuery';
+ 
+ export default function App() {
+@@
+-  return (
+-    <div>
+-      {/* existing routing/layout */}
+-      {/* Minimal: mount Reports at /reports if you use a router; otherwise link from header */}
+-      <Reports />
+-    </div>
+-  );
++  const { getAll } = useQueryState();
++  const qp = getAll();
++  const { data, loading, error } = useTasksQuery({
++    status: qp.status,
++    assignee: qp.assignee,
++    project: qp.project,
++    q: qp.q,
++    page: qp.page,
++    limit: qp.limit,
++    sort: qp.sort
++  });
++
++  return (
++    <div>
++      {/* existing routing/layout */}
++      <TasksFilters />
++      {loading ? <div className="p-4">Loading…</div> : error ? <div className="p-4">Error: {error}</div> : (
++        <div className="p-2">
++          <div className="opacity-70 text-sm mb-2">Results: {data?.total ?? 0}</div>
++          {/* You already have TaskRow; re-use it if it's in scope */}
++          {data?.items?.length ? data.items.map((t:any) => (
++            <div key={t.id} className="p-3 mb-2 rounded-2xl shadow">{t.title}</div>
++          )) : <div className="opacity-70">No tasks.</div>}
++        </div>
++      )}
++      {/* Minimal: mount Reports until router is added */}
++      <Reports />
++    </div>
++  );
+ }
+*** End Patch
+PATCH
+
+# 5) Docs: add shareable views section
+applypatch <<'PATCH'
+*** Begin Patch
+*** Update File: docs/api-contract.md
+@@
+ ## Tasks — Filtered Listing
+@@
+ **Example**
+ ```bash
+ curl "$BASE_URL/tasks?status=overdue,In%20Progress&assignee=<UUID>&due_to=2025-11-01&q=pump&limit=20&page=1&sort=due_date:asc" \
+   -H "Authorization: Bearer $TOKEN"
+````
+
+*
+
++### Shareable Views (URL params)
++UI reads filters from URL and keeps them in sync. Copy the browser URL to share an exact view.
+*** End Patch
+PATCH
+
+echo "✅ URL-bound filters added (hook + filter bar + debounced fetch + shareable links + docs)"
+
+```
+
+**Success check:**
+- Open the Tasks screen:
+  - Toggle status chips, type a search, or set project/assignee → the URL updates (`?status=…&q=…`).
+  - Results update within ~200ms after typing stops.
+  - “Copy View Link” copies the full URL; pasting it in a new tab yields the same filtered list.
+- Hitting your backend `/tasks` with the same params returns identical items (pagination/sort stable).
+
+**Next:** wait for user
+```
