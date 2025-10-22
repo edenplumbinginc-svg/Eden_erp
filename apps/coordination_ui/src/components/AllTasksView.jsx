@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQueryState } from '../hooks/useQueryState';
 import { useTasksQuery } from '../hooks/useTasksQuery';
 import TasksFilters from './TasksFilters';
 import TaskItem from './TaskItem';
+import CreateTaskModal from './CreateTaskModal';
 
 export default function AllTasksView() {
   const { getAll, set } = useQueryState();
   const qp = getAll();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   
   const { data, loading, error } = useTasksQuery({
     status: qp.status,
@@ -25,7 +27,22 @@ export default function AllTasksView() {
 
   return (
     <div className="space-y-4">
-      <TasksFilters />
+      <div className="flex items-center justify-between">
+        <div className="flex-1">
+          <TasksFilters />
+        </div>
+        <button
+          className="px-4 py-2 rounded bg-black text-white hover:bg-gray-800 ml-4 whitespace-nowrap"
+          onClick={() => setIsCreateModalOpen(true)}
+        >
+          + Create Task
+        </button>
+      </div>
+
+      <CreateTaskModal 
+        isOpen={isCreateModalOpen} 
+        onClose={() => setIsCreateModalOpen(false)} 
+      />
       
       <div className="card p-5">
         <div className="flex items-center justify-between mb-4">

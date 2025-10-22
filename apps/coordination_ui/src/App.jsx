@@ -9,6 +9,7 @@ import DevAuthSwitcher from './components/DevAuthSwitcher';
 import EdenHeader from './components/EdenHeader';
 import TaskDetail from './pages/TaskDetail';
 import ProjectDetail from './pages/ProjectDetail';
+import CreateTaskPage from './pages/CreateTaskPage';
 import { ToasterProvider } from './components/Toaster';
 import GuestView from './pages/GuestView';
 import AllTasksView from './components/AllTasksView';
@@ -116,6 +117,7 @@ function AppContent() {
             }
           />
           <Route path="/alltasks" element={<AllTasksView />} />
+          <Route path="/tasks/new" element={<CreateTaskPage />} />
           <Route path="/reports" element={<Reports />} />
           <Route 
             path="/project/:projectId" 
