@@ -36,6 +36,8 @@ function IdleBadge({ needsIdleReminder }) {
 
 function TaskItem({ t, projectId, onChanged }) {
   const [snoozingIdle, setSnoozingIdle] = useState(false);
+  const [handoffDept, setHandoffDept] = useState('Operations');
+  const [handoffBusy, setHandoffBusy] = useState(false);
   const dueISO = t.due_at ? new Date(t.due_at).toISOString().slice(0,10) : "—";
   
   const handleSnoozeIdle = async () => {
@@ -54,6 +56,32 @@ function TaskItem({ t, projectId, onChanged }) {
     }
   };
   
+  const handleHandoff = async () => {
+    setHandoffBusy(true);
+    try {
+      const res = await api.post(`/api/tasks/${t.id}/handoff`, {
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to_department: handoffDept })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        if (data.skipped) {
+          alert('Handoff skipped (duplicate in last 24h)');
+        } else {
+          alert(`Handed off to ${handoffDept}`);
+          onChanged();
+        }
+      } else {
+        alert('Failed to handoff');
+      }
+    } catch (err) {
+      console.error('[Handoff] Error:', err);
+      alert('Failed to handoff');
+    } finally {
+      setHandoffBusy(false);
+    }
+  };
+  
   return (
     <div className="soft-panel p-4 hover:bg-gray-100 transition">
       <div className="flex items-start justify-between gap-3">
@@ -63,6 +91,11 @@ function TaskItem({ t, projectId, onChanged }) {
             <BICChip value={t.ball_in_court || t.bic} />
             <OverdueBadge due_at={t.due_at} status={t.status} />
             <IdleBadge needsIdleReminder={t.needs_idle_reminder} />
+            {t.department && (
+              <span className="inline-flex items-center px-2 h-6 rounded-full bg-blue-50 text-blue-700 text-xs border border-blue-200">
+                {t.department}
+              </span>
+            )}
           </div>
           <div className="text-xs text-gray-500 mt-1">
             Due {dueISO} • {t.priority ?? "—"} • ID {t.id.slice(0,8)}
@@ -80,6 +113,29 @@ function TaskItem({ t, projectId, onChanged }) {
               {snoozingIdle ? "..." : "Snooze 3d"}
             </button>
           )}
+          <div className="flex items-center gap-1">
+            <select
+              className="input text-xs px-2 py-1"
+              value={handoffDept}
+              onChange={(e) => setHandoffDept(e.target.value)}
+              title="Select destination department"
+            >
+              <option>Operations</option>
+              <option>Procurement</option>
+              <option>Accounting</option>
+              <option>Service</option>
+              <option>Estimating</option>
+              <option>Scheduling</option>
+            </select>
+            <button
+              className="btn text-xs px-2 py-1"
+              onClick={handleHandoff}
+              disabled={handoffBusy}
+              title="Handoff task to selected department"
+            >
+              {handoffBusy ? "..." : "Handoff"}
+            </button>
+          </div>
           <StatusSelect task={t} projectId={projectId} onChange={onChanged} />
         </div>
       </div>
