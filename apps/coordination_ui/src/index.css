@@ -933,6 +933,127 @@ html {
   color: var(--md-on-surface);
 }
 
+/* Dev Mode Banner */
+.dev-banner {
+  background: #fff3cd;
+  border: 1px solid var(--md-warning);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.dev-banner-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+
+.dev-banner-info {
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--md-on-surface);
+}
+
+.dev-banner-uuid {
+  font-size: 12px;
+  color: var(--md-on-surface-variant);
+  margin-top: var(--space-1);
+}
+
+.dev-banner-actions {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.dev-banner-minimized {
+  background: var(--md-warning);
+  padding: 6px var(--space-2);
+  margin-bottom: var(--space-1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.dev-banner-btn {
+  padding: 4px var(--space-2);
+  font-size: 12px;
+  background: var(--md-surface-variant);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 500;
+  transition: background var(--transition-fast);
+}
+
+.dev-banner-btn:hover {
+  background: var(--md-border);
+}
+
+.dev-banner-btn-primary {
+  background: var(--md-warning);
+}
+
+.dev-banner-btn-expand {
+  padding: 2px var(--space-1);
+  font-size: 11px;
+  background: rgba(0,0,0,0.1);
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.dev-banner-presets {
+  display: flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+
+.dev-banner-preset-btn {
+  padding: 6px var(--space-2);
+  font-size: 13px;
+  background: var(--md-surface-variant);
+  color: var(--md-on-surface);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.dev-banner-preset-btn.active {
+  background: var(--md-primary);
+  color: white;
+}
+
+.dev-banner-custom-form {
+  margin-top: var(--space-2);
+}
+
+.dev-banner-input-group {
+  margin-bottom: var(--space-1);
+}
+
+.dev-banner-input {
+  width: 100%;
+  padding: 6px;
+  margin-bottom: var(--space-1);
+  font-size: 13px;
+  border: 1px solid var(--md-border);
+  border-radius: var(--radius-sm);
+  background: var(--md-surface);
+  color: var(--md-on-surface);
+}
+
+.dev-banner-input:focus {
+  outline: none;
+  border-color: var(--md-primary);
+  box-shadow: 0 0 0 1px var(--md-primary);
+}
+
 /* Mobile Responsive */
 @media (max-width: 640px) {
   .container {

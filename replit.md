@@ -11,7 +11,7 @@ I prefer iterative development, with a focus on delivering functional increments
 ### UI/UX Decisions
 - **Frontend Framework**: React 18 with Vite.
 - **Styling**: 100% Google Material Design with custom CSS (Tailwind removed October 2025). Professional Google Workspace aesthetic with Roboto font, Material color palette, 4-level elevation system, 8px spacing grid, and smooth transitions.
-- **Development Authentication**: `DevAuthSwitcher` for quick user role switching.
+- **Development Authentication**: `DevAuthSwitcher` for quick user role switching, with collapsible/minimizable UI for clean testing views.
 - **API Integration**: Axios-based client with interceptors for development auth headers.
 - **Project Structure**: Monorepo with frontend in `apps/coordination_ui/`. Vite proxies `/api` to backend on port 3000.
 - **Material Design System**: Complete implementation with color variables (--md-primary: #1a73e8), elevation shadows (4 levels), spacing tokens (8/16/24/32/40/48px), typography scale (Roboto 300/400/500/700), button styles (raised, outlined, danger, success), form inputs with focus states, navigation tabs, cards with proper shadows, loading skeletons, and Material animations.
@@ -43,7 +43,7 @@ I prefer iterative development, with a focus on delivering functional increments
 - **Task Filtering**: Server-side filtering with pagination and sorting on `GET /api/tasks`. Supports filtering by status, priority, assignee, project, department, ball-in-court, due date ranges, overdue/idle flags, and text search. Configurable pagination (default 20, max 100) and sorting by created_at, updated_at, due_at, title, status, or priority.
 - **Shareable Views (URL-Bound Filtering)**: Frontend task filtering with URL query parameter synchronization for shareable views. Features include `useQueryState` and `useTasksQuery` hooks with shared subscription model, debounced API calls (300ms), status chips, search bar, advanced filters, "Copy View Link" button, and "All Tasks" view toggle. All filter state persists in URL for bookmarking and sharing.
 - **Notifications**: Supports `in_app`, `email`, and `push` channels.
-- **Frontend UI**: Coordination dashboard, project detail view, full-featured task view, guest view (public read-only), task create page/modal, and reports page.
+- **Frontend UI**: Coordination dashboard with "+ Create Task" button, project detail view with "+ Create Task" button, full-featured task view, guest view (public read-only), task create page/modal, and reports page.
 - **Task Creation**: Unified task creation interface with modal (in-context) and standalone page (/tasks/new for deep-linking). Features include required title field, optional fields (description, status, priority, assignee, due date, project), department/ball-in-court selection, and collapsible advanced options for voice/email intake (origin, voice_url, voice_transcript, ball_in_court_note). Form validation, toast notifications, react-query cache invalidation, and auto-navigation to created task.
 - **Reporting**: Four card layout (Tasks by Status, Tasks by Owner, Overdue Tasks, Recent Activity) with deep-linking. Performance leaderboard with 7/30-day task completion metrics and CSV export.
 - **Guest View**: Public read-only access to tasks and projects via token, with rate limiting and audit logging.

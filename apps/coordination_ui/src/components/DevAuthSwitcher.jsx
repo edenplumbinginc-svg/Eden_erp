@@ -28,30 +28,9 @@ function DevAuthSwitcher({ onUserChange }) {
 
   if (isMinimized) {
     return (
-      <div style={{
-        background: '#ffc107',
-        padding: '6px 12px',
-        marginBottom: '8px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderRadius: '4px',
-        fontSize: '12px',
-        fontWeight: '500'
-      }}>
+      <div className="dev-banner-minimized">
         <span>🔧 Dev Mode: {currentUser.email.split('@')[0]}</span>
-        <button
-          onClick={() => setIsMinimized(false)}
-          style={{
-            padding: '2px 8px',
-            fontSize: '11px',
-            background: 'rgba(0,0,0,0.1)',
-            border: 'none',
-            borderRadius: '3px',
-            cursor: 'pointer',
-            fontWeight: '500'
-          }}
-        >
+        <button onClick={() => setIsMinimized(false)} className="dev-banner-btn-expand">
           Expand
         </button>
       </div>
@@ -59,98 +38,55 @@ function DevAuthSwitcher({ onUserChange }) {
   }
 
   return (
-    <div style={{
-      background: '#fff3cd',
-      border: '1px solid #ffc107',
-      borderRadius: '4px',
-      padding: '12px',
-      marginBottom: '20px'
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+    <div className="dev-banner">
+      <div className="dev-banner-header">
         <div>
-          <strong>🔧 Dev Mode:</strong> {currentUser.email}
-          <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+          <div className="dev-banner-info">
+            <strong>🔧 Dev Mode:</strong> {currentUser.email}
+          </div>
+          <div className="dev-banner-uuid">
             UUID: {currentUser.id}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            onClick={() => setIsMinimized(true)}
-            style={{
-              padding: '4px 12px',
-              fontSize: '12px',
-              background: '#e9ecef',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
+        <div className="dev-banner-actions">
+          <button onClick={() => setIsMinimized(true)} className="dev-banner-btn">
             Minimize
           </button>
-          <button
-            onClick={() => setShowCustom(!showCustom)}
-            style={{
-              padding: '4px 12px',
-              fontSize: '12px',
-              background: '#ffc107',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
+          <button onClick={() => setShowCustom(!showCustom)} className="dev-banner-btn dev-banner-btn-primary">
             {showCustom ? 'Cancel' : 'Custom User'}
           </button>
         </div>
       </div>
 
       {showCustom ? (
-        <form onSubmit={handleCustomSubmit} style={{ marginTop: '12px' }}>
-          <div style={{ marginBottom: '8px' }}>
+        <form onSubmit={handleCustomSubmit} style={{ marginTop: 'var(--space-2)' }}>
+          <div style={{ marginBottom: 'var(--space-1)' }}>
             <input
               type="email"
               placeholder="Email"
               value={customEmail}
               onChange={(e) => setCustomEmail(e.target.value)}
-              style={{ width: '100%', padding: '6px', marginBottom: '8px', fontSize: '13px' }}
+              style={{ width: '100%', padding: '6px', marginBottom: 'var(--space-1)', fontSize: '13px' }}
             />
             <input
               type="text"
               placeholder="User ID (UUID)"
               value={customId}
               onChange={(e) => setCustomId(e.target.value)}
-              style={{ width: '100%', padding: '6px', marginBottom: '8px', fontSize: '13px' }}
+              style={{ width: '100%', padding: '6px', marginBottom: 'var(--space-1)', fontSize: '13px' }}
             />
           </div>
-          <button
-            type="submit"
-            style={{
-              padding: '6px 16px',
-              fontSize: '13px',
-              background: '#28a745',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
+          <button type="submit" className="btn btn-success">
             Set Custom User
           </button>
         </form>
       ) : (
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <div className="dev-banner-presets">
           {Object.entries(devAuth.presets).map(([key, preset]) => (
             <button
               key={key}
               onClick={() => handlePresetChange(key)}
-              style={{
-                padding: '6px 12px',
-                fontSize: '13px',
-                background: currentUser.email === preset.email ? '#007bff' : '#e9ecef',
-                color: currentUser.email === preset.email ? 'white' : '#333',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
+              className={`dev-banner-preset-btn ${currentUser.email === preset.email ? 'active' : ''}`}
             >
               {key.toUpperCase()} - {preset.role}
             </button>
