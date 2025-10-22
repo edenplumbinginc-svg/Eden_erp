@@ -26,11 +26,11 @@ if [[ "$code" == "401" || "$code" == "403" ]]; then pass "Protected reads enforc
 
 # 3) Authenticated read (with dev headers or TOKEN)
 if true; then  # Always run authenticated checks in dev mode
-  body=$(curl -sS "${auth_hdr[@]}" "${BASE_URL}/api/tasks?limit=5&page=1&sort=due_date:asc&q=test")
+  body=$(curl -sS "${auth_hdr[@]}" "${BASE_URL}/api/tasks?limit=5&page=1&sort=due_at:asc&q=test")
   echo "$body" | jq -e '.items' >/dev/null 2>&1 && pass "Reads return {items,...} shape" || fail "Response is not paged {items,...}"
   # 3a) Pagination stable ordering
   pg1_ids=$(echo "$body" | jq -r '.items[].id' | tr '\n' ' ')
-  body2=$(curl -sS "${auth_hdr[@]}" "${BASE_URL}/api/tasks?limit=5&page=2&sort=due_date:asc&q=test")
+  body2=$(curl -sS "${auth_hdr[@]}" "${BASE_URL}/api/tasks?limit=5&page=2&sort=due_at:asc&q=test")
   pg2_ids=$(echo "$body2" | jq -r '.items[].id' | tr '\n' ' ')
   if [[ "$pg1_ids" != "$pg2_ids" ]]; then pass "Pagination returns distinct pages"; else warn "Pagination likely broken (duplicate IDs)"; fi
 
