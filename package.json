@@ -51,6 +51,7 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
     "drizzle-kit": "^0.31.5"
   }
 }
