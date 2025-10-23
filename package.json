@@ -29,7 +29,7 @@
     "smoke:api": "node scripts/smoke-api.js"
   },
   "description": "Monolithic shell.",
-  "main": "index.js",
+  "main": "server.js",
   "keywords": [],
   "author": "",
   "dependencies": {
