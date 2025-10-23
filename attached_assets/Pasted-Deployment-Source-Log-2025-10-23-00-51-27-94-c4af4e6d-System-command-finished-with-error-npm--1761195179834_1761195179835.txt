@@ -1,0 +1,212 @@
+Deployment
+Source
+Log
+2025-10-23 00:51:27.94
+c4af4e6d
+System
+command finished with error [npm start]: exit status 1
+2025-10-23 00:52:24.43
+c4af4e6d
+User
+🔍 DATABASE_URL host: ep-quiet-silence-ae28zd1f.c-2.us-east-2.aws.neon.tech
+2025-10-23 00:52:24.43
+c4af4e6d
+User
+❌ Host ep-quiet-silence-ae28zd1f.c-2.us-east-2.aws.neon.tech is not a Supabase database. Eden ERP requires Supabase (pooler or direct connection).
+2025-10-23 00:52:24.45
+c4af4e6d
+System
+command finished with error [npm start]: exit status 1
+2025-10-23 00:52:26.21
+c4af4e6d
+System
+crash loop detected
+2025-10-23 00:52:33.47
+c4af4e6d
+System
+starting up user application
+2025-10-23 00:52:33.48
+c4af4e6d
+System
+forwarding local port 5000 to external port 80 (mapped as 1104)
+2025-10-23 00:52:34.43
+c4af4e6d
+User
+> eden_erp@0.1.0 prestart
+2025-10-23 00:52:34.43
+c4af4e6d
+User
+> node scripts/verify-db.js
+2025-10-23 00:52:34.54
+c4af4e6d
+User
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️ specify custom .env file path with { path: '/custom/path/.env' }
+2025-10-23 00:52:34.54
+c4af4e6d
+User
+🔍 DATABASE_URL host: ep-quiet-silence-ae28zd1f.c-2.us-east-2.aws.neon.tech
+2025-10-23 00:52:34.54
+c4af4e6d
+User
+❌ Host ep-quiet-silence-ae28zd1f.c-2.us-east-2.aws.neon.tech is not a Supabase database. Eden ERP requires Supabase (pooler or direct connection).
+2025-10-23 00:52:34.57
+c4af4e6d
+System
+command finished with error [npm start]: exit status 1
+2025-10-23 00:52:34.89
+c4af4e6d
+User
+> eden_erp@0.1.0 prestart
+2025-10-23 00:52:34.89
+c4af4e6d
+User
+> node scripts/verify-db.js
+2025-10-23 00:52:34.97
+c4af4e6d
+User
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️ load multiple .env files with { path: ['.env.local', '.env'] }
+2025-10-23 00:52:34.97
+c4af4e6d
+User
+🔍 DATABASE_URL host: ep-quiet-silence-ae28zd1f.c-2.us-east-2.aws.neon.tech
+2025-10-23 00:52:34.97
+c4af4e6d
+User
+❌ Host ep-quiet-silence-ae28zd1f.c-2.us-east-2.aws.neon.tech is not a Supabase database. Eden ERP requires Supabase (pooler or direct connection).
+2025-10-23 00:52:34.99
+c4af4e6d
+System
+command finished with error [npm start]: exit status 1
+2025-10-23 00:52:35.38
+c4af4e6d
+User
+> eden_erp@0.1.0 prestart
+2025-10-23 00:52:35.38
+c4af4e6d
+User
+> node scripts/verify-db.js
+2025-10-23 00:52:35.46
+c4af4e6d
+User
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
+2025-10-23 00:52:35.46
+c4af4e6d
+User
+🔍 DATABASE_URL host: ep-quiet-silence-ae28zd1f.c-2.us-east-2.aws.neon.tech
+2025-10-23 00:52:35.46
+c4af4e6d
+User
+❌ Host ep-quiet-silence-ae28zd1f.c-2.us-east-2.aws.neon.tech is not a Supabase database. Eden ERP requires Supabase (pooler or direct connection).
+2025-10-23 00:52:35.48
+c4af4e6d
+System
+command finished with error [npm start]: exit status 1
+2025-10-23 00:52:35.73
+c4af4e6d
+User
+> eden_erp@0.1.0 prestart
+2025-10-23 00:52:35.73
+c4af4e6d
+User
+> node scripts/verify-db.js
+2025-10-23 00:52:35.82
+c4af4e6d
+User
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
+2025-10-23 00:52:35.82
+c4af4e6d
+User
+🔍 DATABASE_URL host: ep-quiet-silence-ae28zd1f.c-2.us-east-2.aws.neon.tech
+2025-10-23 00:52:35.82
+c4af4e6d
+User
+❌ Host ep-quiet-silence-ae28zd1f.c-2.us-east-2.aws.neon.tech is not a Supabase database. Eden ERP requires Supabase (pooler or direct connection).
+2025-10-23 00:52:35.84
+c4af4e6d
+System
+command finished with error [npm start]: exit status 1
+2025-10-23 00:52:36.64
+c4af4e6d
+User
+> eden_erp@0.1.0 prestart
+2025-10-23 00:52:36.64
+c4af4e6d
+User
+> node scripts/verify-db.js
+2025-10-23 00:52:36.72
+c4af4e6d
+User
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️ override existing env vars with { override: true }
+2025-10-23 00:52:36.72
+c4af4e6d
+User
+🔍 DATABASE_URL host: ep-quiet-silence-ae28zd1f.c-2.us-east-2.aws.neon.tech
+2025-10-23 00:52:36.72
+c4af4e6d
+User
+❌ Host ep-quiet-silence-ae28zd1f.c-2.us-east-2.aws.neon.tech is not a Supabase database. Eden ERP requires Supabase (pooler or direct connection).
+2025-10-23 00:52:36.74
+c4af4e6d
+System
+command finished with error [npm start]: exit status 1
+2025-10-23 00:52:37.08
+c4af4e6d
+User
+> eden_erp@0.1.0 prestart
+2025-10-23 00:52:37.08
+c4af4e6d
+User
+> node scripts/verify-db.js
+2025-10-23 00:52:37.16
+c4af4e6d
+User
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ⚙️ specify custom .env file path with { path: '/custom/path/.env' }
+2025-10-23 00:52:37.17
+c4af4e6d
+User
+🔍 DATABASE_URL host: ep-quiet-silence-ae28zd1f.c-2.us-east-2.aws.neon.tech
+2025-10-23 00:52:37.17
+c4af4e6d
+User
+❌ Host ep-quiet-silence-ae28zd1f.c-2.us-east-2.aws.neon.tech is not a Supabase database. Eden ERP requires Supabase (pooler or direct connection).
+2025-10-23 00:52:37.18
+c4af4e6d
+System
+command finished with error [npm start]: exit status 1
+2025-10-23 00:52:38.67
+c4af4e6d
+User
+> eden_erp@0.1.0 prestart
+2025-10-23 00:52:38.67
+c4af4e6d
+User
+> node scripts/verify-db.js
+2025-10-23 00:52:38.75
+c4af4e6d
+User
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🔐 encrypt with Dotenvx: https://dotenvx.com
+2025-10-23 00:52:38.75
+c4af4e6d
+User
+🔍 DATABASE_URL host: ep-quiet-silence-ae28zd1f.c-2.us-east-2.aws.neon.tech
+2025-10-23 00:52:38.75
+c4af4e6d
+User
+❌ Host ep-quiet-silence-ae28zd1f.c-2.us-east-2.aws.neon.tech is not a Supabase database. Eden ERP requires Supabase (pooler or direct connection).
+
+Wrap
+
+Colors
+SESSION_SECRET
+••••••••
+PGPORT
+••••••••
+DB_SSL_REJECT_UNAUTHORIZED
+••••••••
+DATABASE_URL
+postgresql://postgres.jwehjdggkskmjrmoqibk:GdUoQM6HcTrho5yo@aws-1-us-east-2.pooler.supabase.com:5432/postgres
+EXPECTED_DB_HOST
+aws-1-us-east-2.pooler.supabase.com:5432
+EXPECTED_DB_PROJECT_REF
+jwehjdggkskmjrmoqibk
+Commands
