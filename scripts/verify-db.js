@@ -16,10 +16,7 @@ const refOk = !expectedRef || ref === expectedRef;
 const isAws0 = /aws-0-.*\.pooler\.supabase\.com:5432$/.test(url.host);
 const isAws1 = /aws-1-.*\.pooler\.supabase\.com:5432$/.test(url.host);
 const isSupabasePooler = isAws0 || isAws1;
-
-if (!isSupabasePooler) {
-  die(`Host ${url.host} is not a Supabase pooler (expected aws-0 or aws-1 ...pooler.supabase.com:5432)`);
-}
+const isNeon = /\.neon\.tech/.test(url.host);
 
 if (isAws1) {
   warn(`Using transaction pooler (aws-1). Session pooler (aws-0) is recommended for better compatibility.`);
@@ -34,5 +31,14 @@ if (expectedRef && !refOk) {
   die(`Project ref mismatch. Expected ${expectedRef} got ${ref || '(none)'}`);
 }
 
-const poolerType = isAws0 ? 'session (aws-0)' : 'transaction (aws-1)';
-console.log(`✅ DB checks passed: host=${url.host}, ref=${ref || '(n/a)'}, pooler=${poolerType}`);
+let dbType;
+if (isSupabasePooler) {
+  const poolerType = isAws0 ? 'session (aws-0)' : 'transaction (aws-1)';
+  dbType = `Supabase ${poolerType} pooler`;
+} else if (isNeon) {
+  dbType = 'Neon database';
+} else {
+  dbType = 'PostgreSQL database';
+}
+
+console.log(`✅ DB checks passed: host=${url.host}, type=${dbType}, ref=${ref || '(n/a)'}`);
