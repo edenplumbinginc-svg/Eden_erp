@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useQueryState } from '../hooks/useQueryState';
+import { apiService } from '../services/api';
 
 const STATUS_OPTIONS = ['open', 'todo', 'in_progress', 'review', 'done'];
 const STATUS_LABELS = {
@@ -25,6 +27,16 @@ export default function TasksFilters() {
   const [status, setStatus] = useState(qp.status?.split(',').filter(Boolean) || []);
   const [overdue, setOverdue] = useState(qp.overdue === 'true');
   const [idle, setIdle] = useState(qp.idle === 'true');
+
+  const { data: users = [], isLoading: usersLoading } = useQuery({
+    queryKey: ['users'],
+    queryFn: () => apiService.getUsers().then(res => res.data)
+  });
+
+  const { data: projects = [], isLoading: projectsLoading } = useQuery({
+    queryKey: ['projects'],
+    queryFn: () => apiService.getProjects().then(res => res.data)
+  });
 
   useEffect(() => {
     set(
@@ -166,23 +178,37 @@ export default function TasksFilters() {
           </div>
 
           <div>
-            <label className="block text-caption text-muted mb-1">Project ID</label>
-            <input
-              className="input w-full text-body"
-              placeholder="UUID"
-              value={project}
-              onChange={e => setProject(e.target.value)}
-            />
+            <label className="block text-caption text-muted mb-1">Project</label>
+            <select 
+              className="input w-full text-body" 
+              value={project} 
+              onChange={e => setProject(e.target.value || '')}
+              disabled={projectsLoading}
+            >
+              <option value="">All Projects</option>
+              {projects.map(p => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
-            <label className="block text-caption text-muted mb-1">Assignee ID</label>
-            <input
-              className="input w-full text-body"
-              placeholder="UUID"
-              value={assignee}
-              onChange={e => setAssignee(e.target.value)}
-            />
+            <label className="block text-caption text-muted mb-1">Assignee</label>
+            <select 
+              className="input w-full text-body" 
+              value={assignee} 
+              onChange={e => setAssignee(e.target.value || '')}
+              disabled={usersLoading}
+            >
+              <option value="">All Users</option>
+              {users.map(u => (
+                <option key={u.id} value={u.id}>
+                  {u.email}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </details>
