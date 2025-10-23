@@ -34,6 +34,26 @@ export default function DashboardPage() {
           + Create Task
         </Link>
       </div>
+
+      {totalTasks === 0 && !statusLoading && (
+        <div className="card" style={{
+          backgroundColor: 'rgba(26, 115, 232, 0.05)',
+          borderLeft: '4px solid var(--md-primary)',
+          padding: 'var(--space-4)',
+          marginBottom: 'var(--space-4)'
+        }}>
+          <div className="font-semibold text-body mb-2">👋 Welcome to Eden Coordination</div>
+          <p className="text-body text-muted mb-3">
+            Get started by creating your first task. Use the "+ Create Task" button above or explore these features:
+          </p>
+          <ul className="text-body text-muted space-y-1" style={{ paddingLeft: 'var(--space-3)' }}>
+            <li>✓ <strong>Create Tasks</strong> – Assign work, set due dates, and track status</li>
+            <li>✓ <strong>Ball Handoff</strong> – Pass responsibility between departments with notes</li>
+            <li>✓ <strong>Collaborate</strong> – Comment on tasks and get notified of updates</li>
+            <li>✓ <strong>Track Progress</strong> – View tasks by status, assignee, and priority</li>
+          </ul>
+        </div>
+      )}
       
       <div className="grid grid-cols-3 gap-4">
         <SummaryCard 
