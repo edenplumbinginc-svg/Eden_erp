@@ -79,22 +79,31 @@ I prefer iterative development, with a focus on delivering functional increments
 
 ## Production Deployment
 ### Configuration
-- **Deployment Target**: VM (stateful app with cron jobs and background queue)
-- **Build Process**: `cd apps/coordination_ui && npm install && npm run build` (builds React frontend to dist/)
+- **Deployment Target**: Reserved VM (stateful app with cron jobs and background queue)
+- **Build Process**: `npm run build` - Installs dependencies and builds React frontend to dist/
 - **Production Server**: `node server.js` (serves API + static frontend from dist/)
 - **Static File Serving**: Backend automatically serves production build when `apps/coordination_ui/dist/` exists
+- **Database**: Supabase PostgreSQL (aws-1-us-east-2.pooler.supabase.com) - Transaction Pooler
+- **Production URL**: https://edenerp-edenplumbinginc.replit.app
 
-### Pre-Launch Checklist Complete (October 2025)
-✅ Smoke tests passed (20/21 - 95% success rate)
-✅ RBAC permissions seeded for admin user
-✅ All 23 Phase 1-6 tasks completed and architect-approved
-✅ Production frontend build successful (343KB JS, 15KB CSS)
-✅ Static file serving configured in server.js
-✅ Health checks operational (6/6 passing)
-✅ Database connected and stable
-✅ Authentication working correctly
+### Deployment Complete (October 23, 2025)
+✅ **Successfully deployed to Replit Reserved VM**
+✅ Database migrated from Replit Neon to Supabase PostgreSQL
+✅ 34 projects and 37 tasks loaded successfully
+✅ Cron jobs operational (3:00 AM overdue check, 9:05 AM idle reminders)
+✅ Background queue processing emails and notifications
+✅ Health checks passing (API: OK, DB: Connected with TLS relaxed mode)
+✅ Frontend build successful and serving from production
+✅ DevAuthSwitcher enabled for pilot testing
 
-### Post-Deployment
-- Monitor logs during first pilot week for anomalies
-- Execute `npm run smoke:prod` to validate production health
-- Pilot testing with 2 family members recommended before wider rollout
+### Deployment Notes
+- **Database Secret Management**: Manual deployment secrets required (DATABASE_URL, EXPECTED_DB_HOST, EXPECTED_DB_PROJECT_REF). Removed auto-injected PGDATABASE, PGHOST, PGUSER, PGPASSWORD to prevent conflicts.
+- **TLS Configuration**: Using DB_SSL_REJECT_UNAUTHORIZED=false for Supabase transaction pooler compatibility.
+- **Port Configuration**: Internal port 3000 mapped to external port 80 for web access.
+
+### Post-Deployment Status
+✅ **Ready for internal pilot testing** (2 family members)
+- DevAuthSwitcher provides instant user role switching for testing
+- All core features operational (tasks, projects, notifications, reporting)
+- Daily email summaries sending successfully
+- Monitor production logs via Publishing → Logs tab
