@@ -46,8 +46,7 @@ function devIdentity(req) {
   };
 }
 
-// TODO: Replace with real JWT verification (Clerk/Auth0/Supabase)
-function verifyJwt(req) {
+async function verifyJwt(req) {
   const auth = req.headers.authorization || '';
   const [type, token] = auth.split(' ');
   
@@ -55,22 +54,23 @@ function verifyJwt(req) {
     return null;
   }
   
-  // Minimal stub: accept any non-empty token and attach a fake user
-  // In production, use jsonwebtoken.verify() with your JWT_SECRET
-  // Example:
-  // const decoded = jwt.verify(token, process.env.JWT_SECRET);
-  // return { email: decoded.email, role: decoded.role, id: decoded.sub };
-  
-  return {
-    email: 'user@edenmep.ca',
-    role: 'User',
-    id: null,
-    token: token
-  };
+  try {
+    const { verifySupabaseJwt } = require('./supabaseAuth');
+    const payload = await verifySupabaseJwt(token);
+    
+    return {
+      email: payload.email,
+      id: payload.sub,
+      token: token,
+      supabase: true
+    };
+  } catch (err) {
+    console.error('JWT verification failed:', err.message);
+    return null;
+  }
 }
 
-// Require authentication on all routes
-function requireAuth(req, res, next) {
+async function requireAuth(req, res, next) {
   let user = null;
 
   if (DEV) {
@@ -85,9 +85,11 @@ function requireAuth(req, res, next) {
         dev: true
       };
     }
-  } else {
-    // Production mode: require JWT
-    user = verifyJwt(req);
+  }
+  
+  // Also check for Supabase JWT (works in both dev and prod)
+  if (!user) {
+    user = await verifyJwt(req);
   }
 
   if (!user) {

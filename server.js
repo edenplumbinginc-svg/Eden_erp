@@ -203,6 +203,9 @@ app.get('/diag/db', async (req, res) => {
 // --- Public guest view routes (MUST be before auth middleware) ---
 app.use('/api/guest', require('./routes/guestView'));
 
+// --- User info endpoints (requires auth) ---
+app.use('/api', require('./routes/me'));
+
 // --- Enforce authentication on all /api/* routes ---
 const { requireAuth } = require('./middleware/auth');
 app.use('/api', requireAuth);
