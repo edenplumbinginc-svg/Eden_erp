@@ -1,0 +1,274 @@
+[Mode: Execution]
+
+Step: Replace DevAuthSwitcher with real Supabase Auth (login/signup + JWT → RBAC pipeline).
+
+Why it matters: Production-grade authentication unlocks real users and lets your existing RBAC spine enforce access end-to-end without dev-only switches.
+
+Inputs needed:
+
+Supabase project URL, ANON_KEY, SERVICE_ROLE_KEY.
+
+Your API DATABASE_URL.
+
+Existing RBAC tables (already present).
+
+Replit repo access.
+
+Command (exact actions to paste/run):
+
+Install deps (frontend + API):
+
+# Frontend app
+npm i @supabase/supabase-js
+
+# API app
+cd apps/api
+npm i jose cross-fetch @supabase/supabase-js
+
+
+Set environment variables (Replit Secrets):
+
+SUPABASE_URL=<your-supabase-url>
+SUPABASE_ANON_KEY=<anon>
+SUPABASE_SERVICE_ROLE_KEY=<service-role>   # server-side only
+SUPABASE_JWKS_URL=${SUPABASE_URL}/auth/v1/.well-known/jwks.json
+JWT_AUD=authenticated
+
+
+Frontend: create Supabase client and auth pages.
+
+apps/web/src/lib/supabaseClient.ts
+
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || (window as any).SUPABASE_URL || process.env.SUPABASE_URL;
+const supabaseAnon = import.meta.env.VITE_SUPABASE_ANON_KEY || (window as any).SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+
+export const supabase = createClient(supabaseUrl!, supabaseAnon!, {
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+});
+
+
+.env or Replit “Secrets” for frontend build:
+
+VITE_SUPABASE_URL=<your-supabase-url>
+VITE_SUPABASE_ANON_KEY=<anon>
+
+
+apps/web/src/routes/auth/Login.tsx (minimal, functional):
+
+import { useState } from "react";
+import { supabase } from "../../lib/supabaseClient";
+
+export default function Login() {
+  const [email, setEmail] = useState(""); 
+  const [password, setPassword] = useState(""); 
+  const [err, setErr] = useState<string | null>(null);
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setErr(null);
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) setErr(error.message);
+    else window.location.href = "/"; // go home
+  }
+
+  return (
+    <div className="mx-auto max-w-sm p-6">
+      <h1 className="text-xl font-semibold mb-4">Sign in</h1>
+      <form onSubmit={onSubmit} className="space-y-3">
+        <input className="w-full border p-2 rounded" placeholder="email" value={email} onChange={e=>setEmail(e.target.value)} />
+        <input className="w-full border p-2 rounded" placeholder="password" type="password" value={password} onChange={e=>setPassword(e.target.value)} />
+        {err && <p className="text-red-600 text-sm">{err}</p>}
+        <button className="w-full border p-2 rounded">Login</button>
+      </form>
+      <a className="text-sm underline block mt-3" href="/auth/register">Create account</a>
+    </div>
+  );
+}
+
+
+apps/web/src/routes/auth/Register.tsx:
+
+import { useState } from "react";
+import { supabase } from "../../lib/supabaseClient";
+
+export default function Register() {
+  const [email, setEmail] = useState(""); 
+  const [password, setPassword] = useState(""); 
+  const [err, setErr] = useState<string | null>(null);
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setErr(null);
+    const { error } = await supabase.auth.signUp({ email, password });
+    if (error) setErr(error.message);
+    else window.location.href = "/auth/login";
+  }
+
+  return (
+    <div className="mx-auto max-w-sm p-6">
+      <h1 className="text-xl font-semibold mb-4">Create account</h1>
+      <form onSubmit={onSubmit} className="space-y-3">
+        <input className="w-full border p-2 rounded" placeholder="email" value={email} onChange={e=>setEmail(e.target.value)} />
+        <input className="w-full border p-2 rounded" placeholder="password" type="password" value={password} onChange={e=>setPassword(e.target.value)} />
+        {err && <p className="text-red-600 text-sm">{err}</p>}
+        <button className="w-full border p-2 rounded">Sign up</button>
+      </form>
+      <a className="text-sm underline block mt-3" href="/auth/login">Back to login</a>
+    </div>
+  );
+}
+
+
+Session bridge → RBAC: on app boot, fetch session and call your /me/permissions endpoint; store in your existing global store.
+
+// apps/web/src/hooks/useAuthBootstrap.ts
+import { useEffect } from "react";
+import { supabase } from "../lib/supabaseClient";
+import { usePermissionsStore } from "../state/permissions";
+
+export function useAuthBootstrap() {
+  const setPerms = usePermissionsStore(s => s.set);
+  useEffect(() => {
+    const init = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) return;
+      const jwt = data.session.access_token;
+      const res = await fetch("/api/me/permissions", { headers: { Authorization: `Bearer ${jwt}` }});
+      if (res.ok) {
+        const { permissions, roleSlugs } = await res.json();
+        setPerms({ permissions: new Set(permissions), roles: roleSlugs });
+      }
+    };
+    init();
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) setPerms({ permissions: new Set(), roles: [] });
+    });
+    return () => { sub.subscription.unsubscribe(); };
+  }, [setPerms]);
+}
+
+
+API: auth middleware (verify Supabase JWT via JWKS, attach RBAC):
+
+apps/api/src/auth/jwt.ts
+
+import { createRemoteJWKSet, jwtVerify } from "jose";
+import fetch from "cross-fetch";
+
+const jwks = createRemoteJWKSet(new URL(process.env.SUPABASE_JWKS_URL!));
+
+export async function verifyJwt(token: string) {
+  const { payload } = await jwtVerify(token, jwks, {
+    issuer: process.env.SUPABASE_URL,
+    audience: process.env.JWT_AUD || "authenticated",
+  });
+  return payload; // contains sub (user id), email, etc.
+}
+
+
+apps/api/src/middleware/auth.ts
+
+import type { Request, Response, NextFunction } from "express";
+import { verifyJwt } from "../auth/jwt";
+import { db } from "../db"; // your drizzle instance
+import { userRoles, rolePermissions, permissions, roles } from "../db/schema/rbac";
+import { eq, inArray } from "drizzle-orm";
+
+export async function requireAuth(req: Request, res: Response, next: NextFunction) {
+  try {
+    const header = req.headers.authorization || "";
+    const token = header.startsWith("Bearer ") ? header.slice(7) : null;
+    if (!token) return res.status(401).json({ error: "Missing bearer token" });
+
+    const payload: any = await verifyJwt(token);
+    const userId = payload.sub as string;
+    (req as any).auth = { userId, email: payload.email };
+
+    // Load roles (UUIDs) for the user
+    const urs = await db.select().from(userRoles).where(eq(userRoles.userId, userId as any));
+    const roleIds = urs.map(u => u.roleId);
+    let permSlugs: string[] = [];
+    let roleSlugs: string[] = [];
+
+    if (roleIds.length) {
+      const rps = await db.select().from(rolePermissions).where(inArray(rolePermissions.roleId, roleIds));
+      const permIds = rps.map(x => x.permissionId);
+      if (permIds.length) {
+        const perms = await db.select().from(permissions).where(inArray(permissions.id, permIds));
+        permSlugs = perms.map(p => (p as any).code ?? (p as any).slug); // your current column is 'code'
+      }
+      const rs = await db.select().from(roles).where(inArray(roles.id, roleIds));
+      roleSlugs = rs.map(r => (r as any).slug);
+    }
+
+    (req as any).rbac = { userId, roleSlugs, permSet: new Set(permSlugs) };
+    next();
+  } catch (e) {
+    return res.status(401).json({ error: "Invalid token" });
+  }
+}
+
+export function requirePerm(perm: string) {
+  return (req: any, res: any, next: any) => {
+    const set: Set<string> | undefined = req?.rbac?.permSet;
+    if (!set || !set.has(perm)) return res.status(403).json({ error: "Forbidden" });
+    next();
+  };
+}
+
+
+Add a current-user probe endpoint:
+
+// apps/api/src/routes/me.ts
+import { Router } from "express";
+import { requireAuth } from "../middleware/auth";
+const router = Router();
+
+router.get("/me/permissions", requireAuth, async (req: any, res) => {
+  const { roleSlugs, permSet } = req.rbac;
+  res.json({ roleSlugs, permissions: Array.from(permSet) });
+});
+
+export default router;
+
+
+Wire middleware/routes (where your Express app initializes):
+
+import meRoutes from "./routes/me";
+// ...
+app.use("/api", meRoutes);
+
+
+Assign roles on signup (optional initial automation):
+
+A tiny server function to auto-assign viewer on first login; promote via admin UI later.
+
+// apps/api/src/jobs/assignDefaultRole.ts
+import { db } from "../db";
+import { userRoles, roles } from "../db/schema/rbac";
+import { eq } from "drizzle-orm";
+
+export async function ensureDefaultRole(userId: string) {
+  const [viewer] = await db.select().from(roles).where(eq(roles.slug, "viewer"));
+  if (!viewer) return;
+  await db.insert(userRoles).values({ userId: userId as any, roleId: viewer.id }).onConflictDoNothing();
+}
+
+
+Hook this after successful login webhooks or expose an admin action for controlled assignment.
+
+Success check:
+
+Visit /auth/register → create user → login at /auth/login.
+
+In network tab, /api/me/permissions returns { roleSlugs: ["viewer"], permissions: ["projects:read","tasks:read"] } (or empty until you assign roles).
+
+Hitting any protected endpoint without a JWT returns 401; with JWT but missing permission returns 403.
+
+UI shows/hides buttons via your existing useHasPermission('…') using the loaded permission set.
+
+Next: wait for user.
+
+When you paste your current auth.ts (API) and useHasPermission (web), I’ll diff them and splice in the minimal edits so everything compiles cleanly and your Task module immediately respects real auth.
