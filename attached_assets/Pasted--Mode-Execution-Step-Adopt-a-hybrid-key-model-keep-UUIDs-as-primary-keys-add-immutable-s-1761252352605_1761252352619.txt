@@ -1,0 +1,176 @@
+[Mode: Execution]
+
+**Step:** Adopt a hybrid key model: keep UUIDs as primary keys, add immutable string `slug` keys for roles/permissions, then seed via slugs.
+
+**Why it matters:** You get speed (human-readable keys for seeding/UI) without breaking logic (stable UUID FK integrity across environments).
+
+**Inputs needed:**
+
+* Your current Drizzle schema for `roles`, `permissions`, `role_permissions`, `user_roles`.
+* Access to run a migration + seed in Replit.
+
+**Command (schema update + seed):**
+
+1. **Update schema** to add `slug` with uniqueness (don’t remove UUIDs).
+
+```ts
+// apps/api/src/db/schema/rbac.ts
+import { pgTable, varchar, timestamp, uuid, primaryKey, uniqueIndex } from "drizzle-orm/pg-core";
+
+// ROLES
+export const roles = pgTable("roles", {
+  id: uuid("id").defaultRandom().primaryKey(),        // keep UUID
+  slug: varchar("slug", { length: 64 }).notNull(),     // new: 'admin','operations', etc.
+  label: varchar("label", { length: 120 }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).defaultNow(),
+}, (t) => ({
+  slugIdx: uniqueIndex("roles_slug_uq").on(t.slug),
+}));
+
+// PERMISSIONS
+export const permissions = pgTable("permissions", {
+  id: uuid("id").defaultRandom().primaryKey(),         // keep UUID
+  slug: varchar("slug", { length: 128 }).notNull(),    // new: 'projects:read','tasks:create', etc.
+  label: varchar("label", { length: 160 }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).defaultNow(),
+}, (t) => ({
+  slugIdx: uniqueIndex("permissions_slug_uq").on(t.slug),
+}));
+
+// ROLE_PERMISSIONS (FKs stay UUID; we’ll resolve by slug in seed)
+export const rolePermissions = pgTable("role_permissions", {
+  roleId: uuid("role_id").notNull(),
+  permissionId: uuid("permission_id").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).defaultNow(),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.roleId, t.permissionId] })
+}));
+
+// USER_ROLES unchanged (UUID FKs)
+export const userRoles = pgTable("user_roles", {
+  userId: uuid("user_id").notNull(),
+  roleId: uuid("role_id").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true, mode: "date" }),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).defaultNow(),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.userId, t.roleId] })
+}));
+```
+
+2. **Create a safe migration** to add slugs if the columns don’t exist:
+
+```sql
+-- apps/api/sql/migrations/20251023_add_rbac_slugs.sql
+alter table roles add column if not exists slug varchar(64);
+alter table permissions add column if not exists slug varchar(128);
+create unique index if not exists roles_slug_uq on roles(slug);
+create unique index if not exists permissions_slug_uq on permissions(slug);
+```
+
+3. **Seed via slugs** (works across all envs; internally resolves to UUIDs):
+
+```ts
+// apps/api/src/db/seeds/rbacSeed.ts
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Client } from "pg";
+import { roles, permissions, rolePermissions } from "../schema/rbac";
+import { eq, inArray } from "drizzle-orm";
+
+const ROLES = [
+  { slug: "admin",        label: "Administrator" },
+  { slug: "operations",   label: "Operations" },
+  { slug: "contributor",  label: "Contributor" },
+  { slug: "viewer",       label: "Viewer" },
+] as const;
+
+const PERMS = [
+  "projects:read","projects:create","projects:update","projects:delete",
+  "tasks:read","tasks:create","tasks:update","tasks:delete",
+  "attachments:upload","attachments:delete",
+  "comments:write","comments:delete",
+  "rbac:manage"
+] as const;
+
+const MAP: Record<string, string[]> = {
+  admin:        [...PERMS],
+  operations:   ["projects:read","projects:create","projects:update","tasks:read","tasks:create","tasks:update","attachments:upload","comments:write"],
+  contributor:  ["projects:read","tasks:read","tasks:create","tasks:update","attachments:upload","comments:write"],
+  viewer:       ["projects:read","tasks:read"],
+};
+
+async function main() {
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+  const db = drizzle(client);
+
+  // Upsert roles by slug
+  for (const r of ROLES) {
+    await db.insert(roles).values({ slug: r.slug, label: r.label }).onConflictDoUpdate({
+      target: roles.slug,
+      set: { label: r.label },
+    });
+  }
+
+  // Upsert permissions by slug
+  for (const p of PERMS) {
+    await db.insert(permissions).values({ slug: p, label: p }).onConflictDoUpdate({
+      target: permissions.slug,
+      set: { label: p },
+    });
+  }
+
+  // Pull UUIDs to map
+  const dbRoles = await db.select().from(roles).where(inArray(roles.slug, ROLES.map(r=>r.slug)));
+  const dbPerms = await db.select().from(permissions).where(inArray(permissions.slug, PERMS as unknown as string[]));
+
+  const roleBySlug = Object.fromEntries(dbRoles.map(r => [r.slug, r]));
+  const permBySlug = Object.fromEntries(dbPerms.map(p => [p.slug, p]));
+
+  // Link role->permissions using UUIDs resolved from slugs
+  for (const [roleSlug, permSlugs] of Object.entries(MAP)) {
+    const r = roleBySlug[roleSlug];
+    if (!r) continue;
+    for (const ps of permSlugs) {
+      const p = permBySlug[ps];
+      if (!p) continue;
+      await db.insert(rolePermissions).values({ roleId: r.id, permissionId: p.id }).onConflictDoNothing();
+    }
+  }
+
+  await client.end();
+  console.log("✅ RBAC seed by slug complete");
+}
+
+main().catch((e) => { console.error(e); process.exit(1); });
+```
+
+4. **Run migration + seed:**
+
+```bash
+cd apps/api
+# if you keep SQL migrations separate, run them; otherwise use your drizzle migration command
+psql "$DATABASE_URL" -f ./src/db/../sql/migrations/20251023_add_rbac_slugs.sql 2>/dev/null || true
+
+# wire an npm script if not present:
+# package.json -> "db:seed:rbac": "tsx src/db/seeds/rbacSeed.ts"
+npm run db:seed:rbac
+```
+
+5. **Update permission checks to prefer slugs in code ergonomics** while still consulting UUIDs in joins (no code change to FKs required). In your **frontend guard** keep:
+
+```ts
+// useHasPermission('tasks:create') — slug string everywhere in UI
+```
+
+In your **backend middleware**, you likely already resolve a Set<string> of permission slugs on session load; keep that pattern.
+
+**Success check:**
+
+* `select slug from roles order by slug;` returns `admin, contributor, operations, viewer`.
+* `select slug from permissions limit 5;` returns readable strings.
+* Logging in as different users toggles UI affordances via `useHasPermission('…')`.
+* Existing data untouched (UUIDs preserved); no FK churn.
+
+**Next:** wait for user.
+
+If you paste your current `rbac.ts` and seed file, I’ll diff it in-line and give you the exact minimal edits so we don’t churn your repo.
