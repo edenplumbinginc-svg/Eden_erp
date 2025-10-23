@@ -244,7 +244,7 @@ export default function TaskForm({ onSubmit, onCancel, initialData = {}, submitL
               rows={2}
               value={formData.ball_in_court_note}
               onChange={(e) => handleChange('ball_in_court_note', e.target.value)}
-              placeholder="Note about current ball in court status"
+              placeholder="Note about current Ball in Court status"
             />
           </div>
         </div>

@@ -62,7 +62,7 @@ function TaskList({ project, users, onBack }) {
   };
 
   const handleUpdate = async (task) => {
-    const newStatus = prompt('Enter new status (open/in_progress/closed):', task.status);
+    const newStatus = prompt('Enter new status (open/todo/in_progress/review/done):', task.status);
     if (!newStatus) return;
     try {
       await apiService.updateTask(task.id, { status: newStatus });
@@ -217,7 +217,7 @@ function TaskList({ project, users, onBack }) {
                 <div className="ball-status">
                   <span className="ball-icon">⚽</span>
                   <span>
-                    Ball in court: {
+                    Ball in Court: {
                       task.ball_in_court 
                         ? users.find(u => u.id === task.ball_in_court)?.email || 'Unknown'
                         : 'Unassigned'
