@@ -23,7 +23,7 @@ I prefer iterative development, with a focus on delivering functional increments
 - **Database**: Supabase PostgreSQL with Drizzle ORM.
 - **Runtime**: Node.js 20.
 - **Authentication**: Global authentication on `/api/*` routes, supporting development headers and JWT.
-- **RBAC**: Complete foundation with normalized tables, module-based permission naming, and middleware.
+- **RBAC (Role-Based Access Control)**: Complete production-ready system with 4 roles (Administrator, Operations, Contributor, Read-Only Viewer), 35+ granular permissions (project.view/create/edit/delete, task.view/create/edit/delete, task.comment, comments:read/write), backend enforcement via `requirePerm()` middleware on 27+ API endpoints, frontend permission-aware UI using `useHasPermission()` hook, database normalized role/permission tables, and architect-verified security (no privilege escalation holes).
 - **Airtight Layer**: Middleware for Zod schema validation, Rate Limiting, Audit Logs, Idempotency, Background Job Queue, and PII Scrubbing.
 - **Monitoring**: Health checks, structured JSON logging, Sentry integration, and automated post-deploy gates.
 - **Smoke Tests**: Automated API health checks.
@@ -44,7 +44,7 @@ I prefer iterative development, with a focus on delivering functional increments
 - **Task Filtering**: Server-side filtering with pagination and sorting on `GET /api/tasks`. Supports filtering by status, priority, assignee, project, department, ball-in-court, due date ranges, overdue/idle flags, and text search. Configurable pagination (default 20, max 100) and sorting by created_at, updated_at, due_at, title, status, or priority.
 - **Shareable Views (URL-Bound Filtering)**: Frontend task filtering with URL query parameter synchronization for shareable views. Features include `useQueryState` and `useTasksQuery` hooks with shared subscription model, debounced API calls (300ms), status chips, search bar, advanced filters, "Copy View Link" button, and "All Tasks" view toggle. All filter state persists in URL for bookmarking and sharing.
 - **Notifications**: Supports `in_app`, `email`, and `push` channels.
-- **Frontend UI**: Coordination dashboard with "+ Create Task" button, project detail view with "+ Create Task" button, full-featured task view, guest view (public read-only), task create page/modal, and reports page.
+- **Frontend UI**: Coordination dashboard with "+ Create Task" button, project detail view with "+ Create Task" button, full-featured task view, guest view (public read-only), task create page/modal, reports page, and 5 additional pages (Project Request Form, Audit Log Viewer, Intake Queue, Team Overview, Archive View).
 - **Task Creation**: Unified task creation interface with modal (in-context) and standalone page (/tasks/new for deep-linking). Features include required title field, optional fields (description, status, priority, assignee, due date, project), department/ball-in-court selection, and collapsible advanced options for voice/email intake (origin, voice_url, voice_transcript, ball_in_court_note). Form validation, toast notifications, react-query cache invalidation, and auto-navigation to created task.
 - **Reporting**: Four card layout (Tasks by Status, Tasks by Owner, Overdue Tasks, Recent Activity) with deep-linking. Performance leaderboard with 7/30-day task completion metrics and CSV export.
 - **Guest View**: Public read-only access to tasks and projects via token, with rate limiting and audit logging.
