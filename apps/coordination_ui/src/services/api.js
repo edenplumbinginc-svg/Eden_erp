@@ -99,6 +99,11 @@ export const apiService = {
 export { api };
 
 // Dev Auth Control - allows switching users to test different permissions
+let currentDevUser = {
+  email: 'test@edenplumbing.com',
+  id: '855546bf-f53d-4538-b8d5-cd30f5c157a2'
+};
+
 export const devAuth = {
   getCurrentUser: () => ({ ...currentDevUser }),
   
