@@ -289,6 +289,24 @@ if (process.env.NODE_ENV !== 'production') {
   });
 }
 
+// --- Serve production frontend (static files) ---
+const path = require('path');
+const fs = require('fs');
+const frontendDistPath = path.join(__dirname, 'apps', 'coordination_ui', 'dist');
+
+if (fs.existsSync(frontendDistPath)) {
+  app.use(express.static(frontendDistPath));
+  
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/db') || req.path.startsWith('/health')) {
+      return next();
+    }
+    res.sendFile(path.join(frontendDistPath, 'index.html'));
+  });
+  
+  logger.info('Serving production frontend from dist folder');
+}
+
 // --- Sentry error handler (must be after routes, before other error handlers) ---
 if (sentryEnabled) {
   app.use(Sentry.Handlers.errorHandler());

@@ -7,3 +7,5 @@ node_modules/
 .vscode/
 *.log
 /tmp/logs/
+dist/
+apps/coordination_ui/dist/

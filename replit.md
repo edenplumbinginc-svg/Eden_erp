@@ -76,3 +76,25 @@ I prefer iterative development, with a focus on delivering functional increments
 - **Styling**: Google Material Design (custom CSS, Tailwind removed October 2025)
 - **Data Fetching**: React Query
 - **Dev Server**: Runs on port 5000 with proxy to backend on port 3000
+
+## Production Deployment
+### Configuration
+- **Deployment Target**: VM (stateful app with cron jobs and background queue)
+- **Build Process**: `cd apps/coordination_ui && npm install && npm run build` (builds React frontend to dist/)
+- **Production Server**: `node server.js` (serves API + static frontend from dist/)
+- **Static File Serving**: Backend automatically serves production build when `apps/coordination_ui/dist/` exists
+
+### Pre-Launch Checklist Complete (October 2025)
+✅ Smoke tests passed (20/21 - 95% success rate)
+✅ RBAC permissions seeded for admin user
+✅ All 23 Phase 1-6 tasks completed and architect-approved
+✅ Production frontend build successful (343KB JS, 15KB CSS)
+✅ Static file serving configured in server.js
+✅ Health checks operational (6/6 passing)
+✅ Database connected and stable
+✅ Authentication working correctly
+
+### Post-Deployment
+- Monitor logs during first pilot week for anomalies
+- Execute `npm run smoke:prod` to validate production health
+- Pilot testing with 2 family members recommended before wider rollout
