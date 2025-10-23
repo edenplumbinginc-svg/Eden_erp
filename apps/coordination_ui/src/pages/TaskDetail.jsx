@@ -11,6 +11,53 @@ import Breadcrumbs from "../components/Breadcrumbs";
 import InlineEdit from "../components/InlineEdit";
 import InlineAssigneeEdit from "../components/InlineAssigneeEdit";
 import ConfirmDialog from "../components/ConfirmDialog";
+import TagsEditor from "../components/TagsEditor";
+import { getStatusLabel } from "../constants/statusLabels";
+
+function TaskMetadata({ task }) {
+  const { data: projects = [] } = useQuery({
+    queryKey: ['projects'],
+    queryFn: () => apiService.getProjects().then(res => res.data)
+  });
+
+  const project = projects.find(p => p.id === task?.project_id);
+
+  return (
+    <div className="card">
+      <div className="font-semibold mb-3">Task Details</div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <div className="text-caption text-muted">Project</div>
+          <div className="text-body font-medium">{project?.name || project?.title || 'No project'}</div>
+        </div>
+        <div>
+          <div className="text-caption text-muted">Department</div>
+          <div className="text-body font-medium">{task?.department || 'Not assigned'}</div>
+        </div>
+        <div>
+          <div className="text-caption text-muted">Status</div>
+          <div className="text-body font-medium">{getStatusLabel(task?.status)}</div>
+        </div>
+        <div>
+          <div className="text-caption text-muted">Priority</div>
+          <div className="text-body font-medium capitalize">{task?.priority || 'Normal'}</div>
+        </div>
+        <div>
+          <div className="text-caption text-muted">Due Date</div>
+          <div className="text-body font-medium">
+            {task?.due_at ? new Date(task.due_at).toLocaleDateString() : 'No due date'}
+          </div>
+        </div>
+        <div>
+          <div className="text-caption text-muted">Created</div>
+          <div className="text-body font-medium">
+            {task?.created_at ? new Date(task.created_at).toLocaleDateString() : '—'}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function daysSince(ts) {
   if (!ts) return null;
@@ -138,6 +185,25 @@ function Comments({ taskId }) {
   );
 }
 
+function getFileIcon(mime) {
+  if (mime?.startsWith('image/')) return '🖼️';
+  if (mime?.startsWith('video/')) return '🎥';
+  if (mime?.startsWith('audio/')) return '🎵';
+  if (mime?.includes('pdf')) return '📄';
+  if (mime?.includes('word') || mime?.includes('document')) return '📝';
+  if (mime?.includes('sheet') || mime?.includes('excel')) return '📊';
+  if (mime?.includes('zip') || mime?.includes('archive')) return '📦';
+  return '📎';
+}
+
+function formatFileSize(bytes) {
+  if (!bytes) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+}
+
 function Attachments({ taskId }) {
   const qc = useQueryClient();
   const { push } = useToaster();
@@ -146,6 +212,7 @@ function Attachments({ taskId }) {
   const [uploadPct, setUploadPct] = useState(0);
   const [uploadErr, setUploadErr] = useState(null);
   const [uploadOk, setUploadOk] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState(null);
 
   const { data } = useQuery({
     queryKey: ["attachments", taskId],
@@ -192,6 +259,7 @@ function Attachments({ taskId }) {
       setTimeout(() => setUploadOk(false), 3000);
       if (uploadRef.current) uploadRef.current.value = "";
       setFile(null);
+      setPreviewUrl(null);
       setUploadPct(0);
       qc.invalidateQueries({ queryKey: ["attachments", taskId] });
       push("success", "File uploaded successfully");
@@ -203,56 +271,106 @@ function Attachments({ taskId }) {
     }
   });
 
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files?.[0] ?? null;
+    setFile(selectedFile);
+    
+    if (selectedFile && selectedFile.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => setPreviewUrl(reader.result);
+      reader.readAsDataURL(selectedFile);
+    } else {
+      setPreviewUrl(null);
+    }
+  };
+
   const files = data?.files || data || [];
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <div className="font-semibold">Attachments</div>
       {files.length === 0 ? <div className="text-body text-muted">No files yet.</div> :
         <ul className="space-y-2">
-          {files.map(f => (
-            <li key={f.id} className="flex items-center justify-between border rounded p-2">
-              <div>
-                <div className="text-body">{f.file_name || f.fileName || f.path}</div>
-                <div className="text-caption text-muted">{f.mime} • {f.size_bytes || f.sizeBytes} bytes</div>
-              </div>
-            </li>
-          ))}
+          {files.map(f => {
+            const mime = f.mime || f.mimeType;
+            const size = f.size_bytes || f.sizeBytes;
+            const name = f.file_name || f.fileName || f.path;
+            const isImage = mime?.startsWith('image/');
+            
+            return (
+              <li key={f.id} className="border rounded p-3 hover:bg-gray-50 transition-colors">
+                <div className="flex items-start gap-3">
+                  <div className="text-2xl">{getFileIcon(mime)}</div>
+                  <div className="flex-1">
+                    <div className="text-body font-medium">{name}</div>
+                    <div className="text-caption text-muted">{formatFileSize(size)} • {mime || 'Unknown type'}</div>
+                    {isImage && f.url && (
+                      <img 
+                        src={f.url} 
+                        alt={name} 
+                        className="mt-2 max-w-xs rounded border"
+                        style={{ maxHeight: '200px' }}
+                      />
+                    )}
+                  </div>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       }
-      <div className="flex items-center gap-2">
-        <input
-          ref={uploadRef}
-          type="file"
-          accept="image/*,video/*,audio/*,application/pdf"
-          onChange={e => setFile(e.target.files?.[0] ?? null)}
-        />
-        <button
-          className="btn btn-secondary"
-          disabled={!file || uploadFile.isPending}
-          onClick={() => file && uploadFile.mutate(file)}>
-          {uploadFile.isPending ? "Uploading…" : "Upload file"}
-        </button>
-      </div>
+      
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <input
+            ref={uploadRef}
+            type="file"
+            accept="image/*,video/*,audio/*,application/pdf"
+            onChange={handleFileChange}
+            className="text-body"
+          />
+          <button
+            className="btn btn-primary"
+            disabled={!file || uploadFile.isPending}
+            onClick={() => file && uploadFile.mutate(file)}>
+            {uploadFile.isPending ? "Uploading…" : "Upload"}
+          </button>
+        </div>
 
-      {uploadFile.isPending && (
-        <div className="mt-2">
-          <div className="h-2 w-full bg-gray-200 rounded">
-            <div
-              className="h-2 bg-black rounded"
-              style={{ width: `${uploadPct}%`, transition: "width 120ms linear" }}
+        {previewUrl && (
+          <div>
+            <div className="text-caption text-muted mb-1">Preview:</div>
+            <img 
+              src={previewUrl} 
+              alt="Preview" 
+              className="max-w-xs rounded border"
+              style={{ maxHeight: '150px' }}
             />
           </div>
-          <div className="text-caption text-muted mt-1">{uploadPct}%</div>
-        </div>
-      )}
+        )}
 
-      {uploadErr && (
-        <div className="mt-2"><Alert>{uploadErr}</Alert></div>
-      )}
-      {uploadOk && (
-        <div className="mt-2"><Alert kind="success">Upload complete.</Alert></div>
-      )}
+        {uploadFile.isPending && (
+          <div>
+            <div className="flex justify-between text-caption text-muted mb-1">
+              <span>Uploading {file?.name}...</span>
+              <span>{uploadPct}%</span>
+            </div>
+            <div className="h-2 w-full bg-gray-200 rounded overflow-hidden">
+              <div
+                className="h-2 bg-primary rounded transition-all duration-300"
+                style={{ width: `${uploadPct}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {uploadErr && (
+          <div className="mt-2"><Alert>{uploadErr}</Alert></div>
+        )}
+        {uploadOk && (
+          <div className="mt-2"><Alert kind="success">Upload complete!</Alert></div>
+        )}
+      </div>
     </div>
   );
 }
@@ -340,6 +458,10 @@ export default function TaskDetail() {
             value={task?.assigned_to}
             onSave={(newAssignee) => updateTask.mutateAsync({ assigned_to: newAssignee })}
           />
+          <TagsEditor
+            tags={task?.tags}
+            onSave={(newTags) => updateTask.mutateAsync({ tags: newTags })}
+          />
         </div>
         <div className="flex flex-col items-end gap-2">
           <BallInCourt task={task} />
@@ -373,6 +495,8 @@ export default function TaskDetail() {
           <p className="text-body text-amber-800">{task.ball_in_court_note}</p>
         </div>
       )}
+
+      <TaskMetadata task={task} />
 
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-6">
