@@ -1,4 +1,4 @@
-const { storage } = require('../server/storage');
+const { pool } = require('../services/database');
 
 async function loadRbacPermissions(req, res, next) {
   if (!req.user?.id) {
@@ -8,7 +8,7 @@ async function loadRbacPermissions(req, res, next) {
   try {
     const userId = req.user.id;
     
-    const userRoles = await storage.query(
+    const userRoles = await pool.query(
       `SELECT role_id FROM user_roles WHERE user_id = $1`,
       [userId]
     );
@@ -20,13 +20,13 @@ async function loadRbacPermissions(req, res, next) {
       return next();
     }
     
-    const roleData = await storage.query(
+    const roleData = await pool.query(
       `SELECT slug FROM roles WHERE id = ANY($1::uuid[])`,
       [roleIds]
     );
     const roleSlugs = roleData.rows.map(r => r.slug);
     
-    const permData = await storage.query(
+    const permData = await pool.query(
       `SELECT DISTINCT p.code 
        FROM permissions p
        JOIN role_permissions rp ON p.id = rp.permission_id
