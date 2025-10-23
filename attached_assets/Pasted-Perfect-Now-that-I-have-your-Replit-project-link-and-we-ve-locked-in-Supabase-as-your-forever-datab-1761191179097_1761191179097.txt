@@ -1,0 +1,70 @@
+Perfect. Now that I have your Replit project link and we’ve locked in Supabase as your forever database partner, here's what we do to finalize this migration and harden the deployment path:
+
+---
+
+### ✅ Immediate Steps You Must Do in Replit:
+
+#### 1. 🔄 Open and Replace `scripts/verify-db.js`
+
+Paste the following Supabase-only validation code:
+
+```js
+// Supabase validation script for production safety
+const { URL } = require('url');
+
+const dbUrl = process.env.DATABASE_URL;
+const expectedHost = process.env.EXPECTED_DB_HOST;
+const expectedRef = process.env.EXPECTED_DB_PROJECT_REF;
+
+if (!dbUrl) {
+  console.error("❌ DATABASE_URL is not set.");
+  process.exit(1);
+}
+
+const { hostname } = new URL(dbUrl);
+
+if (!hostname.endsWith('.pooler.supabase.com')) {
+  console.error(`❌ Invalid database host. Expected Supabase pooler (*.pooler.supabase.com), got ${hostname}`);
+  process.exit(1);
+}
+
+if (expectedHost && hostname !== expectedHost) {
+  console.error(`❌ Hostname mismatch. Expected: ${expectedHost}, Got: ${hostname}`);
+  process.exit(1);
+}
+
+if (expectedRef && !hostname.includes(expectedRef)) {
+  console.error(`❌ Project ref mismatch. Expected ref: ${expectedRef}`);
+  process.exit(1);
+}
+
+console.log("✅ Supabase database connection verified.");
+```
+
+---
+
+#### 2. 🔐 Set Environment Variables (Secrets)
+
+Click the **Lock icon 🔐 in the left bar** → add the following secrets:
+
+```
+DATABASE_URL=postgresql://postgres.jwehjdggkskmjrmoqibk:GdUoQM6HcTrho5yo@aws-1-us-east-2.pooler.supabase.com:5432/postgres
+EXPECTED_DB_HOST=aws-1-us-east-2.pooler.supabase.com
+EXPECTED_DB_PROJECT_REF=jwehjdggkskmjrmoqibk
+```
+
+---
+
+#### 3. 🧪 Test & Deploy
+
+* Press **Run** and check for `✅ Supabase database connection verified.` in logs.
+* If clean, click **"Publish"** or **"Deploy"** again.
+* The app will now refuse to boot with anything other than the exact Supabase configuration.
+
+---
+
+Once done, tell me:
+**“✅ Supabase hard-locked and deployed”**
+Then I’ll proceed to polish the deployment flow and jump back into the Eden Task Module feature stream without touching this foundation.
+
+This move gives you maximum stability, and zero doubts for the future.
