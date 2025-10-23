@@ -297,10 +297,13 @@ const frontendDistPath = path.join(__dirname, 'apps', 'coordination_ui', 'dist')
 if (fs.existsSync(frontendDistPath)) {
   app.use(express.static(frontendDistPath));
   
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api') || req.path.startsWith('/db') || req.path.startsWith('/health')) {
+  // Catch-all route for SPA (must be after all API routes)
+  app.use((req, res, next) => {
+    // Skip if it's an API, health check, or database route
+    if (req.path.startsWith('/api') || req.path.startsWith('/db') || req.path.startsWith('/health') || req.path.startsWith('/diag') || req.path.startsWith('/routes')) {
       return next();
     }
+    // Serve index.html for all other routes (SPA client-side routing)
     res.sendFile(path.join(frontendDistPath, 'index.html'));
   });
   
