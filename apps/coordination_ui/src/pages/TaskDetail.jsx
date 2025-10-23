@@ -325,7 +325,6 @@ function Attachments({ taskId }) {
           <input
             ref={uploadRef}
             type="file"
-            accept="image/*,video/*,audio/*,application/pdf"
             onChange={handleFileChange}
             className="text-body"
           />
