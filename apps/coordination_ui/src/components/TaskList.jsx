@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { getStatusLabel } from '../constants/statusLabels';
+import { useHasPermission } from '../hooks/usePermissions';
 
 function TaskList({ project, users, onBack }) {
   const [tasks, setTasks] = useState([]);
@@ -16,6 +17,10 @@ function TaskList({ project, users, onBack }) {
     ball_in_court: '',
     due_at: ''
   });
+
+  const canCreateTask = useHasPermission('task.create');
+  const canEditTask = useHasPermission('task.edit');
+  const canDeleteTask = useHasPermission('task.delete');
 
   useEffect(() => {
     loadTasks();
@@ -109,9 +114,11 @@ function TaskList({ project, users, onBack }) {
           <button className="btn btn-secondary" onClick={onBack}>← Back</button>
           <h2>Tasks for {project.name}</h2>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowCreateForm(!showCreateForm)}>
-          {showCreateForm ? 'Cancel' : 'New Task'}
-        </button>
+        {canCreateTask && (
+          <button className="btn btn-primary" onClick={() => setShowCreateForm(!showCreateForm)}>
+            {showCreateForm ? 'Cancel' : 'New Task'}
+          </button>
+        )}
       </div>
 
       {showCreateForm && (
@@ -230,12 +237,16 @@ function TaskList({ project, users, onBack }) {
                 <button className="btn btn-primary" onClick={() => handleHandoff(task)}>
                   Hand Off Ball
                 </button>
-                <button className="btn btn-secondary" onClick={() => handleUpdate(task)}>
-                  Update Status
-                </button>
-                <button className="btn btn-danger" onClick={() => handleDelete(task.id)}>
-                  Delete
-                </button>
+                {canEditTask && (
+                  <button className="btn btn-secondary" onClick={() => handleUpdate(task)}>
+                    Update Status
+                  </button>
+                )}
+                {canDeleteTask && (
+                  <button className="btn btn-danger" onClick={() => handleDelete(task.id)}>
+                    Delete
+                  </button>
+                )}
               </div>
             </div>
           ))}

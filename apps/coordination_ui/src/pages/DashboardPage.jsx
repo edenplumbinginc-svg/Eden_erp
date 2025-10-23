@@ -5,8 +5,11 @@ import SummaryCard from '../components/SummaryCard';
 import TasksByStatusChart from '../components/TasksByStatusChart';
 import TasksByAssigneeChart from '../components/TasksByAssigneeChart';
 import RecentActivityFeed from '../components/RecentActivityFeed';
+import { useHasPermission } from '../hooks/usePermissions';
 
 export default function DashboardPage() {
+  const canCreateTask = useHasPermission('task.create');
+
   const { data: statusData = [], isLoading: statusLoading } = useQuery({
     queryKey: ['tasks_by_status'],
     queryFn: () => apiService.getTasksByStatus().then(res => res.data)
@@ -30,9 +33,11 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
         <h1 className="font-bold">Dashboard</h1>
-        <Link to="/tasks/new" className="btn btn-primary">
-          + Create Task
-        </Link>
+        {canCreateTask && (
+          <Link to="/tasks/new" className="btn btn-primary">
+            + Create Task
+          </Link>
+        )}
       </div>
 
       {totalTasks === 0 && !statusLoading && (

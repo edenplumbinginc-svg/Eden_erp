@@ -13,6 +13,7 @@ function DevAuthSwitcher({ onUserChange }) {
     devAuth.setUser(preset.email, preset.id);
     setCurrentUser(devAuth.getCurrentUser());
     setShowCustom(false);
+    window.dispatchEvent(new Event('dev-user-changed'));
     if (onUserChange) onUserChange();
   };
 
@@ -22,6 +23,7 @@ function DevAuthSwitcher({ onUserChange }) {
       devAuth.setUser(customEmail, customId);
       setCurrentUser(devAuth.getCurrentUser());
       setShowCustom(false);
+      window.dispatchEvent(new Event('dev-user-changed'));
       if (onUserChange) onUserChange();
     }
   };

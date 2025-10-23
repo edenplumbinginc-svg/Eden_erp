@@ -11,6 +11,10 @@ function ProjectList({ projects, onRefresh, onSelectProject }) {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  const canCreateProject = useHasPermission('project.create');
+  const canEditProject = useHasPermission('project.edit');
+  const canDeleteProject = useHasPermission('project.delete');
+
   const { data: taskStats = [], isLoading: statsLoading } = useQuery({
     queryKey: ['tasks_by_status'],
     queryFn: () => apiService.getTasksByStatus().then(res => res.data)
@@ -108,9 +112,11 @@ function ProjectList({ projects, onRefresh, onSelectProject }) {
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h2>Projects</h2>
-          <button className="btn btn-primary" onClick={() => setShowCreateForm(!showCreateForm)}>
-            {showCreateForm ? 'Cancel' : 'New Project'}
-          </button>
+          {canCreateProject && (
+            <button className="btn btn-primary" onClick={() => setShowCreateForm(!showCreateForm)}>
+              {showCreateForm ? 'Cancel' : 'New Project'}
+            </button>
+          )}
         </div>
 
       {showCreateForm && (
@@ -150,9 +156,11 @@ function ProjectList({ projects, onRefresh, onSelectProject }) {
           <p className="text-muted mb-4">
             Create your first project to get started organizing your tasks
           </p>
-          <button className="btn btn-primary" onClick={() => setShowCreateForm(true)}>
-            + New Project
-          </button>
+          {canCreateProject && (
+            <button className="btn btn-primary" onClick={() => setShowCreateForm(true)}>
+              + New Project
+            </button>
+          )}
         </div>
       ) : (
         <div className="project-grid">
@@ -173,12 +181,16 @@ function ProjectList({ projects, onRefresh, onSelectProject }) {
                 <Link className="btn btn-primary" to={`/project/${project.id}`}>
                   View Tasks
                 </Link>
-                <button className="btn btn-secondary" onClick={() => handleUpdate(project.id, project.name)}>
-                  Edit
-                </button>
-                <button className="btn btn-danger" onClick={() => handleDelete(project.id)}>
-                  Delete
-                </button>
+                {canEditProject && (
+                  <button className="btn btn-secondary" onClick={() => handleUpdate(project.id, project.name)}>
+                    Edit
+                  </button>
+                )}
+                {canDeleteProject && (
+                  <button className="btn btn-danger" onClick={() => handleDelete(project.id)}>
+                    Delete
+                  </button>
+                )}
               </div>
             </div>
           ))}

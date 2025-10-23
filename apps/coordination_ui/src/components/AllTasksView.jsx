@@ -7,12 +7,14 @@ import TaskItem from './TaskItem';
 import CreateTaskModal from './CreateTaskModal';
 import { apiService, devAuth } from '../services/api';
 import { TaskListSkeleton } from './LoadingSkeleton';
+import { useHasPermission } from '../hooks/usePermissions';
 
 export default function AllTasksView() {
   const { getAll, set } = useQueryState();
   const qp = getAll();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const currentUser = devAuth.getCurrentUser();
+  const canCreateTask = useHasPermission('task.create');
 
   const { data: allTasksCount } = useQuery({
     queryKey: ['tasks_count', 'all'],
@@ -111,12 +113,14 @@ export default function AllTasksView() {
         <div className="flex-1">
           <TasksFilters />
         </div>
-        <button
-          className="btn btn-primary ml-4 whitespace-nowrap"
-          onClick={() => setIsCreateModalOpen(true)}
-        >
-          + Create Task
-        </button>
+        {canCreateTask && (
+          <button
+            className="btn btn-primary ml-4 whitespace-nowrap"
+            onClick={() => setIsCreateModalOpen(true)}
+          >
+            + Create Task
+          </button>
+        )}
       </div>
 
       <CreateTaskModal 
@@ -154,12 +158,14 @@ export default function AllTasksView() {
                     'Create your first task to get started.'
                   }
                 </p>
-                <button
-                  className="btn btn-primary"
-                  onClick={() => setIsCreateModalOpen(true)}
-                >
-                  + Create Task
-                </button>
+                {canCreateTask && (
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => setIsCreateModalOpen(true)}
+                  >
+                    + Create Task
+                  </button>
+                )}
               </div>
             ) : (
               data.items.map(t => <TaskItem key={t.id} t={t} />)

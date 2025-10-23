@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { api } from '../services/api';
+import { devAuth } from '../services/api';
 
 // Mock permission data for each role (will be replaced with real API call later)
 const ROLE_PERMISSIONS = {
@@ -28,19 +28,35 @@ const ROLE_PERMISSIONS = {
  */
 export function useHasPermission(permission) {
   const [hasPermission, setHasPermission] = useState(false);
+  const [currentUserEmail, setCurrentUserEmail] = useState('');
   
   useEffect(() => {
-    // Get current dev user from api.js
-    const currentUser = api.defaults.headers['X-Dev-User-Email'];
+    // Get current dev user from devAuth
+    const currentUser = devAuth.getCurrentUser();
+    const userEmail = currentUser?.email || '';
+    setCurrentUserEmail(userEmail);
     
-    if (!currentUser) {
+    if (!userEmail) {
       setHasPermission(false);
       return;
     }
 
     // Check if user has permission
-    const userPermissions = ROLE_PERMISSIONS[currentUser] || [];
+    const userPermissions = ROLE_PERMISSIONS[userEmail] || [];
     setHasPermission(userPermissions.includes(permission));
+    
+    // Listen for user changes (custom event fired by DevAuthSwitcher)
+    const handleUserChange = () => {
+      const updatedUser = devAuth.getCurrentUser();
+      const updatedEmail = updatedUser?.email || '';
+      setCurrentUserEmail(updatedEmail);
+      
+      const updatedPermissions = ROLE_PERMISSIONS[updatedEmail] || [];
+      setHasPermission(updatedPermissions.includes(permission));
+    };
+    
+    window.addEventListener('dev-user-changed', handleUserChange);
+    return () => window.removeEventListener('dev-user-changed', handleUserChange);
   }, [permission]);
 
   return hasPermission;
@@ -54,15 +70,16 @@ export function usePermissions() {
   const [permissions, setPermissions] = useState([]);
 
   useEffect(() => {
-    // Get current dev user from api.js
-    const currentUser = api.defaults.headers['X-Dev-User-Email'];
+    // Get current dev user from devAuth
+    const currentUser = devAuth.getCurrentUser();
+    const userEmail = currentUser?.email || '';
     
-    if (!currentUser) {
+    if (!userEmail) {
       setPermissions([]);
       return;
     }
 
-    const userPermissions = ROLE_PERMISSIONS[currentUser] || [];
+    const userPermissions = ROLE_PERMISSIONS[userEmail] || [];
     setPermissions(userPermissions);
   }, []);
 

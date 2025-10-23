@@ -13,6 +13,7 @@ import InlineAssigneeEdit from "../components/InlineAssigneeEdit";
 import ConfirmDialog from "../components/ConfirmDialog";
 import TagsEditor from "../components/TagsEditor";
 import { getStatusLabel } from "../constants/statusLabels";
+import { useHasPermission } from "../hooks/usePermissions";
 
 function TaskMetadata({ task }) {
   const { data: projects = [] } = useQuery({
@@ -107,6 +108,9 @@ function BallInCourt({ task }) {
 function Comments({ taskId }) {
   const qc = useQueryClient();
   const { push } = useToaster();
+  const canComment = useHasPermission('task.comment');
+  const canDeleteComment = useHasPermission('task.delete');
+  
   const { data } = useQuery({
     queryKey: ["comments", taskId],
     queryFn: async () => apiService.getTaskComments(taskId),
@@ -148,28 +152,32 @@ function Comments({ taskId }) {
               <div className="text-body">{c.body}</div>
               <div className="text-caption text-muted">{new Date(c.created_at || c.createdAt).toLocaleString()}</div>
             </div>
-            <button
-              className="btn-icon text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={() => setDeleteConfirm(c.id)}
-              title="Delete comment"
-            >
-              🗑️
-            </button>
+            {canDeleteComment && (
+              <button
+                className="btn-icon text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={() => setDeleteConfirm(c.id)}
+                title="Delete comment"
+              >
+                🗑️
+              </button>
+            )}
           </div>
         )) : <div className="text-body text-muted">No comments yet.</div>}
       </div>
-      <div className="flex gap-2">
-        <input
-          className="border rounded px-2 py-1 flex-1"
-          placeholder="Write a comment…"
-          value={body}
-          onChange={e => setBody(e.target.value)}
-        />
-        <button className="btn btn-primary"
-          onClick={() => body.trim() && createComment.mutate({ body })}>
-          Comment
-        </button>
-      </div>
+      {canComment && (
+        <div className="flex gap-2">
+          <input
+            className="border rounded px-2 py-1 flex-1"
+            placeholder="Write a comment…"
+            value={body}
+            onChange={e => setBody(e.target.value)}
+          />
+          <button className="btn btn-primary"
+            onClick={() => body.trim() && createComment.mutate({ body })}>
+            Comment
+          </button>
+        </div>
+      )}
       
       <ConfirmDialog
         isOpen={!!deleteConfirm}
@@ -207,6 +215,7 @@ function formatFileSize(bytes) {
 function Attachments({ taskId }) {
   const qc = useQueryClient();
   const { push } = useToaster();
+  const canEdit = useHasPermission('task.edit');
   const uploadRef = useRef();
   const [file, setFile] = useState(null);
   const [uploadPct, setUploadPct] = useState(0);
@@ -320,21 +329,22 @@ function Attachments({ taskId }) {
         </ul>
       }
       
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <input
-            ref={uploadRef}
-            type="file"
-            onChange={handleFileChange}
-            className="text-body"
-          />
-          <button
-            className="btn btn-primary"
-            disabled={!file || uploadFile.isPending}
-            onClick={() => file && uploadFile.mutate(file)}>
-            {uploadFile.isPending ? "Uploading…" : "Upload"}
-          </button>
-        </div>
+      {canEdit && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <input
+              ref={uploadRef}
+              type="file"
+              onChange={handleFileChange}
+              className="text-body"
+            />
+            <button
+              className="btn btn-primary"
+              disabled={!file || uploadFile.isPending}
+              onClick={() => file && uploadFile.mutate(file)}>
+              {uploadFile.isPending ? "Uploading…" : "Upload"}
+            </button>
+          </div>
 
         {previewUrl && (
           <div>
@@ -366,10 +376,11 @@ function Attachments({ taskId }) {
         {uploadErr && (
           <div className="mt-2"><Alert>{uploadErr}</Alert></div>
         )}
-        {uploadOk && (
-          <div className="mt-2"><Alert kind="success">Upload complete!</Alert></div>
-        )}
-      </div>
+          {uploadOk && (
+            <div className="mt-2"><Alert kind="success">Upload complete!</Alert></div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -379,6 +390,9 @@ export default function TaskDetail() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { push } = useToaster();
+
+  const canEditTask = useHasPermission('task.edit');
+  const canDeleteTask = useHasPermission('task.delete');
 
   const { data: task, isLoading } = useQuery({
     queryKey: ["task", taskId],
@@ -432,35 +446,62 @@ export default function TaskDetail() {
       <div className="flex items-start justify-between">
         <div className="flex-1 space-y-4">
           <div className="flex items-center gap-2">
-            <InlineEdit
-              value={task?.title}
-              onSave={(newTitle) => updateTask.mutateAsync({ title: newTitle })}
-              className="flex-1"
-              displayClassName="text-xl font-semibold"
-              placeholder="Enter task title..."
-            />
+            {canEditTask ? (
+              <InlineEdit
+                value={task?.title}
+                onSave={(newTitle) => updateTask.mutateAsync({ title: newTitle })}
+                className="flex-1"
+                displayClassName="text-xl font-semibold"
+                placeholder="Enter task title..."
+              />
+            ) : (
+              <h1 className="text-xl font-semibold">{task?.title}</h1>
+            )}
             {task?.origin && (
               <span className="text-caption px-2 py-0.5 rounded bg-blue-50 border border-blue-300 text-blue-700">
                 {task.origin === 'voice' ? '🎤 Voice' : task.origin === 'email' ? '📧 Email' : '💻 UI'}
               </span>
             )}
           </div>
-          <InlineEdit
-            value={task?.description}
-            onSave={(newDescription) => updateTask.mutateAsync({ description: newDescription })}
-            multiline
-            className="w-full"
-            displayClassName="text-body text-muted"
-            placeholder="Add a description..."
-          />
-          <InlineAssigneeEdit
-            value={task?.assigned_to}
-            onSave={(newAssignee) => updateTask.mutateAsync({ assigned_to: newAssignee })}
-          />
-          <TagsEditor
-            tags={task?.tags}
-            onSave={(newTags) => updateTask.mutateAsync({ tags: newTags })}
-          />
+          {canEditTask ? (
+            <>
+              <InlineEdit
+                value={task?.description}
+                onSave={(newDescription) => updateTask.mutateAsync({ description: newDescription })}
+                multiline
+                className="w-full"
+                displayClassName="text-body text-muted"
+                placeholder="Add a description..."
+              />
+              <InlineAssigneeEdit
+                value={task?.assigned_to}
+                onSave={(newAssignee) => updateTask.mutateAsync({ assigned_to: newAssignee })}
+              />
+              <TagsEditor
+                tags={task?.tags}
+                onSave={(newTags) => updateTask.mutateAsync({ tags: newTags })}
+              />
+            </>
+          ) : (
+            <>
+              {task?.description && (
+                <p className="text-body text-muted">{task.description}</p>
+              )}
+              {task?.assigned_to && (
+                <div className="text-body">
+                  <span className="text-muted">Assigned to: </span>
+                  <span>{task.assigned_to}</span>
+                </div>
+              )}
+              {task?.tags && task.tags.length > 0 && (
+                <div className="flex gap-2">
+                  {task.tags.map((tag, i) => (
+                    <span key={i} className="px-2 py-1 bg-gray-100 rounded text-caption">{tag}</span>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </div>
         <div className="flex flex-col items-end gap-2">
           <BallInCourt task={task} />
@@ -499,7 +540,7 @@ export default function TaskDetail() {
 
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-6">
-          <ChecklistEditor taskId={taskId} canEdit={true} />
+          <ChecklistEditor taskId={taskId} canEdit={canEditTask} />
           <Comments taskId={taskId} />
         </div>
         <div className="space-y-6">
