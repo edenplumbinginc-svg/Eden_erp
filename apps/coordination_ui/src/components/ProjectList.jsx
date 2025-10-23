@@ -26,7 +26,12 @@ function ProjectList({ projects, onRefresh, onSelectProject }) {
       setShowCreateForm(false);
       onRefresh();
     } catch (err) {
-      alert('Failed to create project: ' + err.message);
+      const errorMsg = err.response?.data?.error || err.message || 'Unknown error';
+      if (errorMsg.includes('duplicate key') || errorMsg.includes('unique constraint')) {
+        alert('A project with this code already exists. Please use a different code.');
+      } else {
+        alert('Failed to create project: ' + errorMsg);
+      }
     } finally {
       setLoading(false);
     }
@@ -120,14 +125,16 @@ function ProjectList({ projects, onRefresh, onSelectProject }) {
             />
           </div>
           <div className="form-group">
-            <label>Project Code</label>
+            <label>Project Code (optional)</label>
             <input
               type="text"
               value={formData.code}
               onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-              required
               placeholder="e.g., MKT-2025-Q1"
             />
+            <p className="text-muted" style={{ fontSize: '12px', marginTop: '4px' }}>
+              Must be unique if provided
+            </p>
           </div>
           <button type="submit" className="btn btn-success" disabled={loading}>
             {loading ? 'Creating...' : 'Create Project'}
