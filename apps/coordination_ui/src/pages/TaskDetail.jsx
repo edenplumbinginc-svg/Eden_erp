@@ -8,6 +8,8 @@ import ChecklistEditor from "../components/ChecklistEditor";
 import { useToaster } from "../components/Toaster";
 import HandoffModal from "../components/HandoffModal";
 import Breadcrumbs from "../components/Breadcrumbs";
+import InlineEdit from "../components/InlineEdit";
+import InlineAssigneeEdit from "../components/InlineAssigneeEdit";
 
 function daysSince(ts) {
   if (!ts) return null;
