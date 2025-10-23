@@ -16,6 +16,7 @@ I prefer iterative development, with a focus on delivering functional increments
 - **Project Structure**: Monorepo with frontend in `apps/coordination_ui/`. Vite proxies `/api` to backend on port 3000.
 - **Material Design System**: Complete implementation with color variables (--md-primary: #1a73e8), elevation shadows (4 levels), spacing tokens (8/16/24/32/40/48px), typography scale (Roboto 300/400/500/700), button styles (raised, outlined, danger, success), form inputs with focus states, navigation tabs, cards with proper shadows, loading skeletons, and Material animations.
 - **Components**: StatusSelect, BICChip, Overdue Badge, Idle Badge, Notifications Bell, Toast System, SummaryCard, TasksByStatusChart, TasksByAssigneeChart, RecentActivityFeed.
+- **UI Terminology Standards**: Centralized status labels in `constants/statusLabels.js` with consistent mapping: "New" (instead of "Open"), "To Do", "In Progress", "Review", "Done". Ball in Court always capitalized (capital "C", lowercase "in"). All components use `getStatusLabel()` helper for consistency. Browser cache headers configured in Vite to prevent stale UI.
 
 ### Technical Implementations
 - **Backend Framework**: Express.js.
