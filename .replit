@@ -83,6 +83,6 @@ localPort = 42193
 externalPort = 3001
 
 [deployment]
-deploymentTarget = "vm"
+deploymentTarget = "cloudrun"
 run = ["node", "server.js"]
 build = ["bash", "-c", "cd apps/coordination_ui && npm install && npm run build"]
