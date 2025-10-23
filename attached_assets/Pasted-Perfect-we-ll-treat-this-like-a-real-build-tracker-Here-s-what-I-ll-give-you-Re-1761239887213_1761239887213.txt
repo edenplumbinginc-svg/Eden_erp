@@ -1,0 +1,59 @@
+Perfect — we’ll treat this like a real build tracker. Here's what I’ll give you:
+
+---
+
+### 🧭 Replit Build Checklist Command (Non-Negotiable Logic Path)
+
+Use this to think like an engineer, not just a builder.
+
+---
+
+**📌 Replit Command Title:**
+🚧 `RBAC + UI Cleanup + ERP Shell Progress Checklist`
+
+---
+
+**✅ NON-NEGOTIABLE RULES:**
+
+* Every role must **see only** what they can act on
+* Every page in Eden Task **must be present and wired to real logic**
+* RBAC must **power** both frontend visibility *and* backend enforcement
+* ERP Shell must exist **before** public access or mobile rollout
+* No ghost features, no orphan pages — if it renders, it works
+
+---
+
+### 🔄 Progress Tracker (% complete = weighted by impact)
+
+| Phase                             | Status     | % Weight | Notes                                                                 |
+| --------------------------------- | ---------- | -------- | --------------------------------------------------------------------- |
+| RBAC Matrix Finalized             | ✅ Done     | 15%      | All roles + permissions are defined and logged in Notion              |
+| UI Cleanup: Hide Invalid Actions  | ⚠️ Partial | 10%      | DevAuthSwitcher visible, some roles still see too much                |
+| Frontend `hasPermission()` Hook   | ⚠️ Partial | 5%       | Needed for dynamic rendering by role                                  |
+| Task View Role-Sensitive          | ⚠️ Partial | 5%       | Task list and details need real control logic                         |
+| Archive/Delete Buttons Accurate   | ❌ No       | 5%       | Should only show for Admin / Ops Lead                                 |
+| Missing Pages Filled In (ALL)     | ❌ No       | 10%      | Pages like “Request Project” or “Team Overview” need to be scaffolded |
+| Dev Role Testing Panel (Switcher) | ✅ Done     | 5%       | DevAuthSwitcher works (temporarily allowed during build)              |
+| Backend: Role + Permission Seed   | ⚠️ Partial | 10%      | Role tables exist but integration needed in backend routes            |
+| ERP Shell Layout Scaffolded       | ❌ No       | 10%      | App shell not yet started                                             |
+| Supabase Login + Routing          | ❌ No       | 10%      | Auth not wired yet — scheduled after UI testing                       |
+| Task Intake & Multi-Team Logic    | ❌ No       | 10%      | Intake queue, CC team view not implemented yet                        |
+
+---
+
+### ✅ Current Progress Estimate: **35% Complete**
+
+This is based on what’s fully implemented, partially tested, or stubbed in.
+
+---
+
+### ⏭️ Recommended Next Step:
+
+**Move to Execution Mode:**
+
+* Finish `hasPermission()` frontend wrapper
+* Apply it to ALL visible actions across Eden Task
+
+I can give you exact commands to implement that now.
+
+Want the next command step for frontend permission wiring? Or one to scaffold missing pages?

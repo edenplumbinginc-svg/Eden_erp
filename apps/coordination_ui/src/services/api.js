@@ -120,6 +120,11 @@ export const devAuth = {
       id: '855546bf-f53d-4538-b8d5-cd30f5c157a2',
       role: 'ops (has tasks:read + tasks:write)'
     },
+    contributor: {
+      email: 'contributor@edenplumbing.com',
+      id: '33333333-3333-3333-3333-333333333333',
+      role: 'contributor (can create/edit, cannot delete)'
+    },
     viewer: {
       email: 'viewer@edenplumbing.com',
       id: '11111111-1111-1111-1111-111111111111',

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { apiService } from '../services/api';
 import { ChartSkeleton } from './LoadingSkeleton';
+import { useHasPermission } from '../hooks/usePermissions';
 
 function ProjectList({ projects, onRefresh, onSelectProject }) {
   const [showCreateForm, setShowCreateForm] = useState(false);

@@ -1,0 +1,71 @@
+Excellent — here’s your clarified **INFJ-tailored execution sequence**, revised to answer exactly where your RBAC model fits and what comes first.
+
+---
+
+### 🧭 Updated: My INFJ-Aligned Recommendation (with RBAC placement)
+
+---
+
+#### ✅ Step 1: **Fix Eden Task UI First**
+
+**Why:** The UI must reflect what roles *can* and *cannot* do — or your RBAC logic will feel broken even if it's perfect.
+
+**What to do now:**
+
+* Remove DevAuthSwitcher *visually* (keep in code for testing)
+* Add permission-aware components (buttons only show if user has permission)
+* Hide or reword actions that don’t apply to the current role
+* Clean up dummy/test views, confusing modals, or leftover dev scaffolding
+
+**RBAC usage:** Use your `mockCurrentUser` role + permission array from the RBAC matrix to drive what appears on screen.
+
+---
+
+#### ✅ Step 2: **Wire the Full RBAC System Into Eden Task**
+
+**Why:** Now that the UI behaves like a real app, you can embed real role logic safely.
+
+**What to do:**
+
+* Use the permission matrix and `role_permissions` seeds
+* Build middleware + `hasPermission()` frontend hooks
+* Simulate each role using DevAuthSwitcher or fake user contexts
+* Confirm: Each role can only do what they should — nothing more
+
+**RBAC usage:** All RBAC logic is now live inside Eden Task, but using mock or static session data.
+
+---
+
+#### ✅ Step 3: **Build ERP Shell + Supabase Auth (Then Plug RBAC Into It)**
+
+**Why:** Now that everything *works*, you just need to route it through a real login.
+
+**What to do:**
+
+* Create ERP shell app
+* Add Supabase auth (email/password)
+* On login: load `user.role_id` and fetch their permissions
+* Store in context → Eden Task reads that context
+* Swap out DevAuthSwitcher for real user sessions
+
+**RBAC usage:** RBAC is already tested — now it’s just fetching from the real user, not mock.
+
+---
+
+#### 🛑 Important: **Do NOT bind RBAC directly to Supabase or the shell yet**
+
+* You're still in active feature development
+* Use static/mock permission sets for now
+* Once tested, Supabase will just *pass you the keys*
+
+---
+
+### 🔐 Summary: Where RBAC Comes In
+
+* **Step 1:** You use RBAC to **guide UI cleanup**
+* **Step 2:** You use RBAC to **power real logic with mock data**
+* **Step 3:** You plug real user login into the existing RBAC engine
+
+This gives you speed **and** structure — the INFJ paradox, solved.
+
+Want the UI Cleanup Checklist next? Or a mock `hasPermission()` hook to drop in?
