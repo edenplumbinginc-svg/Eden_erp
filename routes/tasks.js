@@ -68,6 +68,25 @@ const HandoffSchema = z.object({
   note: z.string().max(1000).optional()
 });
 
+const CreateTaskSchema = z.object({
+  title: z.string().min(1).max(200),
+  description: z.string().max(20000).optional(),
+  status: z.enum(['open', 'todo', 'in_progress', 'review', 'done']).optional(),
+  department: z.enum(['Operations', 'Procurement', 'Accounting', 'Service', 'Estimating', 'Scheduling']),
+  priority: z.string().optional(),
+  assignee_id: z.string().uuid().nullable().optional(),
+  ball_in_court: z.string().uuid().nullable().optional(),
+  ball_in_court_note: z.string().max(1000).nullable().optional(),
+  ballOwnerType: z.enum(['user', 'vendor', 'dept', 'system']).nullable().optional(),
+  ballOwnerId: z.string().uuid().nullable().optional(),
+  due_at: z.string().datetime().nullable().optional(),
+  tags: z.array(z.string().min(1).max(64)).max(50).optional(),
+  origin: z.string().optional(),
+  voice_url: z.string().url().nullable().optional(),
+  voice_transcript: z.string().max(20000).nullable().optional(),
+  project_id: z.string().uuid().nullable().optional()
+});
+
 // Status flow validation
 const validStatusTransitions = {
   'open': ['todo', 'in_progress'],
@@ -98,6 +117,96 @@ router.get('/', authenticate, requirePerm('tasks:read'), async (req, res) => {
   } catch (e) {
     if (e.status) return res.status(e.status).json({ ok: false, error: e.message });
     res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// Create a new task
+router.post('/', authenticate, requirePerm('tasks:write'), validate(CreateTaskSchema), async (req, res) => {
+  try {
+    const data = req.data;
+    
+    // Map 'open' to 'todo' for backward compatibility
+    let status = data.status || 'todo';
+    if (status === 'open') status = 'todo';
+    
+    // Derive created_by from authenticated user or headers
+    const createdBy = req.user?.id || deriveStableUUID(req.headers['x-dev-user-email'] || 'system@edenplumbing.com');
+    
+    const newTask = await withTx(pool, async (tx) => {
+      // Get a default project if none provided (project_id is NOT NULL in schema)
+      let projectId = data.project_id;
+      if (!projectId) {
+        const defaultProject = await tx.query('SELECT id FROM public.projects LIMIT 1');
+        if (defaultProject.rows.length > 0) {
+          projectId = defaultProject.rows[0].id;
+        } else {
+          throw new Error('No projects available. Please create a project first.');
+        }
+      }
+      
+      // Insert task
+      const insertResult = await tx.query(
+        `INSERT INTO public.tasks (
+          title, description, status, department, priority,
+          assignee_id, ball_in_court, ball_in_court_note,
+          due_at, tags, origin, voice_url, voice_transcript,
+          project_id, created_by
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        RETURNING *`,
+        [
+          data.title,
+          data.description || null,
+          status,
+          data.department,
+          data.priority || 'normal',
+          data.assignee_id || null,
+          data.ball_in_court || null,
+          data.ball_in_court_note || null,
+          data.due_at || null,
+          data.tags || [''],
+          data.origin || 'UI',
+          data.voice_url || null,
+          data.voice_transcript || null,
+          projectId,
+          createdBy
+        ]
+      );
+      
+      const task = insertResult.rows[0];
+      
+      // Audit log
+      await audit(createdBy, 'task.create', `task:${task.id}`, { created: task });
+      
+      // Create notifications
+      if (data.assignee_id) {
+        await createNotification({
+          userId: data.assignee_id,
+          type: 'task_assigned',
+          taskId: task.id,
+          projectId: projectId,
+          actorId: createdBy,
+          payload: { title: task.title }
+        });
+      }
+      
+      if (data.ball_in_court && data.ball_in_court !== data.assignee_id) {
+        await createNotification({
+          userId: data.ball_in_court,
+          type: 'task_created',
+          taskId: task.id,
+          projectId: projectId,
+          actorId: createdBy,
+          payload: { title: task.title }
+        });
+      }
+      
+      return task;
+    });
+    
+    res.status(201).json(newTask);
+  } catch (e) {
+    console.error('Task creation error:', e);
+    res.status(500).json({ ok: false, error: { code: 'INTERNAL_ERROR', message: e.message } });
   }
 });
 
