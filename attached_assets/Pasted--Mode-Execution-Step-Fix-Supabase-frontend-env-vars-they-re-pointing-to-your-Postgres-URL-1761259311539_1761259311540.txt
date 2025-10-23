@@ -1,0 +1,72 @@
+[Mode: Execution]
+
+**Step:** Fix Supabase frontend env vars (they’re pointing to your Postgres URL), then verify real login → RBAC in the browser.
+
+**Why it matters:** If `VITE_SUPABASE_URL` isn’t your `https://<project>.supabase.co`, the client can’t mint valid JWTs. No JWT → your `/api/me/permissions` will keep 401/empty and the UI can render blank.
+
+**Inputs needed:**
+
+* Your real Supabase **Project URL** and **Anon key** from: Supabase Dashboard → Settings → API.
+* Replit access to update Secrets.
+
+**Command:**
+
+1. **Set correct Vite secrets (Replit → Tools → Secrets):**
+
+```
+VITE_SUPABASE_URL = https://<your-project-ref>.supabase.co
+VITE_SUPABASE_ANON_KEY = <your anon public key starting with eyJ...>
+```
+
+Make sure these are **not** the database `postgresql://...` URL.
+
+2. **Restart the web app** (stop/run) so Vite picks up the new vars.
+
+3. **Guard the client with a tiny runtime check** (prevents “blank page” next time):
+
+```ts
+// apps/web/src/lib/supabaseClient.ts
+import { createClient } from "@supabase/supabase-js";
+
+const url = import.meta.env.VITE_SUPABASE_URL;
+const anon = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (!url || !anon) {
+  // Don’t crash silently: clear UI + log a precise error
+  // eslint-disable-next-line no-console
+  console.error("Supabase env missing: check VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY in Replit Secrets.");
+  throw new Error("Supabase misconfigured");
+}
+
+export const supabase = createClient(url, anon, {
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+});
+```
+
+4. **Quick browser smoke test (DevTools → Console):**
+
+```js
+// 1) Verify env reached the browser
+console.log(import.meta.env.VITE_SUPABASE_URL);
+
+// 2) Try the flow end-to-end
+const { data } = await window.supabase.auth.getSession();
+if (!data.session) {
+  console.log("No session → go to /auth/register or /auth/login");
+} else {
+  const jwt = data.session.access_token;
+  const r = await fetch("/api/me/permissions", { headers: { Authorization: `Bearer ${jwt}` }});
+  console.log("Status", r.status, "Body", await r.json());
+}
+```
+
+**Success check:**
+
+* You can load `/auth/register` → create a user → login.
+* DevTools shows `import.meta.env.VITE_SUPABASE_URL` as your `https://...supabase.co`.
+* `/api/me/permissions` returns `200` with `{ roles: [...], permissions: [...] }`.
+* Hitting a protected write endpoint without the right permission returns `403`.
+
+**Next:** wait for user.
+
+Once you confirm it works, I’ll ship the tiny **PrivateRoute + DevAuthSwitcher hide** patch and a **default-role assigner** so every new user lands as `viewer` automatically.
