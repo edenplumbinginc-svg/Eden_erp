@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink, useNavigate, useParams } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { apiService } from './services/api';
+import { AuthProvider } from './hooks/AuthProvider';
+import RequireAuth from './components/RequireAuth';
 import ProjectList from './components/ProjectList';
 import TaskList from './components/TaskList';
 import Reports from './components/Reports';
@@ -11,6 +13,8 @@ import TaskDetail from './pages/TaskDetail';
 import ProjectDetail from './pages/ProjectDetail';
 import CreateTaskPage from './pages/CreateTaskPage';
 import DashboardPage from './pages/DashboardPage';
+import LoginPage from './pages/LoginPage';
+import SignupPage from './pages/SignupPage';
 import { ToasterProvider } from './components/Toaster';
 import GuestView from './pages/GuestView';
 import AllTasksView from './components/AllTasksView';
@@ -79,47 +83,122 @@ function AppContent() {
 
       {!loading && (
         <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/guest" element={<GuestView />} />
+          
           <Route
             path="/"
             element={
-              <ProjectList
-                projects={projects}
-                onRefresh={loadProjects}
-                onSelectProject={handleProjectSelect}
-              />
+              <RequireAuth>
+                <ProjectList
+                  projects={projects}
+                  onRefresh={loadProjects}
+                  onSelectProject={handleProjectSelect}
+                />
+              </RequireAuth>
             }
           />
-          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route 
+            path="/dashboard" 
+            element={
+              <RequireAuth>
+                <DashboardPage />
+              </RequireAuth>
+            } 
+          />
           <Route
             path="/tasks/:projectId"
             element={
-              <TasksRoute
-                projects={projects}
-                users={users}
-                onBack={() => navigate('/')}
-              />
+              <RequireAuth>
+                <TasksRoute
+                  projects={projects}
+                  users={users}
+                  onBack={() => navigate('/')}
+                />
+              </RequireAuth>
             }
           />
-          <Route path="/alltasks" element={<AllTasksView />} />
-          <Route path="/tasks/new" element={<CreateTaskPage />} />
-          <Route path="/reports" element={<Reports />} />
+          <Route 
+            path="/alltasks" 
+            element={
+              <RequireAuth>
+                <AllTasksView />
+              </RequireAuth>
+            } 
+          />
+          <Route 
+            path="/tasks/new" 
+            element={
+              <RequireAuth>
+                <CreateTaskPage />
+              </RequireAuth>
+            } 
+          />
+          <Route 
+            path="/reports" 
+            element={
+              <RequireAuth>
+                <Reports />
+              </RequireAuth>
+            } 
+          />
           <Route 
             path="/project/:projectId" 
-            element={<ProjectDetail />} 
+            element={
+              <RequireAuth>
+                <ProjectDetail />
+              </RequireAuth>
+            } 
           />
           <Route 
             path="/task/:taskId" 
-            element={<TaskDetail />} 
+            element={
+              <RequireAuth>
+                <TaskDetail />
+              </RequireAuth>
+            } 
           />
           <Route 
-            path="/guest" 
-            element={<GuestView />} 
+            path="/request-project" 
+            element={
+              <RequireAuth>
+                <ProjectRequestForm />
+              </RequireAuth>
+            } 
           />
-          <Route path="/request-project" element={<ProjectRequestForm />} />
-          <Route path="/audit-log" element={<AuditLogViewer />} />
-          <Route path="/intake" element={<IntakeQueue />} />
-          <Route path="/team" element={<TeamOverview />} />
-          <Route path="/archive" element={<ArchiveView />} />
+          <Route 
+            path="/audit-log" 
+            element={
+              <RequireAuth>
+                <AuditLogViewer />
+              </RequireAuth>
+            } 
+          />
+          <Route 
+            path="/intake" 
+            element={
+              <RequireAuth>
+                <IntakeQueue />
+              </RequireAuth>
+            } 
+          />
+          <Route 
+            path="/team" 
+            element={
+              <RequireAuth>
+                <TeamOverview />
+              </RequireAuth>
+            } 
+          />
+          <Route 
+            path="/archive" 
+            element={
+              <RequireAuth>
+                <ArchiveView />
+              </RequireAuth>
+            } 
+          />
         </Routes>
       )}
       </div>
@@ -151,9 +230,11 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
-        <ToasterProvider>
-          <AppContent />
-        </ToasterProvider>
+        <AuthProvider>
+          <ToasterProvider>
+            <AppContent />
+          </ToasterProvider>
+        </AuthProvider>
       </Router>
     </QueryClientProvider>
   );

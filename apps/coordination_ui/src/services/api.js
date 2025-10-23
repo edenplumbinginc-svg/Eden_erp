@@ -9,16 +9,14 @@ const api = axios.create({
   }
 });
 
-// Dev user configuration for testing RBAC
-let currentDevUser = {
-  email: 'test@edenplumbing.com',
-  id: '855546bf-f53d-4538-b8d5-cd30f5c157a2'
-};
-
-// Add auth headers to all requests
+// Add JWT auth header to all requests
 api.interceptors.request.use((config) => {
-  config.headers['X-Dev-User-Email'] = currentDevUser.email;
-  config.headers['X-Dev-User-Id'] = currentDevUser.id;
+  const token = localStorage.getItem('edenAuthToken');
+  
+  if (token) {
+    config.headers['Authorization'] = `Bearer ${token}`;
+  }
+  
   return config;
 }, (error) => {
   console.error('Request interceptor error:', error);
