@@ -425,6 +425,23 @@ router.post('/:taskId/comments', authenticate, requirePerm('tasks:write'), valid
   }
 });
 
+// Delete comment
+router.delete('/comments/:commentId', authenticate, requirePerm('tasks:write'), async (req, res) => {
+  try {
+    const r = await pool.query(
+      'DELETE FROM public.task_comments WHERE id = $1 RETURNING id, task_id',
+      [req.params.commentId]
+    );
+    if (r.rowCount === 0) return res.status(404).json({ error: { message: 'Comment not found' } });
+
+    await audit(req.user?.id, 'comment.delete', `comment:${req.params.commentId}`, { taskId: r.rows[0].task_id });
+
+    res.json({ deleted: true, id: r.rows[0].id });
+  } catch (e) {
+    res.status(500).json({ error: { message: e.message } });
+  }
+});
+
 // Ball handoff
 router.post('/:taskId/ball', authenticate, requirePerm('tasks:write'), validate(BallHandoffSchema), async (req, res) => {
   try {
