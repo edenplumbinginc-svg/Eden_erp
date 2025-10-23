@@ -6,6 +6,7 @@ function warn(msg) { console.warn(`⚠️  ${msg}`); }
 if (!process.env.DATABASE_URL) die('DATABASE_URL missing');
 
 const url = new URL(process.env.DATABASE_URL);
+console.log(`🔍 DATABASE_URL host: ${url.host}`);
 const expectedHost = process.env.EXPECTED_DB_HOST;
 const expectedRef  = process.env.EXPECTED_DB_PROJECT_REF;
 
