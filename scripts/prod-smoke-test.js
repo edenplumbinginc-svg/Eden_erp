@@ -9,7 +9,7 @@ const http = require('http');
 // Configuration
 const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:3000';
 const DEV_EMAIL = process.env.TEST_DEV_EMAIL || 'admin@edenmep.ca';
-const DEV_USER_ID = process.env.TEST_DEV_USER_ID || '00000000-0000-0000-0000-000000000000';
+const DEV_USER_ID = process.env.TEST_DEV_USER_ID || 'a0535c10-a86d-4751-b7bd-bac680bfb183';
 
 // Test results tracker
 const results = {
