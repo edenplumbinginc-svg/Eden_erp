@@ -14,6 +14,11 @@ import DashboardPage from './pages/DashboardPage';
 import { ToasterProvider } from './components/Toaster';
 import GuestView from './pages/GuestView';
 import AllTasksView from './components/AllTasksView';
+import ProjectRequestForm from './pages/ProjectRequestForm';
+import AuditLogViewer from './pages/AuditLogViewer';
+import IntakeQueue from './pages/IntakeQueue';
+import TeamOverview from './pages/TeamOverview';
+import ArchiveView from './pages/ArchiveView';
 
 const queryClient = new QueryClient();
 
@@ -33,9 +38,7 @@ function AppContent() {
     setLoading(true);
     setError(null);
     try {
-      console.log('Loading projects...');
       const response = await apiService.getProjects();
-      console.log('Projects loaded:', response.data.length);
       setProjects(response.data);
     } catch (err) {
       console.error('Error loading projects:', err);
@@ -112,6 +115,11 @@ function AppContent() {
             path="/guest" 
             element={<GuestView />} 
           />
+          <Route path="/request-project" element={<ProjectRequestForm />} />
+          <Route path="/audit-log" element={<AuditLogViewer />} />
+          <Route path="/intake" element={<IntakeQueue />} />
+          <Route path="/team" element={<TeamOverview />} />
+          <Route path="/archive" element={<ArchiveView />} />
         </Routes>
       )}
       </div>

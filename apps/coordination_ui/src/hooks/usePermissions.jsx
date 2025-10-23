@@ -10,11 +10,11 @@ const ROLE_PERMISSIONS = {
   ],
   'test@edenplumbing.com': [
     'tasks:read', 'tasks:write', 'task.view', 'task.create', 'task.edit',
-    'task.comment', 'comments:read', 'comments:write'
+    'task.comment', 'comments:read', 'comments:write', 'project.view'
   ],
   'contributor@edenplumbing.com': [
     'task.view', 'task.create', 'task.edit', 'task.comment',
-    'comments:read', 'comments:write'
+    'comments:read', 'comments:write', 'project.view'
   ],
   'viewer@edenplumbing.com': [
     'tasks:read', 'task.view', 'project.view', 'comments:read'

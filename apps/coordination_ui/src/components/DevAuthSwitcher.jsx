@@ -2,6 +2,11 @@ import React, { useState } from 'react';
 import { devAuth } from '../services/api';
 
 function DevAuthSwitcher({ onUserChange }) {
+  // Hide in production
+  if (import.meta.env.MODE === 'production') {
+    return null;
+  }
+
   const [currentUser, setCurrentUser] = useState(devAuth.getCurrentUser());
   const [showCustom, setShowCustom] = useState(false);
   const [customEmail, setCustomEmail] = useState('');

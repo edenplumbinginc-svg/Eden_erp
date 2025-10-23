@@ -39,8 +39,8 @@ const CreateTaskSchema = z.object({
   linked_project_ids: z.array(z.string().uuid()).optional()
 });
 
-// List projects - RBAC protected with projects:read permission
-router.get('/', authenticate, requirePerm('projects:read'), async (req, res) => {
+// List projects - RBAC protected with project.view permission
+router.get('/', authenticate, requirePerm('project.view'), async (req, res) => {
   try {
     const r = await pool.query(
       'SELECT id, name, code, status, created_at FROM public.projects ORDER BY created_at DESC'
@@ -52,7 +52,7 @@ router.get('/', authenticate, requirePerm('projects:read'), async (req, res) => 
 });
 
 // Get single project by ID
-router.get('/:id', authenticate, requirePerm('projects:read'), async (req, res) => {
+router.get('/:id', authenticate, requirePerm('project.view'), async (req, res) => {
   try {
     const r = await pool.query(
       'SELECT id, name, code, status, created_at FROM public.projects WHERE id = $1',
@@ -66,7 +66,7 @@ router.get('/:id', authenticate, requirePerm('projects:read'), async (req, res) 
 });
 
 // Create project
-router.post('/', authenticate, requirePerm('projects:write'), validate(CreateProjectSchema), async (req, res) => {
+router.post('/', authenticate, requirePerm('project.create'), validate(CreateProjectSchema), async (req, res) => {
   try {
     const { name, code } = req.data;
     const r = await pool.query(
@@ -84,7 +84,7 @@ router.post('/', authenticate, requirePerm('projects:write'), validate(CreatePro
 });
 
 // Update project
-router.patch('/:id', authenticate, requirePerm('projects:write'), validate(UpdateProjectSchema), async (req, res) => {
+router.patch('/:id', authenticate, requirePerm('project.edit'), validate(UpdateProjectSchema), async (req, res) => {
   try {
     const { name, code, status } = req.data;
     const updates = [];
@@ -112,7 +112,7 @@ router.patch('/:id', authenticate, requirePerm('projects:write'), validate(Updat
 });
 
 // Delete project
-router.delete('/:id', authenticate, requirePerm('projects:write'), async (req, res) => {
+router.delete('/:id', authenticate, requirePerm('project.delete'), async (req, res) => {
   try {
     const r = await pool.query('DELETE FROM public.projects WHERE id = $1 RETURNING id', [req.params.id]);
     if (r.rowCount === 0) return res.status(404).json({ error: 'project not found' });
@@ -125,7 +125,7 @@ router.delete('/:id', authenticate, requirePerm('projects:write'), async (req, r
 });
 
 // List tasks by project
-router.get('/:projectId/tasks', authenticate, requirePerm('tasks:read'), async (req, res) => {
+router.get('/:projectId/tasks', authenticate, requirePerm('task.view'), async (req, res) => {
   try {
     const q = `
       SELECT t.id, t.title, t.description, t.status, t.priority,
@@ -148,7 +148,7 @@ router.get('/:projectId/tasks', authenticate, requirePerm('tasks:read'), async (
 });
 
 // Create task in project
-router.post('/:projectId/tasks', authenticate, requirePerm('tasks:write'), validate(CreateTaskSchema), async (req, res) => {
+router.post('/:projectId/tasks', authenticate, requirePerm('task.create'), validate(CreateTaskSchema), async (req, res) => {
   try {
     const { title, description, assignee_id, ball_in_court, ball_in_court_note, due_at, priority, tags, origin, voice_url, voice_transcript, linked_project_ids } = req.data;
     

@@ -108,7 +108,7 @@ function isValidStatusTransition(currentStatus, newStatus) {
 }
 
 // List all tasks with filtering, pagination, and sorting
-router.get('/', authenticate, requirePerm('tasks:read'), async (req, res) => {
+router.get('/', authenticate, requirePerm('task.view'), async (req, res) => {
   try {
     const filters = parseQuery(req.query);
     const result = await fetchTasks(filters);
@@ -121,7 +121,7 @@ router.get('/', authenticate, requirePerm('tasks:read'), async (req, res) => {
 });
 
 // Create a new task
-router.post('/', authenticate, requirePerm('tasks:write'), validate(CreateTaskSchema), async (req, res) => {
+router.post('/', authenticate, requirePerm('task.create'), validate(CreateTaskSchema), async (req, res) => {
   try {
     const data = req.data;
     
@@ -211,7 +211,7 @@ router.post('/', authenticate, requirePerm('tasks:write'), validate(CreateTaskSc
 });
 
 // Get single task (with computed fields)
-router.get('/:id', authenticate, requirePerm('tasks:read'), async (req, res) => {
+router.get('/:id', authenticate, requirePerm('task.view'), async (req, res) => {
   try {
     const q = `
       SELECT t.id, t.title, t.description, t.status, t.priority,
@@ -235,7 +235,7 @@ router.get('/:id', authenticate, requirePerm('tasks:read'), async (req, res) => 
 });
 
 // Update task
-router.patch('/:id', authenticate, requirePerm('tasks:write'), validate(UpdateTaskSchema), async (req, res) => {
+router.patch('/:id', authenticate, requirePerm('task.edit'), validate(UpdateTaskSchema), async (req, res) => {
   try {
     const { title, description, status, priority, assignee_id, ball_in_court, ball_in_court_note, ballOwnerType, ballOwnerId, due_at, tags, origin, voice_url, voice_transcript } = req.data;
     
@@ -418,7 +418,7 @@ router.patch('/:id', authenticate, requirePerm('tasks:write'), validate(UpdateTa
 });
 
 // Delete task (soft delete)
-router.delete('/:id', authenticate, requirePerm('tasks:write'), async (req, res) => {
+router.delete('/:id', authenticate, requirePerm('task.delete'), async (req, res) => {
   try {
     const r = await pool.query(
       'UPDATE public.tasks SET deleted_at = now() WHERE id = $1 AND deleted_at IS NULL RETURNING id',
@@ -435,7 +435,7 @@ router.delete('/:id', authenticate, requirePerm('tasks:write'), async (req, res)
 });
 
 // Task comments
-router.get('/:taskId/comments', authenticate, requirePerm('tasks:read'), async (req, res) => {
+router.get('/:taskId/comments', authenticate, requirePerm('task.view'), async (req, res) => {
   try {
     const r = await pool.query(
       `SELECT id, task_id, author_id, body, created_at, updated_at
@@ -450,7 +450,7 @@ router.get('/:taskId/comments', authenticate, requirePerm('tasks:read'), async (
   }
 });
 
-router.post('/:taskId/comments', authenticate, requirePerm('tasks:write'), validate(CreateCommentSchema), async (req, res) => {
+router.post('/:taskId/comments', authenticate, requirePerm('task.comment'), validate(CreateCommentSchema), async (req, res) => {
   try {
     const { body, author_id } = req.data;
     
@@ -535,7 +535,7 @@ router.post('/:taskId/comments', authenticate, requirePerm('tasks:write'), valid
 });
 
 // Delete comment
-router.delete('/comments/:commentId', authenticate, requirePerm('tasks:write'), async (req, res) => {
+router.delete('/comments/:commentId', authenticate, requirePerm('task.delete'), async (req, res) => {
   try {
     const r = await pool.query(
       'DELETE FROM public.task_comments WHERE id = $1 RETURNING id, task_id',
@@ -552,7 +552,7 @@ router.delete('/comments/:commentId', authenticate, requirePerm('tasks:write'), 
 });
 
 // Ball handoff
-router.post('/:taskId/ball', authenticate, requirePerm('tasks:write'), validate(BallHandoffSchema), async (req, res) => {
+router.post('/:taskId/ball', authenticate, requirePerm('task.edit'), validate(BallHandoffSchema), async (req, res) => {
   try {
     const { to_user_id, from_user_id, note } = req.data;
 
@@ -586,7 +586,7 @@ router.post('/:taskId/ball', authenticate, requirePerm('tasks:write'), validate(
   }
 });
 
-router.get('/:taskId/ball', authenticate, requirePerm('tasks:read'), async (req, res) => {
+router.get('/:taskId/ball', authenticate, requirePerm('task.view'), async (req, res) => {
   try {
     const r = await pool.query(
       `SELECT id, task_id, from_user_id, to_user_id, note, changed_at
@@ -602,7 +602,7 @@ router.get('/:taskId/ball', authenticate, requirePerm('tasks:read'), async (req,
 });
 
 // Subtasks
-router.get('/:id/subtasks', authenticate, requirePerm('tasks:read'), async (req, res) => {
+router.get('/:id/subtasks', authenticate, requirePerm('task.view'), async (req, res) => {
   try {
     const r = await pool.query(
       `SELECT id, task_id, title, done, order_index, created_at, updated_at
@@ -617,7 +617,7 @@ router.get('/:id/subtasks', authenticate, requirePerm('tasks:read'), async (req,
   }
 });
 
-router.post('/:id/subtasks', authenticate, requirePerm('tasks:write'), validate(CreateSubtaskSchema), async (req, res) => {
+router.post('/:id/subtasks', authenticate, requirePerm('task.edit'), validate(CreateSubtaskSchema), async (req, res) => {
   try {
     const { title, done, order_index } = req.data;
     
@@ -640,7 +640,7 @@ router.post('/:id/subtasks', authenticate, requirePerm('tasks:write'), validate(
 });
 
 // Subtask operations (by subtask ID)
-router.patch('/subtasks/:id', authenticate, requirePerm('tasks:write'), validate(UpdateSubtaskSchema), async (req, res) => {
+router.patch('/subtasks/:id', authenticate, requirePerm('task.edit'), validate(UpdateSubtaskSchema), async (req, res) => {
   try {
     const { title, done, order_index } = req.data;
     const updates = [];
@@ -675,7 +675,7 @@ router.patch('/subtasks/:id', authenticate, requirePerm('tasks:write'), validate
   }
 });
 
-router.delete('/subtasks/:id', authenticate, requirePerm('tasks:write'), async (req, res) => {
+router.delete('/subtasks/:id', authenticate, requirePerm('task.delete'), async (req, res) => {
   try {
     const r = await pool.query('DELETE FROM public.subtasks WHERE id = $1 RETURNING id', [req.params.id]);
     if (r.rowCount === 0) return res.status(404).json({ error: 'subtask not found' });
@@ -689,7 +689,7 @@ router.delete('/subtasks/:id', authenticate, requirePerm('tasks:write'), async (
 });
 
 // Task dependencies
-router.get('/:id/dependencies', authenticate, requirePerm('tasks:read'), async (req, res) => {
+router.get('/:id/dependencies', authenticate, requirePerm('task.view'), async (req, res) => {
   try {
     const r = await pool.query(
       `SELECT td.task_id, td.blocks_task_id, 
@@ -705,7 +705,7 @@ router.get('/:id/dependencies', authenticate, requirePerm('tasks:read'), async (
   }
 });
 
-router.post('/:id/dependencies', authenticate, requirePerm('tasks:write'), validate(CreateDependencySchema), async (req, res) => {
+router.post('/:id/dependencies', authenticate, requirePerm('task.edit'), validate(CreateDependencySchema), async (req, res) => {
   try {
     const { blocks_task_id } = req.data;
     
@@ -739,7 +739,7 @@ router.post('/:id/dependencies', authenticate, requirePerm('tasks:write'), valid
   }
 });
 
-router.delete('/:id/dependencies/:blocksId', authenticate, requirePerm('tasks:write'), async (req, res) => {
+router.delete('/:id/dependencies/:blocksId', authenticate, requirePerm('task.delete'), async (req, res) => {
   try {
     const r = await pool.query(
       `DELETE FROM public.task_dependencies 
@@ -760,7 +760,7 @@ router.delete('/:id/dependencies/:blocksId', authenticate, requirePerm('tasks:wr
 });
 
 // Soft delete endpoint
-router.delete('/:id/soft', authenticate, requirePerm('tasks:write'), async (req, res) => {
+router.delete('/:id/soft', authenticate, requirePerm('task.delete'), async (req, res) => {
   try {
     const r = await pool.query(
       `UPDATE public.tasks
@@ -780,7 +780,7 @@ router.delete('/:id/soft', authenticate, requirePerm('tasks:write'), async (req,
 });
 
 // Snooze idle reminder for a task
-router.put('/:id/snooze_idle', authenticate, requirePerm('tasks:write'), async (req, res) => {
+router.put('/:id/snooze_idle', authenticate, requirePerm('task.edit'), async (req, res) => {
   try {
     const days = parseInt(req.body?.days || '3', 10);
     if (days <= 0 || days > 30) {
@@ -808,7 +808,7 @@ router.put('/:id/snooze_idle', authenticate, requirePerm('tasks:write'), async (
 });
 
 // Department handoff with 24h duplicate guard
-router.post('/:id/handoff', authenticate, requirePerm('tasks:write'), validate(HandoffSchema), async (req, res) => {
+router.post('/:id/handoff', authenticate, requirePerm('task.edit'), validate(HandoffSchema), async (req, res) => {
   try {
     const taskId = req.params.id;
     const toDepartment = req.body.to_department;

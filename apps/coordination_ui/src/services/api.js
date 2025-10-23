@@ -17,10 +17,6 @@ let currentDevUser = {
 
 // Add auth headers to all requests
 api.interceptors.request.use((config) => {
-  console.log('API Request interceptor - adding headers:', {
-    email: currentDevUser.email,
-    id: currentDevUser.id
-  });
   config.headers['X-Dev-User-Email'] = currentDevUser.email;
   config.headers['X-Dev-User-Id'] = currentDevUser.id;
   return config;
