@@ -51,6 +51,7 @@ export const apiService = {
   getTaskComments: (taskId) => api.get(`/tasks/${taskId}/comments`).then(res => res.data),
   createComment: (taskId, data) => api.post(`/tasks/${taskId}/comments`, data),
   createTaskComment: (taskId, data) => api.post(`/tasks/${taskId}/comments`, data).then(res => res.data),
+  deleteComment: (commentId) => api.delete(`/comments/${commentId}`).then(res => res.data),
 
   // Attachments
   getTaskAttachments: (taskId) => api.get(`/tasks/${taskId}/attachments`).then(res => res.data),

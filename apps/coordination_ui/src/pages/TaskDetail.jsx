@@ -10,6 +10,7 @@ import HandoffModal from "../components/HandoffModal";
 import Breadcrumbs from "../components/Breadcrumbs";
 import InlineEdit from "../components/InlineEdit";
 import InlineAssigneeEdit from "../components/InlineAssigneeEdit";
+import ConfirmDialog from "../components/ConfirmDialog";
 
 function daysSince(ts) {
   if (!ts) return null;
@@ -65,6 +66,7 @@ function Comments({ taskId }) {
   });
 
   const [body, setBody] = useState("");
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   const createComment = useMutation({
     mutationFn: async ({ body }) => apiService.createTaskComment(taskId, { body }),
@@ -78,14 +80,34 @@ function Comments({ taskId }) {
     }
   });
 
+  const deleteComment = useMutation({
+    mutationFn: async (commentId) => apiService.deleteComment(commentId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["comments", taskId] });
+      push("success", "Comment deleted");
+    },
+    onError: (error) => {
+      push("error", error?.response?.data?.error?.message || "Failed to delete comment");
+    }
+  });
+
   return (
     <div className="space-y-3">
       <div className="font-semibold">Comments</div>
       <div className="space-y-2">
         {Array.isArray(data) && data.length > 0 ? data.map(c => (
-          <div key={c.id} className="p-2 border rounded">
-            <div className="text-body">{c.body}</div>
-            <div className="text-caption text-muted">{new Date(c.created_at || c.createdAt).toLocaleString()}</div>
+          <div key={c.id} className="p-2 border rounded flex items-start justify-between group">
+            <div className="flex-1">
+              <div className="text-body">{c.body}</div>
+              <div className="text-caption text-muted">{new Date(c.created_at || c.createdAt).toLocaleString()}</div>
+            </div>
+            <button
+              className="btn-icon text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={() => setDeleteConfirm(c.id)}
+              title="Delete comment"
+            >
+              🗑️
+            </button>
           </div>
         )) : <div className="text-body text-muted">No comments yet.</div>}
       </div>
@@ -101,6 +123,17 @@ function Comments({ taskId }) {
           Comment
         </button>
       </div>
+      
+      <ConfirmDialog
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={() => deleteComment.mutate(deleteConfirm)}
+        title="Delete Comment"
+        message="Are you sure you want to delete this comment? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        danger={true}
+      />
     </div>
   );
 }
@@ -227,10 +260,25 @@ function Attachments({ taskId }) {
 export default function TaskDetail() {
   const { taskId } = useParams();
   const navigate = useNavigate();
+  const qc = useQueryClient();
+  const { push } = useToaster();
+
   const { data: task, isLoading } = useQuery({
     queryKey: ["task", taskId],
     queryFn: async () => apiService.getTask(taskId),
     enabled: !!taskId
+  });
+
+  const updateTask = useMutation({
+    mutationFn: async (updates) => apiService.updateTask(taskId, updates),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["task", taskId] });
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      push("success", "Task updated successfully");
+    },
+    onError: (error) => {
+      push("error", error?.response?.data?.error?.message || "Failed to update task");
+    }
   });
 
   const [invite, setInvite] = useState(null);
@@ -265,16 +313,33 @@ export default function TaskDetail() {
       </div>
 
       <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
-            <h2 className="text-xl font-semibold">{task?.title || "Task"}</h2>
+        <div className="flex-1 space-y-4">
+          <div className="flex items-center gap-2">
+            <InlineEdit
+              value={task?.title}
+              onSave={(newTitle) => updateTask.mutateAsync({ title: newTitle })}
+              className="flex-1"
+              displayClassName="text-xl font-semibold"
+              placeholder="Enter task title..."
+            />
             {task?.origin && (
               <span className="text-caption px-2 py-0.5 rounded bg-blue-50 border border-blue-300 text-blue-700">
                 {task.origin === 'voice' ? '🎤 Voice' : task.origin === 'email' ? '📧 Email' : '💻 UI'}
               </span>
             )}
           </div>
-          <div className="text-body text-muted">{task?.description}</div>
+          <InlineEdit
+            value={task?.description}
+            onSave={(newDescription) => updateTask.mutateAsync({ description: newDescription })}
+            multiline
+            className="w-full"
+            displayClassName="text-body text-muted"
+            placeholder="Add a description..."
+          />
+          <InlineAssigneeEdit
+            value={task?.assigned_to}
+            onSave={(newAssignee) => updateTask.mutateAsync({ assigned_to: newAssignee })}
+          />
         </div>
         <div className="flex flex-col items-end gap-2">
           <BallInCourt task={task} />
