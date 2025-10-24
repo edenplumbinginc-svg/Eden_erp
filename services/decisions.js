@@ -1,9 +1,11 @@
 // services/decisions.js - Auto-Decisions v0 Safe Rules Engine
 // Runs automated low-risk actions based on telemetry and audit data
 // All actions start in DRY_RUN mode by default (safe by design)
-// IDEMPOTENCY: All effects check execution history to prevent duplicates
+// IDEMPOTENCY: Uses action_hash to prevent duplicate executions (survives restarts)
+// TRUTHFUL LOGGING: Records executions ONLY after successful actions
 
 const { pool } = require('./database');
+const { actionHash } = require('./actionHash');
 
 /**
  * Load all enabled decision policies from the database
@@ -19,40 +21,76 @@ async function loadPolicies() {
 }
 
 /**
- * Record a decision execution (audit trail)
+ * Record a decision execution with truthful audit trail
+ * Only called AFTER action succeeds (or in DRY_RUN mode)
+ * Uses action_hash for idempotency (prevents duplicate executions)
  */
-async function recordExec(policy, matched, effect, target, payload) {
+async function recordExec(policy, effect, target, payload, success, errorText = null) {
+  const hash = actionHash({
+    policySlug: policy.slug,
+    effect: effect,
+    targetType: target.type || null,
+    targetId: target.id || null,
+    payload: payload
+  });
+
   await pool.query(`
-    INSERT INTO decision_executions (policy_slug, matched, dry_run, effect, target_type, target_id, payload)
-    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    INSERT INTO decision_executions 
+      (policy_slug, matched, dry_run, effect, target_type, target_id, payload, success, error_text, action_hash)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    ON CONFLICT (action_hash) DO NOTHING
   `, [
     policy.slug,
-    matched,
+    true,
     policy.dry_run,
     effect,
     target.type || null,
     target.id || null,
-    JSON.stringify(payload)
+    JSON.stringify(payload),
+    success,
+    errorText,
+    hash
   ]);
 }
 
 /**
- * Check if a decision has already been executed for a target
- * Returns true if already executed (prevents duplicates)
+ * Execute an action with idempotency and truthful logging
+ * DRY_RUN: records with success=false (simulation only)
+ * LIVE: executes action FIRST, then records with success=true
+ * LIVE error: records with success=false and captures error_text
  */
-async function alreadyExecuted(policySlug, effect, targetType, targetId, withinHours = 24) {
-  const result = await pool.query(`
-    SELECT COUNT(*) as count
-    FROM decision_executions
-    WHERE policy_slug = $1
-      AND effect = $2
-      AND target_type = $3
-      AND target_id = $4
-      AND dry_run = false
-      AND created_at >= now() - ($5::text || ' hours')::interval
-  `, [policySlug, effect, targetType, targetId, withinHours]);
+async function executeAction(policy, effect, target, payload, actionFn) {
+  const hash = actionHash({
+    policySlug: policy.slug,
+    effect: effect,
+    targetType: target.type || null,
+    targetId: target.id || null,
+    payload: payload
+  });
 
-  return parseInt(result.rows[0]?.count || 0) > 0;
+  const existing = await pool.query(`
+    SELECT success FROM decision_executions
+    WHERE action_hash = $1 AND success = true
+    LIMIT 1
+  `, [hash]);
+
+  if (existing.rows.length > 0) {
+    return { executed: false, reason: 'already_done' };
+  }
+
+  if (policy.dry_run) {
+    await recordExec(policy, effect, target, payload, false, null);
+    return { executed: true, dryRun: true };
+  }
+
+  try {
+    await actionFn();
+    await recordExec(policy, effect, target, payload, true, null);
+    return { executed: true, success: true };
+  } catch (err) {
+    await recordExec(policy, effect, target, payload, false, err.message);
+    return { executed: true, success: false, error: err.message };
+  }
 }
 
 /**
@@ -198,7 +236,6 @@ async function runDecisionCycle() {
 
           const effect = policy.action?.effect;
           if (effect === 'label' && event.task_id) {
-            // IDEMPOTENCY: Check if label already exists
             const hasLabel = await taskHasLabel(event.task_id, policy.action.label);
             if (hasLabel) {
               totalSkipped++;
@@ -212,11 +249,20 @@ async function runDecisionCycle() {
               perfEventId: event.id
             };
 
-            await recordExec(policy, true, 'label', { type: 'task', id: event.task_id }, payload);
-            totalExecutions++;
+            const result = await executeAction(
+              policy,
+              'label',
+              { type: 'task', id: event.task_id },
+              payload,
+              async () => {
+                await addTaskLabel(event.task_id, policy.action.label);
+              }
+            );
 
-            if (!policy.dry_run) {
-              await addTaskLabel(event.task_id, policy.action.label);
+            if (result.executed) {
+              totalExecutions++;
+            } else if (result.reason === 'already_done') {
+              totalSkipped++;
             }
           }
         }
@@ -239,20 +285,6 @@ async function runDecisionCycle() {
         `, [days]);
 
         for (const task of idleResult.rows) {
-          // IDEMPOTENCY: Check if we already notified about this task today
-          const alreadyNotified = await alreadyExecuted(
-            policy.slug,
-            'notify',
-            'task',
-            task.id,
-            24 // within last 24 hours
-          );
-
-          if (alreadyNotified) {
-            totalSkipped++;
-            continue;
-          }
-
           const payload = {
             title: task.title,
             idleDays: days,
@@ -260,12 +292,21 @@ async function runDecisionCycle() {
             department: task.department
           };
 
-          await recordExec(policy, true, 'notify', { type: 'task', id: task.id }, payload);
-          totalExecutions++;
+          const result = await executeAction(
+            policy,
+            'notify',
+            { type: 'task', id: task.id },
+            payload,
+            async () => {
+              const message = `Task idle ${days}d: ${task.title}`;
+              await notifyRole(policy.action.role || 'ops', message, 'task', task.id);
+            }
+          );
 
-          if (!policy.dry_run) {
-            const message = `Task idle ${days}d: ${task.title}`;
-            await notifyRole(policy.action.role || 'ops', message, 'task', task.id);
+          if (result.executed) {
+            totalExecutions++;
+          } else if (result.reason === 'already_done') {
+            totalSkipped++;
           }
         }
       }
