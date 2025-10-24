@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { api } from '../services/api';
+import { loadCachedPerms, saveCachedPerms, clearCachedPerms } from '../lib/permissionsCache';
+import { fetchPermissions as fetchPermsFromAPI } from '../lib/permissionsClient';
 
 const AuthContext = createContext({});
 
@@ -16,55 +17,75 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
   const [permissions, setPermissions] = useState([]);
+  const [roles, setRoles] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const init = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.access_token) {
         localStorage.setItem('edenAuthToken', session.access_token);
-        fetchPermissions(session.access_token);
+        
+        // Try cache first for instant UI
+        const cached = loadCachedPerms();
+        if (cached) {
+          setPermissions(cached.permissions);
+          setRoles(cached.roles);
+        }
+        
+        // Always refresh in background to stay current
+        try {
+          const fresh = await fetchPermsFromAPI(session.access_token);
+          setPermissions(fresh.permissions);
+          setRoles(fresh.roles);
+          saveCachedPerms(fresh);
+        } catch (error) {
+          console.warn('Permission refresh failed', error);
+          // Cached view is better than nothing
+        }
       } else {
         localStorage.removeItem('edenAuthToken');
         setPermissions([]);
+        setRoles([]);
+        clearCachedPerms();
       }
       
       setIsLoading(false);
-    });
+    };
+
+    init();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.access_token) {
         localStorage.setItem('edenAuthToken', session.access_token);
-        fetchPermissions(session.access_token);
+        
+        // Immediate refresh on auth state changes
+        try {
+          const fresh = await fetchPermsFromAPI(session.access_token);
+          setPermissions(fresh.permissions);
+          setRoles(fresh.roles);
+          saveCachedPerms(fresh);
+        } catch (error) {
+          console.warn('Permission refresh failed', error);
+        }
       } else {
         localStorage.removeItem('edenAuthToken');
         setPermissions([]);
+        setRoles([]);
+        clearCachedPerms();
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
-
-  const fetchPermissions = async (token) => {
-    try {
-      const response = await api.get('/me/permissions', {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      setPermissions(response.data.permissions || []);
-    } catch (error) {
-      console.error('Failed to fetch permissions:', error);
-      setPermissions([]);
-    }
-  };
 
   const signIn = async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -76,7 +97,15 @@ export function AuthProvider({ children }) {
     
     if (data.session?.access_token) {
       localStorage.setItem('edenAuthToken', data.session.access_token);
-      await fetchPermissions(data.session.access_token);
+      
+      try {
+        const fresh = await fetchPermsFromAPI(data.session.access_token);
+        setPermissions(fresh.permissions);
+        setRoles(fresh.roles);
+        saveCachedPerms(fresh);
+      } catch (err) {
+        console.warn('Permission fetch failed on sign in', err);
+      }
     }
     
     return data;
@@ -92,7 +121,15 @@ export function AuthProvider({ children }) {
     
     if (data.session?.access_token) {
       localStorage.setItem('edenAuthToken', data.session.access_token);
-      await fetchPermissions(data.session.access_token);
+      
+      try {
+        const fresh = await fetchPermsFromAPI(data.session.access_token);
+        setPermissions(fresh.permissions);
+        setRoles(fresh.roles);
+        saveCachedPerms(fresh);
+      } catch (err) {
+        console.warn('Permission fetch failed on sign up', err);
+      }
     }
     
     return data;
@@ -104,12 +141,15 @@ export function AuthProvider({ children }) {
     
     localStorage.removeItem('edenAuthToken');
     setPermissions([]);
+    setRoles([]);
+    clearCachedPerms();
   };
 
   const value = {
     session,
     user,
     permissions,
+    roles,
     isLoading,
     signIn,
     signOut,
