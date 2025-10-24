@@ -38,6 +38,15 @@ if (process.env.SENTRY_DSN && process.env.SENTRY_DSN.startsWith('https://')) {
         return event;
       }
     });
+    
+    // Set release tags for build identification
+    if (process.env.RELEASE_SHA) {
+      Sentry.setTag("release", process.env.RELEASE_SHA);
+    }
+    if (process.env.BUILD_TIME) {
+      Sentry.setTag("build_time", process.env.BUILD_TIME);
+    }
+    
     sentryEnabled = true;
   } catch (err) {
     console.error('Failed to initialize Sentry:', err.message);
