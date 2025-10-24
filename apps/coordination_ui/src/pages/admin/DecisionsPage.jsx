@@ -13,6 +13,9 @@ export default function DecisionsPage() {
         <p style={{ fontSize: '16px', color: '#666', marginTop: '0' }}>
           Manage decision policies, toggle DRY_RUN mode, and view execution history.
         </p>
+        <p style={{ fontSize: '14px', color: '#666', marginTop: '8px' }}>
+          Need to tune the "Unacknowledged handoff" SLA? Adjust it in <a href="/admin/court-flow" style={{ textDecoration: 'underline', color: '#1976d2' }}>Admin · Court Flow</a>.
+        </p>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
