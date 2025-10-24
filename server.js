@@ -109,12 +109,22 @@ const httpLogger = pinoHttp({
   }
 });
 
-// Request timing hook
+// Velocity Layer: Metrics Core
+const { makeMetrics } = require('./lib/metrics');
+const metrics = makeMetrics();
+
+// Request timing + metrics collection hook
 function requestTimingMiddleware(req, res, next) {
   const start = process.hrtime.bigint();
   res.on('finish', () => {
     const end = process.hrtime.bigint();
     const duration_ms = Number(end - start) / 1e6;
+    const ok = res.statusCode < 400;
+    
+    // Feed metrics aggregator
+    metrics.tap(req, res, duration_ms, ok);
+    
+    // Keep Pino structured logging
     req.log.info({ req_id: req.id, duration_ms, statusCode: res.statusCode }, 'req_complete');
   });
   next();
