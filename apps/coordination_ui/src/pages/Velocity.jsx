@@ -158,11 +158,12 @@ export default function Velocity() {
               <th className="px-3 py-2">p95 (5m)</th>
               <th className="px-3 py-2">RPS (5m)</th>
               {header("Regress % (p95)", "regress_pct")}
+              <th className="px-3 py-2">Trace</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
-              <tr><td className="px-3 py-4 text-center" colSpan="9">No data yet — hit some routes</td></tr>
+              <tr><td className="px-3 py-4 text-center" colSpan="10">No data yet — hit some routes</td></tr>
             ) : rows.map((r) => (
               <tr key={r.route} className="border-t">
                 <td className="px-3 py-2 font-mono">{r.route}</td>
@@ -194,6 +195,26 @@ export default function Velocity() {
                         </span>
                       )
                     : "—"}
+                </td>
+                <td className="px-3 py-2">
+                  <button
+                    className="px-2 py-1 rounded-md border hover:bg-gray-50 disabled:opacity-50"
+                    onClick={async () => {
+                      try {
+                        const res = await fetch(`/ops/sentry-link?route=${encodeURIComponent(r.route)}`, { cache: "no-store" });
+                        const j = await res.json();
+                        if (j?.url) return window.open(j.url, "_blank", "noopener,noreferrer");
+                        if (j?.missing) {
+                          alert("Configure SENTRY_ORG_SLUG and SENTRY_PROJECT_SLUG secrets to enable deep links.");
+                        }
+                      } catch {
+                        alert("Could not create Sentry link. Check backend logs.");
+                      }
+                    }}
+                    title="Open Sentry filtered to this route (last 1h)"
+                  >
+                    Sentry →
+                  </button>
                 </td>
               </tr>
             ))}
