@@ -1,6 +1,6 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { perfApi } from '../../services/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { perfApi, adminApi } from '../../services/api';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
 
 function secondsToHMS(sec) {
@@ -20,7 +20,20 @@ const Card = ({ title, value, sub }) => (
 );
 
 export default function CourtFlowPage() {
+  const qc = useQueryClient();
   const { data, isLoading, error } = useQuery(['court-flow'], perfApi.courtFlow, { refetchInterval: 15000 });
+  const { data: slaData } = useQuery(['unack-sla'], adminApi.getUnackSla);
+  const [sla, setSla] = React.useState('');
+  
+  React.useEffect(() => { 
+    if (slaData?.value_seconds != null) setSla(String(slaData.value_seconds)); 
+  }, [slaData]);
+  
+  const save = useMutation({
+    mutationFn: (v) => adminApi.setUnackSla(Number(v)),
+    onSuccess: () => { qc.invalidateQueries(['unack-sla']); },
+  });
+  
   if (isLoading) return <div className="p-6">Loading court flow…</div>;
   if (error) return <div className="p-6 text-red-600">Failed to load court flow metrics.</div>;
 
@@ -40,6 +53,35 @@ export default function CourtFlowPage() {
   return (
     <div className="p-6 space-y-6">
       <h1 className="text-2xl font-semibold">Court Flow · Department Bottlenecks (30d)</h1>
+
+      <div className="rounded-2xl border shadow p-4">
+        <div className="font-medium mb-2">SLA · Unacknowledged Handoff</div>
+        <div className="text-sm text-gray-600 mb-3">
+          Escalate when a handoff isn't acknowledged within this many <b>seconds</b>.
+          Common values: 86400 (24h), 172800 (48h), 259200 (72h).
+        </div>
+        <div className="flex items-center gap-3">
+          <input
+            className="px-3 py-2 border rounded w-48"
+            type="number"
+            min="0"
+            value={sla}
+            onChange={e => setSla(e.target.value)}
+          />
+          <button
+            className="px-3 py-2 rounded bg-black text-white hover:bg-gray-800"
+            onClick={() => save.mutate(sla)}
+            disabled={save.isLoading}
+          >
+            {save.isLoading ? 'Saving…' : 'Save SLA'}
+          </button>
+          {slaData?.value_seconds != null && (
+            <div className="text-xs text-gray-500">
+              Current: {slaData.value_seconds}s ({Math.round(slaData.value_seconds/3600)}h)
+            </div>
+          )}
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card title="Departments" value={items.length} />
