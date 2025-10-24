@@ -112,8 +112,25 @@ const httpLogger = pinoHttp({
 const { makeMetrics } = require('./lib/metrics');
 const metrics = makeMetrics();
 
-// Request timing + metrics collection hook
+// Helper to get stable route key (for both Metrics and Sentry)
+function routeKey(req) {
+  return `${req.method} ${req.route?.path || req.path}`;
+}
+
+// Request timing + metrics collection hook + Sentry tagging
 function requestTimingMiddleware(req, res, next) {
+  // Name Sentry transaction by route for better grouping
+  if (sentryEnabled) {
+    const tx = Sentry.getCurrentHub && Sentry.getCurrentHub().getScope && Sentry.getCurrentHub().getScope().getTransaction && Sentry.getCurrentHub().getScope().getTransaction();
+    if (tx) tx.setName(routeKey(req));
+
+    // Add per-request tags early
+    Sentry.setTag("route", req.route?.path || req.path);
+    Sentry.setTag("method", req.method);
+    if (process.env.RELEASE_SHA) Sentry.setTag("release", process.env.RELEASE_SHA);
+    if (process.env.BUILD_TIME) Sentry.setTag("build_time", process.env.BUILD_TIME);
+  }
+
   const start = process.hrtime.bigint();
   res.on('finish', () => {
     const end = process.hrtime.bigint();
@@ -125,6 +142,25 @@ function requestTimingMiddleware(req, res, next) {
     
     // Keep Pino structured logging
     req.log.info({ req_id: req.id, duration_ms, statusCode: res.statusCode }, 'req_complete');
+
+    // Add outcome tags for Sentry breadcrumbs
+    if (sentryEnabled) {
+      Sentry.setTag("status_code", res.statusCode);
+      Sentry.setTag("duration_ms", Math.round(duration_ms));
+
+      // If a 5xx slipped through without throwing, report it explicitly
+      if (res.statusCode >= 500) {
+        Sentry.captureMessage("HTTP 5xx response", {
+          level: "error",
+          tags: {
+            route: req.route?.path || req.path,
+            method: req.method,
+            status_code: res.statusCode,
+            duration_ms: Math.round(duration_ms),
+          },
+        });
+      }
+    }
   });
   next();
 }
@@ -506,6 +542,33 @@ app.get('/ops/metrics', (_req, res) => {
 app.get('/ops/metrics/trends', (_req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.json(metrics.trends());
+});
+
+// Velocity → Sentry correlation: deep link to filtered Discover view
+app.get('/ops/sentry-link', (req, res) => {
+  const org = process.env.SENTRY_ORG_SLUG || "";
+  const project = process.env.SENTRY_PROJECT_SLUG || "";
+  const env = process.env.SENTRY_ENV || process.env.NODE_ENV || "dev";
+  const route = req.query.route;
+
+  if (!route) return res.status(400).json({ error: "missing route" });
+  if (!org || !project) {
+    return res.status(200).json({
+      url: null,
+      missing: {
+        SENTRY_ORG_SLUG: !org,
+        SENTRY_PROJECT_SLUG: !project,
+      },
+    });
+  }
+  const query = encodeURIComponent(`event.type:error environment:${env} route:"${route}"`);
+  const name = encodeURIComponent(`Velocity: ${route}`);
+  const url =
+    `https://sentry.io/organizations/${org}/discover/results/` +
+    `?name=${name}&field=timestamp&field=message&field=release&field=trace&field=transaction` +
+    `&query=${query}&project=${project}&statsPeriod=1h`;
+
+  res.json({ url });
 });
 
 // --- Sentry test route (development only) ---
