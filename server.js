@@ -705,6 +705,29 @@ app.get('/ops/release-impact', async (req, res) => {
   });
 });
 
+const { loadSloMap, evaluateSloForSnapshot } = require("./lib/slo");
+
+app.get("/ops/slo", (_req, res) => {
+  const sloCfg = loadSloMap();
+  const snap = metrics.snapshot();
+
+  const results = [];
+  for (const [route, wins] of Object.entries(snap.routes || {})) {
+    const one = wins["1m"] || {};
+    results.push(evaluateSloForSnapshot(route, one, sloCfg));
+  }
+
+  res.setHeader("Cache-Control", "no-store");
+  res.json({
+    service: "eden-erp-backend",
+    env: snap.env,
+    generated_at: new Date().toISOString(),
+    defaults: sloCfg.defaults,
+    count: results.length,
+    routes: results,
+  });
+});
+
 // Velocity → Sentry correlation: deep link to filtered Discover view
 app.get('/ops/sentry-link', (req, res) => {
   const org = process.env.SENTRY_ORG_SLUG || "";

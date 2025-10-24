@@ -1,0 +1,117 @@
+Step: Add a server-side SLO endpoint /ops/slo that evaluates each route against simple targets (p95 and error%) using the 1-minute snapshot. Backend-only; UI comes next. (Layer: Velocity → SLO Core)
+
+Why it matters: Metrics tell you “what happened,” SLOs tell you “is this acceptable.” This gives a clear green/yellow/red signal per route that you can surface in the dashboard and alerts.
+
+Inputs needed:
+
+server.js
+
+lib/metrics.js
+
+Command:
+
+Create lib/slo.js (targets + evaluator)
+
+// lib/slo.js — Velocity/SLO Core
+// Configure via env or inline defaults. You can get fancy later (DB/config UI).
+const DEFAULTS = {
+  // global fallbacks
+  p95_ms: +(process.env.SLO_P95_MS || 300),      // 300 ms
+  err_pct: +(process.env.SLO_ERR_PCT || 1.0),    // 1.0 %
+  // per-route overrides (examples)
+  // "GET /api/notifications/recent": { p95_ms: 120, err_pct: 0.5 },
+};
+
+function loadSloMap() {
+  // Optionally parse JSON from env SLO_OVERRIDES='{"GET /api/foo":{"p95_ms":200,"err_pct":0.5}}'
+  let overrides = {};
+  try {
+    if (process.env.SLO_OVERRIDES) overrides = JSON.parse(process.env.SLO_OVERRIDES);
+  } catch { /* ignore bad JSON */ }
+  return { defaults: { p95_ms: DEFAULTS.p95_ms, err_pct: DEFAULTS.err_pct }, routes: overrides };
+}
+
+function classify(value, target, warnFactor = 1.2) {
+  if (value == null) return { state: "no_data" };
+  if (value <= target) return { state: "ok" };
+  if (value <= target * warnFactor) return { state: "warn" };
+  return { state: "critical" };
+}
+
+function evaluateSloForSnapshot(routeKey, oneMinute, sloCfg) {
+  const target = sloCfg.routes[routeKey] || sloCfg.defaults;
+  const p95v = oneMinute?.p95_ms ?? null;
+  const errv = oneMinute?.err_rate ?? null; // already a percent
+  const p95 = classify(p95v, target.p95_ms);
+  const err = classify(errv, target.err_pct);
+  // overall state = worse of the two
+  const rank = { no_data: 0, ok: 1, warn: 2, critical: 3 };
+  const overall = (rank[p95.state] >= rank[err.state]) ? p95.state : err.state;
+
+  return {
+    route: routeKey,
+    targets: { p95_ms: target.p95_ms, err_pct: target.err_pct },
+    actual:  { p95_ms: p95v, err_pct: errv, samples_1m: oneMinute?.count ?? 0 },
+    state: overall,
+    dims: { p95: p95.state, err: err.state },
+  };
+}
+
+module.exports = { loadSloMap, evaluateSloForSnapshot };
+
+
+Add /ops/slo in server.js
+
+// server.js — after metrics is created
+const { loadSloMap, evaluateSloForSnapshot } = require("./lib/slo");
+
+app.get("/ops/slo", (_req, res) => {
+  const sloCfg = loadSloMap();
+  const snap = metrics.snapshot(); // { routes: { "METHOD path": { "1m": {...} } } }
+
+  const results = [];
+  for (const [route, wins] of Object.entries(snap.routes || {})) {
+    const one = wins["1m"] || {};
+    results.push(evaluateSloForSnapshot(route, one, sloCfg));
+  }
+
+  res.setHeader("Cache-Control", "no-store");
+  res.json({
+    service: "eden-erp-backend",
+    env: snap.env,
+    generated_at: new Date().toISOString(),
+    defaults: sloCfg.defaults,
+    count: results.length,
+    routes: results, // array of { route, targets, actual, state, dims }
+  });
+});
+
+
+(Optional, now or later) Wire SLO states into alarms:
+
+Treat state: critical as an additional alarm item with kind: "slo_violation".
+
+Keep today’s step backend-only; we’ll add UI badges next.
+
+Success check:
+
+# Hit some routes, then:
+curl -s http://localhost:3000/ops/slo | python3 -m json.tool | head -120
+
+
+Expect:
+
+Top-level metadata and defaults (targets).
+
+routes: entries like:
+
+{
+  "route": "GET /api/jobs",
+  "targets": { "p95_ms": 300, "err_pct": 1 },
+  "actual":  { "p95_ms": 142, "err_pct": 0, "samples_1m": 37 },
+  "state": "ok",
+  "dims": { "p95": "ok", "err": "ok" }
+}
+
+
+Next: wait for user.
