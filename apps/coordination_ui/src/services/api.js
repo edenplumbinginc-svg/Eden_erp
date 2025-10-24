@@ -1,4 +1,5 @@
 import axios from 'axios';
+import * as Sentry from '@sentry/react';
 
 const API_BASE = '/api';
 
@@ -9,12 +10,26 @@ const api = axios.create({
   }
 });
 
-// Add JWT auth header to all requests
+// Add JWT auth header and Sentry trace headers to all requests
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('edenAuthToken');
   
   if (token) {
     config.headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  // Propagate Sentry trace context to backend for distributed tracing
+  const activeSpan = Sentry.getActiveSpan();
+  if (activeSpan) {
+    const spanContext = Sentry.spanToTraceHeader(activeSpan);
+    const baggage = Sentry.spanToBaggageHeader(activeSpan);
+    
+    if (spanContext) {
+      config.headers['sentry-trace'] = spanContext;
+    }
+    if (baggage) {
+      config.headers['baggage'] = baggage;
+    }
   }
   
   return config;
