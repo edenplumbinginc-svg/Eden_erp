@@ -48,6 +48,7 @@ export default function Velocity() {
   const [trends, setTrends] = useState(null);  // from /ops/metrics/trends
   const [alarms, setAlarms] = useState(null);  // from /ops/alarms
   const [relImpact, setRelImpact] = useState(null);  // from /ops/release-impact
+  const [slo, setSlo] = useState(null);        // from /ops/slo
   const [err, setErr] = useState(null);
   const [sortBy, setSortBy] = useState("rps");
   const [desc, setDesc] = useState(true);
@@ -98,6 +99,21 @@ export default function Velocity() {
     return () => clearInterval(id);
   }, []);
 
+  async function fetchSlo() {
+    try {
+      const r = await fetch("/ops/slo", { cache: "no-store" });
+      if (!r.ok) return;
+      const j = await r.json();
+      setSlo(j);
+    } catch { /* soft-fail */ }
+  }
+
+  useEffect(() => {
+    fetchSlo();
+    const id = setInterval(fetchSlo, 10_000);
+    return () => clearInterval(id);
+  }, []);
+
   // Map alarms by route for quick lookup
   const alarmIndex = useMemo(() => {
     const idx = new Map();
@@ -115,6 +131,7 @@ export default function Velocity() {
     for (const [route, wins] of Object.entries(snap.routes)) {
       const w1 = wins["1m"] || {};
       const tSeries = trends?.routes?.[route]?.series || [];
+      const sloEntry = (slo?.routes || []).find(r => r.route === route);
 
       // --- Regression calc (p95 over 5m buckets) ---
       // Use last 6 buckets: last3 = most recent 3, prev3 = prior 3.
@@ -143,6 +160,7 @@ export default function Velocity() {
         regress_pct,
         is_regress,
         alarms: alarmIndex.get(route) || [],
+        slo: sloEntry || null,
       });
     }
     return out.sort((a, b) => {
@@ -150,7 +168,7 @@ export default function Velocity() {
       const vb = b[sortBy] ?? -Infinity;
       return desc ? (vb - va) : (va - vb);
     });
-  }, [snap, trends, alarmIndex, sortBy, desc]);
+  }, [snap, trends, slo, alarmIndex, sortBy, desc]);
 
   function header(label, key) {
     return (
@@ -172,6 +190,13 @@ export default function Velocity() {
           Env: {snap?.env ?? "—"} • Generated: {snap?.generated_at ?? "—"} • Last fetch: {since ?? "—"}
         </div>
       </div>
+
+      {/* SLO targets display */}
+      {slo?.defaults && (
+        <div className="text-xs opacity-70">
+          SLO targets — p95 ≤ <b>{slo.defaults.p95_ms}ms</b>, errors ≤ <b>{slo.defaults.err_pct}%</b>
+        </div>
+      )}
 
       {/* Release Impact header strip */}
       {relImpact && (
@@ -227,6 +252,7 @@ export default function Velocity() {
               {header("p95 ms (1m)", "p95_ms")}
               {header("Error % (1m)", "err_rate")}
               {header("Samples (1m)", "count")}
+              <th className="px-3 py-2">SLO</th>
               <th className="px-3 py-2">Δ p95 / Δ err%</th>
               <th className="px-3 py-2">Alerts</th>
               <th className="px-3 py-2">p95 (5m)</th>
@@ -237,7 +263,7 @@ export default function Velocity() {
           </thead>
           <tbody>
             {rows.length === 0 ? (
-              <tr><td className="px-3 py-4 text-center" colSpan="12">No data yet — hit some routes</td></tr>
+              <tr><td className="px-3 py-4 text-center" colSpan="13">No data yet — hit some routes</td></tr>
             ) : rows.map((r) => (
               <tr key={r.route} className="border-t">
                 <td className="px-3 py-2 font-mono">{r.route}</td>
@@ -246,6 +272,27 @@ export default function Velocity() {
                 <td className="px-3 py-2">{fmt(r.p95_ms)}</td>
                 <td className={`px-3 py-2 ${r.err_rate > 5 ? "text-red-600 font-medium" : ""}`}>{fmt(r.err_rate)}</td>
                 <td className="px-3 py-2">{fmt(r.count)}</td>
+                {/* SLO badge */}
+                <td className="px-3 py-2">
+                  {r.slo ? (() => {
+                    const st = r.slo.state;
+                    const cls =
+                      st === "ok"       ? "bg-green-100 text-green-700 border-green-200" :
+                      st === "warn"     ? "bg-amber-100 text-amber-800 border-amber-200" :
+                      st === "critical" ? "bg-red-100 text-red-700 border-red-200" :
+                                          "bg-gray-100 text-gray-700 border-gray-200";
+                    const tip = `p95: ${r.slo.actual.p95_ms ?? "—"}ms (≤ ${r.slo.targets.p95_ms}ms), ` +
+                                `err: ${r.slo.actual.err_pct ?? "—"}% (≤ ${r.slo.targets.err_pct}%), ` +
+                                `samples: ${r.slo.actual.samples_1m}`;
+                    const dotColor = cls.split(" ").find(x => x.startsWith("bg-"));
+                    return (
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border ${cls}`} title={tip}>
+                        <span className={`w-2 h-2 inline-block rounded-full ${dotColor}`} />
+                        {st}
+                      </span>
+                    );
+                  })() : "—"}
+                </td>
                 {/* Release deltas cell */}
                 <td className="px-3 py-2">
                   {(() => {

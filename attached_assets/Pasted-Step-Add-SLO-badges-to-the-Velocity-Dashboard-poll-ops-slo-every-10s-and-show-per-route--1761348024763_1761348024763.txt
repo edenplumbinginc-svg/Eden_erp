@@ -1,0 +1,147 @@
+Step: Add SLO badges to the Velocity Dashboard: poll /ops/slo every 10s and show per-route 🟢/🟡/🔴 badges with tooltips (targets vs actuals). (Layer: Velocity → SLO UI)
+
+Why it matters: Numbers say “what,” SLOs say “good/bad.” A single colored badge per route makes operational status obvious.
+
+Inputs needed:
+
+Frontend repo (apps/coordination_ui)
+
+Working /ops/slo endpoint (done)
+
+Command:
+
+Patch apps/coordination_ui/src/pages/Velocity.jsx to fetch SLOs and render a column.
+
+@@
+-  const [relImpact, setRelImpact] = useState(null);  // from /ops/release-impact
++  const [relImpact, setRelImpact] = useState(null);  // from /ops/release-impact
++  const [slo, setSlo] = useState(null);              // from /ops/slo
+@@
+   useEffect(() => {
+     fetchMetrics();
+     const id1 = setInterval(fetchMetrics, 10_000); // match 10s bucket
+     return () => clearInterval(id1);
+   }, []);
+ 
++  async function fetchSlo() {
++    try {
++      const r = await fetch("/ops/slo", { cache: "no-store" });
++      if (!r.ok) return;
++      const j = await r.json();
++      setSlo(j);
++    } catch { /* soft-fail */ }
++  }
++  useEffect(() => {
++    fetchSlo();
++    const id = setInterval(fetchSlo, 10_000);
++    return () => clearInterval(id);
++  }, []);
++
+@@
+   const rows = useMemo(() => {
+     if (!snap?.routes) return [];
+     const out = [];
+     for (const [route, wins] of Object.entries(snap.routes)) {
+       const w1 = wins["1m"] || {};
+       const tSeries = trends?.routes?.[route]?.series || [];
++      const sloEntry = (slo?.routes || []).find(r => r.route === route);
+@@
+       out.push({
+         route,
+         rps: w1.rps ?? 0,
+         p50_ms: w1.p50_ms ?? null,
+         p95_ms: w1.p95_ms ?? null,
+         err_rate: w1.err_rate ?? 0,
+         count: w1.count ?? 0,
+         trend: tSeries,
+         regress_abs,
+         regress_pct,
+         is_regress,
++        slo: sloEntry || null,
+       });
+     }
+     return out.sort((a, b) => {
+       const va = a[sortBy] ?? -Infinity;
+       const vb = b[sortBy] ?? -Infinity;
+       return desc ? (vb - va) : (va - vb);
+     });
+-  }, [snap, trends, alarmIndex, sortBy, desc]);
++  }, [snap, trends, slo, alarmIndex, sortBy, desc]);
+@@
+   function header(label, key) {
+@@
+   return (
+     <div className="p-6 space-y-4">
+       <div className="flex items-center justify-between">
+         <h1 className="text-2xl font-semibold">Velocity Dashboard</h1>
+         <div className="text-sm opacity-70">
+           Env: {snap?.env ?? "—"} • Generated: {snap?.generated_at ?? "—"} • Last fetch: {since ?? "—"}
+         </div>
+       </div>
++      {slo?.defaults && (
++        <div className="text-xs opacity-70">
++          SLO targets — p95 ≤ <b>{slo.defaults.p95_ms}ms</b>, errors ≤ <b>{slo.defaults.err_pct}%</b>
++        </div>
++      )}
+@@
+           <thead className="bg-gray-50">
+             <tr>
+               {header("Route", "route")}
+               {header("RPS (1m)", "rps")}
+               {header("p50 ms (1m)", "p50_ms")}
+               {header("p95 ms (1m)", "p95_ms")}
+               {header("Error % (1m)", "err_rate")}
+               {header("Samples (1m)", "count")}
++              <th className="px-3 py-2">SLO</th>
+               <th className="px-3 py-2">Alerts</th>
+               <th className="px-3 py-2">p95 (5m)</th>
+               <th className="px-3 py-2">RPS (5m)</th>
+               {header("Regress % (p95)", "regress_pct")}
+               <th className="px-3 py-2">Trace</th>
+             </tr>
+           </thead>
+           <tbody>
+@@
+-                <td className="px-3 py-2">{fmt(r.count)}</td>
++                <td className="px-3 py-2">{fmt(r.count)}</td>
++                {/* SLO badge */}
++                <td className="px-3 py-2">
++                  {r.slo ? (() => {
++                    const st = r.slo.state; // ok|warn|critical|no_data
++                    const cls =
++                      st === "ok"       ? "bg-green-100 text-green-700 border-green-200" :
++                      st === "warn"     ? "bg-amber-100 text-amber-800 border-amber-200" :
++                      st === "critical" ? "bg-red-100 text-red-700 border-red-200" :
++                                          "bg-gray-100 text-gray-700 border-gray-200";
++                    const tip = `p95: ${r.slo.actual.p95_ms ?? "—"}ms (≤ ${r.slo.targets.p95_ms}ms), ` +
++                                `err: ${r.slo.actual.err_pct ?? "—"}% (≤ ${r.slo.targets.err_pct}%), ` +
++                                `samples: ${r.slo.actual.samples_1m}`;
++                    return (
++                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border`} title={tip}>
++                        <span className={`w-2 h-2 inline-block rounded-full ${cls.replace("bg-","bg-").split(" ").find(x=>x.startsWith("bg-"))}`} />
++                        <span className={cls}>{st}</span>
++                      </span>
++                    );
++                  })() : "—"}
++                </td>
+
+
+Success check:
+
+Reload /velocity.
+
+You should see a tiny “SLO targets — p95 ≤ X ms, errors ≤ Y %” line under the title.
+
+Each route shows an SLO badge:
+
+🟢 ok when within targets,
+
+🟡 warn when within 20% tolerance,
+
+🔴 critical when exceeding targets,
+
+⚪ no_data if there’s not enough recent traffic.
+
+Hovering the badge shows a tooltip with actuals vs targets and sample count.
+
+Next: wait for user.
