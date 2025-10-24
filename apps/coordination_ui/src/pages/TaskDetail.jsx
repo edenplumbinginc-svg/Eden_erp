@@ -13,6 +13,7 @@ import InlineAssigneeEdit from "../components/InlineAssigneeEdit";
 import ConfirmDialog from "../components/ConfirmDialog";
 import TagsEditor from "../components/TagsEditor";
 import BallHistoryPanel from "../components/BallHistoryPanel";
+import TaskSlaBanner from "../components/TaskSlaBanner";
 import { getStatusLabel } from "../constants/statusLabels";
 import { useHasPermission } from "../hooks/usePermissions";
 
@@ -394,6 +395,7 @@ export default function TaskDetail() {
 
   const canEditTask = useHasPermission('task.edit');
   const canDeleteTask = useHasPermission('task.delete');
+  const canNudge = useHasPermission('admin:manage');
 
   const { data: task, isLoading } = useQuery({
     queryKey: ["task", taskId],
@@ -443,6 +445,8 @@ export default function TaskDetail() {
           ← Back to All Tasks
         </button>
       </div>
+
+      <TaskSlaBanner taskId={taskId} canNudge={canNudge} />
 
       <div className="flex items-start justify-between">
         <div className="flex-1 space-y-4">
