@@ -231,6 +231,7 @@ app.use('/api/ops', require('./routes/ops'));
 app.use('/api', require('./routes/preferences'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api', require('./routes/audit'));
+app.use('/api', require('./routes/taskChecklist'));
 
 // --- Subtask routes need to be at /api level ---
 app.patch('/api/subtasks/:id', async (req, res) => {

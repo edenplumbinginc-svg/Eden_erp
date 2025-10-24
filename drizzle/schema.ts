@@ -422,3 +422,34 @@ export const handoffEvents = pgTable("handoff_events", {
                 name: "handoff_events_task_id_fkey"
         }).onDelete("cascade"),
 ]);
+
+export const taskChecklistItems = pgTable("task_checklist_items", {
+        id: uuid().defaultRandom().primaryKey().notNull(),
+        taskId: uuid("task_id").notNull(),
+        label: text().notNull(),
+        isDone: boolean("is_done").default(false).notNull(),
+        position: integer().default(0).notNull(),
+        createdBy: uuid("created_by"),
+        updatedBy: uuid("updated_by"),
+        createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+        updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+        doneAt: timestamp("done_at", { withTimezone: true, mode: 'string' }),
+}, (table) => [
+        foreignKey({
+                columns: [table.taskId],
+                foreignColumns: [tasks.id],
+                name: "task_checklist_items_task_id_fkey"
+        }).onDelete("cascade"),
+        foreignKey({
+                columns: [table.createdBy],
+                foreignColumns: [users.id],
+                name: "task_checklist_items_created_by_fkey"
+        }),
+        foreignKey({
+                columns: [table.updatedBy],
+                foreignColumns: [users.id],
+                name: "task_checklist_items_updated_by_fkey"
+        }),
+        index("idx_task_checklist_task_position").using("btree", table.taskId.asc().nullsLast(), table.position.asc().nullsLast()),
+        index("idx_task_checklist_task_done").using("btree", table.taskId.asc().nullsLast(), table.isDone.asc().nullsLast()),
+]);

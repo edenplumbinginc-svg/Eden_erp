@@ -13,6 +13,9 @@ async function seedTasksPermissions() {
       ['tasks:read', 'Read tasks'],
       ['tasks:write', 'Create/update/delete tasks'],
       ['tasks:manage', 'Manage task settings & admin actions'],
+      ['tasks:checklist:read', 'Read task checklists'],
+      ['tasks:checklist:write', 'Create/update checklist items'],
+      ['tasks:checklist:delete', 'Delete checklist items'],
     ];
 
     console.log('📝 Seeding tasks:* permissions...');
@@ -51,21 +54,21 @@ async function seedTasksPermissions() {
     }
 
     console.log('🔐 Granting permissions to roles...');
-    await grant('admin', ['tasks:read', 'tasks:write', 'tasks:manage']);
-    console.log('   ✓ admin → read, write, manage');
+    await grant('admin', ['tasks:read', 'tasks:write', 'tasks:manage', 'tasks:checklist:read', 'tasks:checklist:write', 'tasks:checklist:delete']);
+    console.log('   ✓ admin → read, write, manage, checklist:read, checklist:write, checklist:delete');
     
-    await grant('viewer', ['tasks:read']);
-    console.log('   ✓ viewer → read');
+    await grant('viewer', ['tasks:read', 'tasks:checklist:read']);
+    console.log('   ✓ viewer → read, checklist:read');
     
-    await grant('ops', ['tasks:read', 'tasks:write']);
-    console.log('   ✓ ops → read, write');
+    await grant('ops', ['tasks:read', 'tasks:write', 'tasks:checklist:read', 'tasks:checklist:write', 'tasks:checklist:delete']);
+    console.log('   ✓ ops → read, write, checklist:read, checklist:write, checklist:delete');
     
-    await grant('coord', ['tasks:read', 'tasks:write']);
-    console.log('   ✓ coord → read, write');
+    await grant('coord', ['tasks:read', 'tasks:write', 'tasks:checklist:read', 'tasks:checklist:write']);
+    console.log('   ✓ coord → read, write, checklist:read, checklist:write');
     
     for (const slug of ['estimator', 'procurement', 'hr', 'marketing']) {
-      await grant(slug, ['tasks:read']);
-      console.log(`   ✓ ${slug} → read`);
+      await grant(slug, ['tasks:read', 'tasks:checklist:read']);
+      console.log(`   ✓ ${slug} → read, checklist:read`);
     }
 
     const { rows: [counts] } = await client.query(`
