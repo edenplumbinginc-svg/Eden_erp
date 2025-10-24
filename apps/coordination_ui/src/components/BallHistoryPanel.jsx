@@ -1,5 +1,5 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ballApi } from '../services/api';
 
 function fmtAgo(iso) {
@@ -10,12 +10,28 @@ function fmtAgo(iso) {
   }
 }
 
+function holdBadge(seconds = 0) {
+  const hrs = Math.floor(seconds / 3600);
+  const label = hrs >= 24 ? `${Math.floor(hrs/24)}d ${hrs%24}h` : `${hrs}h`;
+  const cls =
+    seconds < 48*3600 ? 'bg-green-100 text-green-800' :   // < 2 days
+    seconds < 120*3600 ? 'bg-yellow-100 text-yellow-800' :// < 5 days
+    'bg-red-100 text-red-800';                            // >= 5 days
+  return <span className={`text-xs px-2 py-0.5 rounded ${cls}`}>{label}</span>;
+}
+
 export default function BallHistoryPanel({ taskId }) {
+  const qc = useQueryClient();
   const { data, isLoading, error } = useQuery(
     ['ball-history', taskId],
     () => ballApi.getHistory(taskId),
     { refetchInterval: 15000 }
   );
+  
+  const ack = useMutation({
+    mutationFn: ({ eventId }) => ballApi.acknowledge(taskId, eventId),
+    onSuccess: () => qc.invalidateQueries(['ball-history', taskId]),
+  });
 
   if (isLoading) return <div className="p-4 border rounded-2xl">Loading responsibility chain…</div>;
   if (error) return <div className="p-4 border rounded-2xl text-red-600">Failed to load responsibility chain.</div>;
@@ -38,6 +54,7 @@ export default function BallHistoryPanel({ taskId }) {
                   <span className="text-sm">
                     <strong>{e.from_role || '—'}</strong> → <strong>{e.to_role || '—'}</strong>
                   </span>
+                  {holdBadge(e.hold_seconds ?? 0)}
                   {e.triggered_by_policy && (
                     <span className="text-xs px-2 py-0.5 rounded bg-gray-100 border">
                       policy: {e.triggered_by_policy}
@@ -46,11 +63,22 @@ export default function BallHistoryPanel({ taskId }) {
                   {e.reason && <span className="text-xs text-gray-500">({e.reason})</span>}
                 </div>
                 <div className="text-xs text-gray-600 mt-1">
-                  {fmtAgo(e.created_at)} · {e.acknowledged ? `Acknowledged by ${e.acknowledged_by || 'recipient'}` : 'Unacknowledged'}
+                  {fmtAgo(e.created_at)} · {e.acknowledged ? `Acknowledged by ${e.acknowledged_by_email || e.acknowledged_by || 'recipient'}` : 'Unacknowledged'}
                 </div>
                 {(e.from_user_email || e.to_user_email) && (
                   <div className="text-xs text-gray-500 mt-0.5">
                     {e.from_user_email ? `from: ${e.from_user_email}` : ''} {e.to_user_email ? `→ to: ${e.to_user_email}` : ''}
+                  </div>
+                )}
+                {!e.acknowledged && (
+                  <div className="mt-2">
+                    <button
+                      className="px-3 py-1 rounded bg-black text-white text-xs hover:bg-gray-800 transition-colors disabled:opacity-50"
+                      onClick={() => ack.mutate({ eventId: e.id })}
+                      disabled={ack.isLoading}
+                    >
+                      {ack.isLoading ? 'Acknowledging...' : 'Acknowledge'}
+                    </button>
                   </div>
                 )}
               </li>

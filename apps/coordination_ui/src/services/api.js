@@ -110,6 +110,8 @@ export const apiService = {
 export const ballApi = {
   getHistory: (taskId) =>
     api.get(`/api/tasks/${taskId}/ball-history`).then(r => r.data),
+  acknowledge: (taskId, eventId) =>
+    api.patch(`/api/tasks/${taskId}/ball-history/${eventId}/ack`).then(r => r.data),
 };
 
 // Export the raw axios instance for direct use
