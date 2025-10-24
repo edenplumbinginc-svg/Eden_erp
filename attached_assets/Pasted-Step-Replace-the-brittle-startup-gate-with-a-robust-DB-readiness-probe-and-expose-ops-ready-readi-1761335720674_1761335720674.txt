@@ -1,3 +1,17 @@
+Step: Replace the brittle startup gate with a robust DB readiness probe and expose /ops/ready (readiness) + /ops/health (detailed JSON). Keep Velocity Metrics Core intact. (Layer: Velocity → Health Core)
+
+Why it matters: Prevents boot flapping and “half-alive” instances by only accepting traffic once the DB is truly reachable, and gives ops a single source of truth for health.
+
+Inputs needed:
+
+Access to your PostgreSQL client (pg Pool or your Drizzle/Knex adapter)
+
+server.js (Express entry)
+
+Command:
+
+Create lib/health.js
+
 // lib/health.js — Velocity/Health Core
 const DEFAULT_OPTS = {
   probeIntervalMs: 10_000,
@@ -51,31 +65,11 @@ function makeHealth({ db, opts = {} }) {
     if (!ready) throw new Error(`DB not ready after ${cfg.startupTimeoutMs}ms`);
   }
 
-  function liveness() { return true; } // process is up; don't depend on externals
+  function liveness() { return true; } // process is up; don’t depend on externals
 
-  function readiness() { 
-    if (process.env.FORCE_HEALTH_FAIL === "true") {
-      return false;
-    }
-    return ready; 
-  } // safe to serve traffic
+  function readiness() { return ready; } // safe to serve traffic
 
   function snapshot() {
-    // Support FORCE_HEALTH_FAIL test switch
-    if (process.env.FORCE_HEALTH_FAIL === "true") {
-      return {
-        service: "eden-erp-backend",
-        env: process.env.SENTRY_ENV || process.env.NODE_ENV || "dev",
-        generated_at: new Date().toISOString(),
-        liveness: liveness(),
-        readiness: false,
-        db: { ok: false, latency_ms: null, error: "FORCE_HEALTH_FAIL enabled" },
-        uptime_ms: process.uptime() * 1000,
-        version: process.env.RELEASE_SHA || null,
-        build_time: process.env.BUILD_TIME || null,
-      };
-    }
-
     return {
       service: "eden-erp-backend",
       env: process.env.SENTRY_ENV || process.env.NODE_ENV || "dev",
@@ -93,3 +87,52 @@ function makeHealth({ db, opts = {} }) {
 }
 
 module.exports = { makeHealth };
+
+
+Wire into server.js (before routes):
+
+// Health Core wiring (keep Metrics Core as-is)
+const { makeHealth } = require("./lib/health");
+
+// If you use 'pg' Pool:
+const { Pool } = require("pg");
+const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+
+const health = makeHealth({ db: pool });
+
+// Block serving until DB ready (startup gate)
+await health.waitUntilReady(); // if using CommonJS without top-level await, wrap server start in an async IIFE
+
+// Liveness & readiness endpoints
+app.get("/ops/live", (_req, res) => res.status(200).send("OK"));
+app.get("/ops/ready", (_req, res) => {
+  return health.readiness() ? res.status(200).send("READY") : res.status(503).send("NOT_READY");
+});
+app.get("/ops/health", (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.json(health.snapshot());
+});
+
+
+If your file doesn’t support top-level await, start the server like:
+
+(async () => {
+  try {
+    await health.waitUntilReady();
+    app.listen(process.env.PORT || 3000, () => console.log("server up"));
+  } catch (e) {
+    console.error("Startup failed:", e);
+    process.exit(1); // fail fast on cold start if DB unreachable
+  }
+})();
+
+
+Success check:
+
+Cold start: the server only begins listening after the DB answers SELECT 1. If DB is down, process exits with a clear error.
+
+GET /ops/ready returns 200 READY once probes pass; otherwise 503 NOT_READY.
+
+GET /ops/health returns JSON with { db.ok, db.latency_ms, readiness, liveness, version, build_time }.
+
+Next: wait for user.

@@ -436,21 +436,55 @@ app.get('/routes', (_, res) => {
 });
 
 // --- Ops Health Endpoints (Resilience Layer) ---
-const { buildHealth } = require('./lib/health');
-const getHealth = buildHealth({ pool });
+const { makeHealth } = require('./lib/health');
+const health = makeHealth({ db: pool });
 
-// Liveness: app is up; returns 200 if process is healthy enough to serve
-app.get('/healthz', async (req, res) => {
-  const h = await getHealth();
-  const code = h.status === 'ok' ? 200 : 503;
-  res.status(code).json({ endpoint: 'healthz', ...h });
+// New Resilience Layer endpoints (Velocity/Health Core)
+app.get('/ops/live', (_req, res) => {
+  res.status(200).send('OK');
 });
 
-// Readiness: stricter (fail fast if DB isn't reachable)
+app.get('/ops/ready', (_req, res) => {
+  return health.readiness() ? res.status(200).send('READY') : res.status(503).send('NOT_READY');
+});
+
+app.get('/ops/health', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json(health.snapshot());
+});
+
+// Liveness: app is up; returns 200 if process is healthy enough to serve (compatibility endpoint)
+app.get('/healthz', async (req, res) => {
+  const snap = health.snapshot();
+  const code = snap.db.ok ? 200 : 503;
+  res.status(code).json({ 
+    endpoint: 'healthz', 
+    status: snap.db.ok ? 'ok' : 'degraded',
+    checks: { db: { ok: snap.db.ok, ms: snap.db.latency_ms } },
+    env: snap.env,
+    version: snap.version,
+    build_time: snap.build_time,
+    uptime_s: Math.floor(snap.uptime_ms / 1000),
+    resources: {},
+    latency_ms: 0
+  });
+});
+
+// Readiness: stricter (fail fast if DB isn't reachable) (compatibility endpoint)
 app.get('/ready', async (req, res) => {
-  const h = await getHealth();
-  const ready = h.checks.db.ok;
-  res.status(ready ? 200 : 503).json({ endpoint: 'ready', ...h });
+  const snap = health.snapshot();
+  const ready = snap.readiness;
+  res.status(ready ? 200 : 503).json({ 
+    endpoint: 'ready',
+    status: snap.db.ok ? 'ok' : 'degraded',
+    checks: { db: { ok: snap.db.ok, ms: snap.db.latency_ms } },
+    env: snap.env,
+    version: snap.version,
+    build_time: snap.build_time,
+    uptime_s: Math.floor(snap.uptime_ms / 1000),
+    resources: {},
+    latency_ms: 0
+  });
 });
 
 // Version: expose version for dashboards
@@ -646,16 +680,13 @@ app.listen(port, () => {
     // This prevents race condition where health check runs before pool is ready
     console.log('[STARTUP_GATE] Waiting for database bootstrap to complete...');
     await bootstrapPromise;
-    console.log('[STARTUP_GATE] Database bootstrap complete, running health check...');
+    console.log('[STARTUP_GATE] Database bootstrap complete, waiting for DB readiness...');
     
-    const h = await getHealth();
-    const ok = h?.checks?.db?.ok === true;
-    if (!ok) {
-      console.error(JSON.stringify({ level: 50, msg: "startup_gate_failed", health: h }));
-      process.exit(42);
-    } else {
-      console.log(JSON.stringify({ level: 30, msg: "startup_gate_ok", health: { status: h.status, db_ms: h.checks.db.ms } }));
-    }
+    // Use new health system with exponential backoff
+    await health.waitUntilReady();
+    
+    const snap = health.snapshot();
+    console.log(JSON.stringify({ level: 30, msg: "startup_gate_ok", health: { db_ok: snap.db.ok, db_latency_ms: snap.db.latency_ms } }));
   } catch (e) {
     console.error(JSON.stringify({ level: 50, msg: "startup_gate_exception", error: String(e) }));
     process.exit(42);
@@ -667,10 +698,10 @@ const WATCH_MS = Number(process.env.WATCHDOG_INTERVAL_MS || 30000); // 30s
 const FAILS_TO_EXIT = Number(process.env.WATCHDOG_FAILS_TO_EXIT || 4); // ~2 min default
 let consecutiveFails = 0;
 
-setInterval(async () => {
+setInterval(() => {
   try {
-    const h = await getHealth();
-    const ok = h?.checks?.db?.ok === true;
+    const snap = health.snapshot();
+    const ok = snap.db.ok === true;
     if (ok) {
       if (consecutiveFails > 0) {
         console.log(JSON.stringify({ level: 30, msg: "watchdog_recovered", consecutiveFails }));
@@ -679,7 +710,7 @@ setInterval(async () => {
       return;
     }
     consecutiveFails += 1;
-    console.warn(JSON.stringify({ level: 40, msg: "watchdog_degraded", consecutiveFails, health: { status: h.status, db_ok: h.checks.db.ok, db_ms: h.checks.db.ms } }));
+    console.warn(JSON.stringify({ level: 40, msg: "watchdog_degraded", consecutiveFails, health: { db_ok: snap.db.ok, db_latency_ms: snap.db.latency_ms, readiness: snap.readiness } }));
     if (consecutiveFails >= FAILS_TO_EXIT) {
       console.error(JSON.stringify({ level: 50, msg: "watchdog_exit", reason: "consecutive_degraded", count: consecutiveFails }));
       process.exit(43);

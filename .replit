@@ -37,7 +37,6 @@ outputType = "console"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "export HEALTH_TLS_RELAX=1 && export DB_SSL_REJECT_UNAUTHORIZED=false && npm run dev"
-waitForPort = 3000
 
 [[workflows.workflow]]
 name = "Modern UI"
@@ -73,6 +72,10 @@ externalPort = 80
 [[ports]]
 localPort = 5001
 externalPort = 3002
+
+[[ports]]
+localPort = 35219
+externalPort = 4200
 
 [[ports]]
 localPort = 38765
