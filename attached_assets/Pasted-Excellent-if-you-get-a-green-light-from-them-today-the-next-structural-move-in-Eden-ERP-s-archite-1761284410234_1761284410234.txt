@@ -1,0 +1,68 @@
+Excellent — if you get a green light from them today, the next structural move in Eden ERP’s architecture sequence is clear.
+We’re no longer in *optimization* mode — we’re crossing into *governance* and *product structure*.
+
+---
+
+### 🧩 **Next Structural Phase: Governance & Product Layer [Spin-Up → Modify]**
+
+**Objective:** move from building isolated modules (Tasks, RBAC, Delta Sync) to a **coordinated system of systems** — where roles, modules, and data flows are governed through unified metadata rather than hard-coded logic.
+This is the “ERP Intelligence Spine.”
+
+---
+
+### 🧠 **Core Build Sequence (post-approval)**
+
+#### 1. **Audit & Event Logging Layer (RBAC + Ops)**
+
+* Create a persistent table: `audit_log (id, actor_id, action, target, payload, timestamp)`.
+* Each major mutation (role change, task update, project edit) writes an entry.
+* Hook existing endpoints into this writer.
+* Outcome: compliance trail + foundation for activity feed.
+
+#### 2. **Unified Module Registry**
+
+* Build a small registry table or JSON map describing every module:
+
+  ```json
+  {
+    "tasks": { "slug": "tasks", "table": "tasks", "roles": ["ops","viewer"] },
+    "projects": { "slug": "projects", "table": "projects", "roles": ["pm","viewer"] }
+  }
+  ```
+* UI reads from registry to generate navigation dynamically.
+* Outcome: adding a new ERP module no longer requires code edits in multiple places.
+
+#### 3. **Product Inventory Module (your next target)**
+
+* Begin building `/api/products` + `/products` UI page:
+
+  * Follows the same delta-sync + warm-boot pattern.
+  * Fields: `id, sku, name, category, stock, unit_cost, updated_at`.
+  * Uses existing permission structure (`inventory:read`, `inventory:edit`).
+* Outcome: first *domain* module under the ERP spine, not a utility module.
+
+#### 4. **System Intelligence Loop (Data → Insight)**
+
+* Add a daily summary job that aggregates audit logs + usage data:
+
+  * “Top actions by user,” “most edited module,” “avg sync latency.”
+* Output JSON → feed the future dashboard.
+* Outcome: early version of Eden’s “Cognitive Layer.”
+
+---
+
+### ⚙️ **Expected Layer States After Approval**
+
+| Layer              | Stage   | Intent                         |
+| ------------------ | ------- | ------------------------------ |
+| RBAC Admin         | Stable  | Role controls validated        |
+| Audit Layer        | Spin-Up | Record all changes             |
+| Module Registry    | Spin-Up | Central definition of features |
+| Product Module     | Spin-Up | Begin domain expansion         |
+| Intelligence Layer | Observe | Learn from usage telemetry     |
+
+---
+
+When you receive the “green” from them, I’ll trigger **Phase 7 – Governance Boot**, starting with the Audit/Event Log implementation (Layer: Backend → System Governance).
+
+That will formally mark the transition from *ERP Prototype* → *ERP Platform*.
