@@ -1,0 +1,144 @@
+ep: Add a p95 regression badge per route (frontend-only): compare the last 3 buckets vs. the previous 3 in /ops/metrics/trends; if ↑ ≥20% and ≥30 ms absolute, flag with a red “↑ regress” badge and enable sorting by regress_pct. (Layer: Velocity → UI)
+
+Why it matters: Snapshots + sparklines are good; automatic drift detection tells you which route needs love right now.
+
+Inputs needed:
+
+apps/coordination_ui/src/pages/Velocity.jsx (existing Velocity page)
+
+Working /ops/metrics/trends
+
+Command:
+
+Patch Velocity.jsx to compute and display regression:
+
+--- a/apps/coordination_ui/src/pages/Velocity.jsx
++++ b/apps/coordination_ui/src/pages/Velocity.jsx
+@@
+ export default function Velocity() {
+-  const [snap, setSnap] = useState(null);      // from /ops/metrics
+-  const [trends, setTrends] = useState(null);  // from /ops/metrics/trends
++  const [snap, setSnap] = useState(null);      // from /ops/metrics
++  const [trends, setTrends] = useState(null);  // from /ops/metrics/trends
+   const [err, setErr] = useState(null);
+-  const [sortBy, setSortBy] = useState("rps");
++  const [sortBy, setSortBy] = useState("rps");
+   const [desc, setDesc] = useState(true);
+   const [since, setSince] = useState(null);
+@@
+   const rows = useMemo(() => {
+     if (!snap?.routes) return [];
+     const out = [];
+     for (const [route, wins] of Object.entries(snap.routes)) {
+       const w1 = wins["1m"] || {};
+       const tSeries = trends?.routes?.[route]?.series || [];
++
++      // --- Regression calc (p95 over 5m buckets) ---
++      // Use last 6 buckets: last3 = most recent 3, prev3 = prior 3.
++      const last6 = tSeries.slice(-6);
++      const last3 = last6.slice(-3).map(b => b?.p95_ms).filter(v => v != null);
++      const prev3 = last6.slice(0, 3).map(b => b?.p95_ms).filter(v => v != null);
++      const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
++      const aLast = avg(last3);
++      const aPrev = avg(prev3);
++      let regress_abs = 0, regress_pct = 0;
++      if (aLast != null && aPrev != null && aPrev > 0) {
++        regress_abs = aLast - aPrev;
++        regress_pct = +( (regress_abs / aPrev) * 100 ).toFixed(1);
++      }
++      const is_regress = (regress_abs >= 30) && (regress_pct >= 20); // 30ms & 20%+
++
+       out.push({
+         route,
+         rps: w1.rps ?? 0,
+         p50_ms: w1.p50_ms ?? null,
+         p95_ms: w1.p95_ms ?? null,
+         err_rate: w1.err_rate ?? 0,
+         count: w1.count ?? 0,
+         trend: tSeries,
++        regress_abs,
++        regress_pct,
++        is_regress,
+       });
+     }
+     return out.sort((a, b) => {
+       const va = a[sortBy] ?? -Infinity;
+       const vb = b[sortBy] ?? -Infinity;
+       return desc ? (vb - va) : (va - vb);
+     });
+   }, [snap, trends, sortBy, desc]);
+@@
+   function header(label, key) {
+     return (
+       <th
+         className="px-3 py-2 cursor-pointer select-none"
+         onClick={() => { setDesc(key === sortBy ? !desc : true); setSortBy(key); }}
+         title={`Sort by ${label}`}
+       >
+         {label} {sortBy === key ? (desc ? "▾" : "▴") : ""}
+       </th>
+     );
+   }
+@@
+         <table className="min-w-full text-sm">
+           <thead className="bg-gray-50">
+             <tr>
+               {header("Route", "route")}
+               {header("RPS (1m)", "rps")}
+               {header("p50 ms (1m)", "p50_ms")}
+               {header("p95 ms (1m)", "p95_ms")}
+               {header("Error % (1m)", "err_rate")}
+               {header("Samples (1m)", "count")}
+               <th className="px-3 py-2">p95 (5m)</th>
+               <th className="px-3 py-2">RPS (5m)</th>
++              {header("Regress % (p95)", "regress_pct")}
+             </tr>
+           </thead>
+           <tbody>
+@@
+-                <td className="px-3 py-2">{fmt(r.count)}</td>
++                <td className="px-3 py-2">{fmt(r.count)}</td>
+                 <td className="px-3 py-1">
+                   <Sparkline
+                     points={r.trend}
+                     accessor={(b)=>b?.p95_ms}
+                     title={`p95 (5m) ${r.route}`}
+                   />
+                 </td>
+                 <td className="px-3 py-1">
+                   <Sparkline
+                     points={r.trend}
+                     accessor={(b)=>b?.rps}
+                     title={`RPS (5m) ${r.route}`}
+                   />
+                 </td>
++                <td className="px-3 py-2">
++                  {Number.isFinite(r.regress_pct)
++                    ? (
++                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs
++                          ${r.is_regress ? "bg-red-100 text-red-700 border border-red-200" : "bg-gray-100 text-gray-700 border border-gray-200"}`}>
++                          {r.is_regress ? "↑ regress" : "—"} {r.is_regress ? `${r.regress_pct}%` : ""}
++                        </span>
++                      )
++                    : "—"}
++                </td>
+               </tr>
+             ))}
+           </tbody>
+         </table>
+       </div>
+
+
+Success check:
+
+Visit /velocity.
+
+Trigger load on one or two routes so you have ≥6 buckets (≈1 minute of activity).
+
+The table shows a new Regress % (p95) column.
+
+When last-3 p95 average is ≥20% and ≥30 ms higher than the previous-3, that row shows a red “↑ regress NN%” badge.
+
+Click the Regress % (p95) header to sort by the largest regressions first.
+
+Next: wait for user.

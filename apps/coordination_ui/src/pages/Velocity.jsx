@@ -82,6 +82,22 @@ export default function Velocity() {
     for (const [route, wins] of Object.entries(snap.routes)) {
       const w1 = wins["1m"] || {};
       const tSeries = trends?.routes?.[route]?.series || [];
+
+      // --- Regression calc (p95 over 5m buckets) ---
+      // Use last 6 buckets: last3 = most recent 3, prev3 = prior 3.
+      const last6 = tSeries.slice(-6);
+      const last3 = last6.slice(-3).map(b => b?.p95_ms).filter(v => v != null);
+      const prev3 = last6.slice(0, 3).map(b => b?.p95_ms).filter(v => v != null);
+      const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
+      const aLast = avg(last3);
+      const aPrev = avg(prev3);
+      let regress_abs = 0, regress_pct = 0;
+      if (aLast != null && aPrev != null && aPrev > 0) {
+        regress_abs = aLast - aPrev;
+        regress_pct = +( (regress_abs / aPrev) * 100 ).toFixed(1);
+      }
+      const is_regress = (regress_abs >= 30) && (regress_pct >= 20); // 30ms & 20%+
+
       out.push({
         route,
         rps: w1.rps ?? 0,
@@ -90,6 +106,9 @@ export default function Velocity() {
         err_rate: w1.err_rate ?? 0,
         count: w1.count ?? 0,
         trend: tSeries,
+        regress_abs,
+        regress_pct,
+        is_regress,
       });
     }
     return out.sort((a, b) => {
@@ -138,11 +157,12 @@ export default function Velocity() {
               {header("Samples (1m)", "count")}
               <th className="px-3 py-2">p95 (5m)</th>
               <th className="px-3 py-2">RPS (5m)</th>
+              {header("Regress % (p95)", "regress_pct")}
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
-              <tr><td className="px-3 py-4 text-center" colSpan="8">No data yet — hit some routes</td></tr>
+              <tr><td className="px-3 py-4 text-center" colSpan="9">No data yet — hit some routes</td></tr>
             ) : rows.map((r) => (
               <tr key={r.route} className="border-t">
                 <td className="px-3 py-2 font-mono">{r.route}</td>
@@ -164,6 +184,16 @@ export default function Velocity() {
                     accessor={(b)=>b?.rps}
                     title={`RPS (5m) ${r.route}`}
                   />
+                </td>
+                <td className="px-3 py-2">
+                  {Number.isFinite(r.regress_pct)
+                    ? (
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs
+                          ${r.is_regress ? "bg-red-100 text-red-700 border border-red-200" : "bg-gray-100 text-gray-700 border border-gray-200"}`}>
+                          {r.is_regress ? "↑ regress" : "—"} {r.is_regress ? `${r.regress_pct}%` : ""}
+                        </span>
+                      )
+                    : "—"}
                 </td>
               </tr>
             ))}
