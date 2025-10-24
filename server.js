@@ -233,6 +233,7 @@ app.use('/api/admin', require('./routes/admin'));
 app.use('/api', require('./routes/audit'));
 app.use('/api', require('./routes/taskChecklist'));
 app.use('/api', require('./routes/performance'));
+app.use('/api', require('./routes/perfCourtFlow'));
 app.use('/api/admin/decisions', require('./routes/decisionsAdmin'));
 app.use('/api/admin/decisions', require('./routes/decisionsNotionSync'));
 app.use('/api', require('./routes/ballHistory'));

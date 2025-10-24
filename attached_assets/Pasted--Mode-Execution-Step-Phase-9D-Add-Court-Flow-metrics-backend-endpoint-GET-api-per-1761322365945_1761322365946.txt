@@ -1,0 +1,93 @@
+[Mode: Execution]
+
+**Step:** Phase 9D — Add **Court Flow metrics** backend endpoint: `GET /api/perf/court-flow` (per-department hold-time, acks, bottlenecks).
+
+**Why it matters:** Turns your new handoff ledger into **ops intelligence** the UI can chart (avg hold time, unacknowledged count, top bottlenecks).
+
+**Inputs needed:**
+
+* DB access (Postgres/Drizzle)
+* Backend (Express) entry for routes
+
+**Command (paste exactly):**
+
+1. **SQL view for department KPIs**
+   *File: `drizzle/20251024_v_court_flow.sql`*
+
+```sql
+-- Per-destination department metrics over last 30 days
+CREATE OR REPLACE VIEW v_court_flow_30d AS
+WITH base AS (
+  SELECT
+    e.id,
+    e.task_id,
+    e.from_role,
+    e.to_role,
+    e.created_at AS handed_at,
+    e.acknowledged,
+    e.acknowledged_at,
+    COALESCE(EXTRACT(EPOCH FROM (
+      COALESCE(LEAD(e.created_at) OVER (PARTITION BY e.task_id ORDER BY e.created_at),
+               now()) - e.created_at
+    )),0)::bigint AS hold_seconds
+  FROM ball_in_court_events e
+  WHERE e.created_at >= now() - INTERVAL '30 days'
+)
+SELECT
+  to_role                                  AS dept,
+  COUNT(*)                                 AS passes_in,
+  SUM(CASE WHEN acknowledged THEN 1 ELSE 0 END) AS acks,
+  SUM(CASE WHEN NOT acknowledged THEN 1 ELSE 0 END) AS unacked,
+  ROUND(AVG(hold_seconds)::numeric,0)      AS avg_hold_s,
+  PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY hold_seconds) AS p50_hold_s,
+  MAX(hold_seconds)                        AS max_hold_s
+FROM base
+GROUP BY to_role;
+```
+
+2. **Route: `GET /api/perf/court-flow`**
+   *File: `src/routes/perfCourtFlow.ts`*
+
+```ts
+import { Router } from 'express';
+import { requireAuth } from '../auth/requireAuth';
+import { db } from '../db';
+import { sql } from 'drizzle-orm';
+
+export const perfCourtFlow = Router();
+
+/**
+ * Returns 30-day per-department court-flow metrics:
+ * [{ dept, passes_in, acks, unacked, avg_hold_s, p50_hold_s, max_hold_s }]
+ */
+perfCourtFlow.get('/perf/court-flow', requireAuth, async (_req, res) => {
+  const rows = await db.execute(sql`SELECT * FROM v_court_flow_30d ORDER BY avg_hold_s DESC NULLS LAST;`);
+  res.json({ range: '30d', items: rows.rows || [] });
+});
+```
+
+3. **Wire the route**
+   *File: `src/server.ts`*
+
+```ts
+import { perfCourtFlow } from './routes/perfCourtFlow';
+app.use('/api', perfCourtFlow);
+```
+
+**Success check:**
+
+* Apply the SQL file; confirm the view exists.
+* `GET /api/perf/court-flow` (with JWT) returns `200` and JSON like:
+
+```json
+{
+  "range": "30d",
+  "items": [
+    {"dept":"Procurement","passes_in":12,"acks":10,"unacked":2,"avg_hold_s":86400,"p50_hold_s":43200,"max_hold_s":432000}
+  ]
+}
+```
+
+* No console errors; query performs < 150 ms on current data.
+
+**Next:** wait for user.
