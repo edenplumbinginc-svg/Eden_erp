@@ -37,6 +37,10 @@ function AppContent() {
   useWarmBoot();
 
   useEffect(() => {
+    // Only load data if we have an auth token
+    const token = localStorage.getItem('edenAuthToken');
+    if (!token) return;
+
     // Try warm data first for instant UI
     const warmProjects = window.__eden?.projectsWarm;
     if (warmProjects && projects.length === 0) {

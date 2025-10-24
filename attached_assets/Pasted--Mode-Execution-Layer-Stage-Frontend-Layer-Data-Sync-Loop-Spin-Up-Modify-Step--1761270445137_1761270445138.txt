@@ -1,0 +1,173 @@
+[Mode: Execution]
+
+**Layer/Stage:** Frontend Layer → Data Sync Loop | Spin-Up → Modify
+
+**Step:** Implement `useDeltaSync` hook for Tasks (incremental fetch using `updated_after`), wire it into the Tasks page, and auto-refresh in the background.
+
+**Why it matters:** You’ll fetch only changes after the first load, cutting bandwidth to nearly zero during daily usage while keeping the list fresh.
+
+**Inputs needed:**
+
+* `/api/tasks` already supports `?updated_after=ISO8601` and returns `meta.next_updated_after`.
+* Your Tasks list component (where items render).
+
+**Command (copy–paste):**
+
+1. **Create the delta-sync hook**
+   `apps/web/src/hooks/useDeltaSync.ts`
+
+```ts
+import { useEffect, useRef, useState } from "react";
+import { supabase } from "../lib/supabaseClient";
+
+type TaskLite = { id: string; title: string; status: string; updatedAt?: string; projectId?: string };
+
+type Options = {
+  key?: string;            // storage key suffix (e.g., "tasks")
+  intervalMs?: number;     // background refresh cadence
+  initialLimit?: number;   // first load size
+};
+
+function storageKey(suffix: string) { return `eden.delta.${suffix}.lastSync`; }
+
+export function useDeltaSync(fetchPathBase: string, opts: Options = {}) {
+  const suffix = opts.key ?? "tasks";
+  const key = storageKey(suffix);
+  const [items, setItems] = useState<TaskLite[]>([]);
+  const [loading, setLoading] = useState(true);
+  const timerRef = useRef<number | null>(null);
+
+  async function authedGet(url: string) {
+    const { data } = await supabase.auth.getSession();
+    const jwt = data?.session?.access_token;
+    if (!jwt) throw new Error("Missing session");
+    const r = await fetch(url, { headers: { Authorization: `Bearer ${jwt}` } });
+    if (!r.ok) throw new Error(`${url} -> ${r.status}`);
+    return r.json();
+  }
+
+  function mergeDelta(base: TaskLite[], delta: TaskLite[]) {
+    const map = new Map(base.map(t => [t.id, t]));
+    for (const d of delta) map.set(d.id, { ...(map.get(d.id) || {}), ...d });
+    // keep a stable, recent-first view by updatedAt when available
+    return Array.from(map.values()).sort((a, b) => {
+      const ta = a.updatedAt ? Date.parse(a.updatedAt) : 0;
+      const tb = b.updatedAt ? Date.parse(b.updatedAt) : 0;
+      return tb - ta;
+    });
+  }
+
+  async function prime() {
+    setLoading(true);
+    const limit = opts.initialLimit ?? 20;
+    const data = await authedGet(`${fetchPathBase}?limit=${limit}`);
+    setItems(data.items ?? data ?? []);
+    if (data?.meta?.next_updated_after) localStorage.setItem(key, data.meta.next_updated_after);
+    setLoading(false);
+  }
+
+  async function refreshDelta() {
+    const since = localStorage.getItem(key);
+    const url = since ? `${fetchPathBase}?updated_after=${encodeURIComponent(since)}` : `${fetchPathBase}?limit=${opts.initialLimit ?? 20}`;
+    const data = await authedGet(url);
+    if (since) {
+      if ((data.meta?.count ?? 0) > 0) setItems(prev => mergeDelta(prev, data.items));
+    } else {
+      setItems(data.items ?? data ?? []);
+    }
+    if (data?.meta?.next_updated_after) localStorage.setItem(key, data.meta.next_updated_after);
+  }
+
+  useEffect(() => {
+    let stopped = false;
+    (async () => {
+      try {
+        const since = localStorage.getItem(key);
+        if (!since) await prime(); // first load
+        await refreshDelta();      // always attempt a delta right after
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn(`[DeltaSync:${suffix}]`, e);
+      }
+      if (stopped) return;
+      const tick = async () => {
+        try { await refreshDelta(); } catch {}
+        if (!stopped) timerRef.current = window.setTimeout(tick, opts.intervalMs ?? 30000);
+      };
+      timerRef.current = window.setTimeout(tick, opts.intervalMs ?? 30000);
+    })();
+    return () => {
+      stopped = true;
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchPathBase]);
+
+  return { items, setItems, loading, forceRefresh: refreshDelta };
+}
+```
+
+2. **Use the hook in your Tasks page**
+   `apps/web/src/routes/tasks/TasksPage.tsx` (adapt to your path)
+
+```tsx
+import { useDeltaSync } from "../../hooks/useDeltaSync";
+
+export default function TasksPage() {
+  const { items, loading, forceRefresh } = useDeltaSync("/api/tasks", { key: "tasks", intervalMs: 30000, initialLimit: 20 });
+
+  if (loading && items.length === 0) {
+    return <div className="p-4 text-sm opacity-70">Loading tasks…</div>;
+  }
+
+  return (
+    <div className="p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <h1 className="text-lg font-semibold">Tasks</h1>
+        <button className="text-xs border rounded px-2 py-1" onClick={() => forceRefresh()}>Refresh</button>
+      </div>
+      <ul className="divide-y">
+        {items.map(t => (
+          <li key={t.id} className="py-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-medium">{t.title}</div>
+                <div className="text-xs opacity-70">{t.status}</div>
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+3. **(Optional) Consume warm-boot if present**
+   At top of `TasksPage` before rendering:
+
+```ts
+// Prefill from warm boot if available
+// @ts-ignore
+const warm = (window as any).__eden?.tasksWarm;
+```
+
+If you use a global store, seed from `warm` once to avoid a flicker.
+
+---
+
+**Success check:**
+
+* After login, Network shows initial `GET /api/tasks?limit=20` (or warm-boot short-circuits it), then periodic `GET /api/tasks?updated_after=...` every 30s.
+* Editing/creating a task triggers the next delta to return just the changed rows.
+* List updates without a full refetch or spinner.
+* `localStorage.getItem('eden.delta.tasks.lastSync')` is a recent ISO timestamp.
+
+**Progress telemetry:**
+
+* Frontend Layer: Spin-Up → Modify ✅ → Stable
+* Backend Layer: Test → ✅ Stable (delta endpoint in use)
+* Integration Layer: Transition → ✅ Stable (background sync operational)
+
+**Next:** wait for user.
+When you confirm Tasks delta sync is working, I’ll mirror the same **useDeltaSync** pattern for **Projects**, then cut a tiny **“Realtime-lite”** upgrade (server emits `last_change` timestamp per module on `/api/health` so the client knows when to force-refresh without polling hard).

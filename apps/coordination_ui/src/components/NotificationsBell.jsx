@@ -25,10 +25,14 @@ export default function NotificationsBell() {
   const lastSeen = useRef(0);
   const { push } = useToaster();
 
+  // Only fetch notifications if user is authenticated
+  const hasToken = !!localStorage.getItem('edenAuthToken');
+
   const { data: items = [], refetch } = useQuery({
     queryKey: ["recent_notifications"],
     queryFn: () => apiService.listRecentNotifications(),
     refetchInterval: 30_000,
+    enabled: hasToken,
   });
 
   useEffect(() => {
