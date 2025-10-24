@@ -13,11 +13,12 @@ const { createNotification, getDepartmentUsers } = require('./notifications');
  * @param {Object} params
  * @param {string} params.taskId - UUID of the task
  * @param {string} params.toDepartment - Destination department
+ * @param {string} params.actorId - UUID of user performing handoff
  * @param {string} params.actorEmail - Email of user performing handoff
  * @param {string} params.note - Optional note for the handoff
  * @returns {Promise<Object>} { ok, skipped, fromDepartment, toDepartment }
  */
-async function handoffTask({ taskId, toDepartment, actorEmail, note }) {
+async function handoffTask({ taskId, toDepartment, actorId, actorEmail, note }) {
   if (!taskId) throw new Error('taskId required');
   if (!toDepartment) throw new Error('to_department required');
 
@@ -44,12 +45,15 @@ async function handoffTask({ taskId, toDepartment, actorEmail, note }) {
     if (dup.rowCount > 0) {
       // Log skipped handoff to audit
       await client.query(
-        `INSERT INTO audit_logs (user_id, action, entity, meta, created_at)
-         VALUES (NULL, $1, $2, $3, NOW())`,
+        `INSERT INTO audit_logs (actor_id, actor_email, action, target_type, target_id, payload, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
         [
+          actorId,
+          actorEmail,
           'task.handoff.skipped',
-          `task:${taskId}`,
-          JSON.stringify({ taskId, fromDepartment, toDepartment, reason: 'duplicate_24h', actorEmail })
+          'task',
+          taskId,
+          JSON.stringify({ fromDepartment, toDepartment, reason: 'duplicate_24h', actorEmail })
         ]
       );
       await client.query('COMMIT');
@@ -71,12 +75,15 @@ async function handoffTask({ taskId, toDepartment, actorEmail, note }) {
 
     // Audit
     await client.query(
-      `INSERT INTO audit_logs (user_id, action, entity, meta, created_at)
-       VALUES (NULL, $1, $2, $3, NOW())`,
+      `INSERT INTO audit_logs (actor_id, actor_email, action, target_type, target_id, payload, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
       [
+        actorId,
+        actorEmail,
         'task.handoff',
-        `task:${taskId}`,
-        JSON.stringify({ taskId, fromDepartment, toDepartment, actorEmail, note })
+        'task',
+        taskId,
+        JSON.stringify({ fromDepartment, toDepartment, actorEmail, note })
       ]
     );
 

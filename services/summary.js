@@ -14,7 +14,7 @@ async function buildDailySummary(dateIso) {
     q(`SELECT id, title, assignee_id, due_at FROM tasks
        WHERE due_at::date = $1::date AND status NOT IN ('done','closed')
        ORDER BY due_at ASC LIMIT 50`, [dateIso]),
-    q(`SELECT action, entity, created_at
+    q(`SELECT action, target_type, created_at
        FROM audit_logs WHERE created_at BETWEEN $1 AND $2
        ORDER BY created_at DESC LIMIT 100`, [since, until]),
   ]);
@@ -30,7 +30,7 @@ async function buildDailySummary(dateIso) {
   lines.push(dueToday.length ? dueToday.map(t => `- ${t.title} (${t.id})`).join("\n") : "- none");
   lines.push("");
   lines.push("Recent Activity (last 24h):");
-  lines.push(recent.length ? recent.map(e => `- ${e.created_at} • ${e.action} • ${e.entity}`).join("\n") : "- none");
+  lines.push(recent.length ? recent.map(e => `- ${e.created_at} • ${e.action} • ${e.target_type}`).join("\n") : "- none");
   lines.push("");
   lines.push("— Sent automatically by Eden ERP");
 

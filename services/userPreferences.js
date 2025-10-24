@@ -46,11 +46,14 @@ async function updateUserPreferences(userId, { default_project_id, tasks_group_b
     );
 
     await client.query(
-      `INSERT INTO audit_logs (user_id, action, entity, meta, created_at)
-       VALUES (NULL, $1, $2, $3, NOW())`,
+      `INSERT INTO audit_logs (actor_id, actor_email, action, target_type, target_id, payload, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
       [
+        userId,
+        actorEmail,
         'user.preferences.update',
-        `user:${userId}`,
+        'user',
+        userId,
         JSON.stringify({ userId, default_project_id, tasks_group_by, actor: actorEmail })
       ]
     );

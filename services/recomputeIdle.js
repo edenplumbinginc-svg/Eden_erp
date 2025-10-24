@@ -50,11 +50,14 @@ async function recomputeIdle(actor = 'system') {
 
     // Write audit log
     await client.query(`
-      INSERT INTO audit_logs (user_id, action, entity, meta, created_at)
-      VALUES (NULL, $1, $2, $3, NOW())
+      INSERT INTO audit_logs (actor_id, actor_email, action, target_type, target_id, payload, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, NOW())
     `, [
+      '00000000-0000-0000-0000-000000000001',
+      actor,
       'system.idle.recompute',
       'system',
+      null,
       JSON.stringify({ set_true: setTrue, set_false: setFalse, idle_days: idleDays, timestamp: now, actor })
     ]);
 

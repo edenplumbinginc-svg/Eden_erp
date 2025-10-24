@@ -813,9 +813,10 @@ router.post('/:id/handoff', authenticate, requirePerm('task.edit'), validate(Han
     const taskId = req.params.id;
     const toDepartment = req.body.to_department;
     const note = req.body.note;
+    const actorId = req.user?.id;
     const actorEmail = req.user?.email || 'unknown';
     
-    const result = await handoffTask({ taskId, toDepartment, actorEmail, note });
+    const result = await handoffTask({ taskId, toDepartment, actorId, actorEmail, note });
     res.json(result);
   } catch (e) {
     if (e.message === 'task not found') {
