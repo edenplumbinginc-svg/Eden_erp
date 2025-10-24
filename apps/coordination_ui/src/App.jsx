@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, NavLink, useNavigate, useParams
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { apiService } from './services/api';
 import { AuthProvider } from './hooks/AuthProvider';
+import { useWarmBoot } from './hooks/useWarmBoot';
 import RequireAuth from './components/RequireAuth';
 import ProjectList from './components/ProjectList';
 import TaskList from './components/TaskList';
@@ -32,8 +33,18 @@ function AppContent() {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
+  // Warm-boot preloader: fetch lightweight lists after auth resolves
+  useWarmBoot();
+
   useEffect(() => {
-    loadProjects();
+    // Try warm data first for instant UI
+    const warmProjects = window.__eden?.projectsWarm;
+    if (warmProjects && projects.length === 0) {
+      setProjects(warmProjects);
+    } else {
+      loadProjects();
+    }
+    
     loadUsers();
   }, []);
 
