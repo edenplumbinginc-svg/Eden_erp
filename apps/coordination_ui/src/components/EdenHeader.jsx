@@ -1,6 +1,7 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import NotificationsBell from "./NotificationsBell";
+import RoleBadge from "./RoleBadge";
 
 export default function EdenHeader() {
   return (
@@ -69,6 +70,7 @@ export default function EdenHeader() {
             >
               Reports
             </NavLink>
+            <RoleBadge />
             <NotificationsBell />
           </nav>
         </div>

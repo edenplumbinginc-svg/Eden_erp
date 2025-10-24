@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { loadCachedPerms, saveCachedPerms, clearCachedPerms } from '../lib/permissionsCache';
 import { fetchPermissions as fetchPermsFromAPI } from '../lib/permissionsClient';
@@ -145,16 +145,29 @@ export function AuthProvider({ children }) {
     clearCachedPerms();
   };
 
-  const value = {
-    session,
-    user,
-    permissions,
-    roles,
-    isLoading,
-    signIn,
-    signOut,
-    signUp,
-  };
+  // Memoized permission set for fast lookups
+  const permSet = useMemo(() => new Set(permissions || []), [permissions]);
+
+  // Memoized permission checker
+  const hasPermission = useMemo(
+    () => (perm) => permSet.has(perm),
+    [permSet]
+  );
+
+  const value = useMemo(
+    () => ({
+      session,
+      user,
+      permissions,
+      roles,
+      isLoading,
+      signIn,
+      signOut,
+      signUp,
+      hasPermission
+    }),
+    [session, user, permissions, roles, isLoading, signIn, signOut, signUp, hasPermission]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

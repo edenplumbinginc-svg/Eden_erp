@@ -1,4 +1,6 @@
 // apps/coordination_ui/src/lib/permissionsCache.js
+import { logCacheHit } from './telemetry';
+
 const KEY = "eden.permissions.v1"; // bump version if shape changes
 const TTL_MS = 5 * 60 * 1000;      // 5 minutes; adjust as needed
 
@@ -8,7 +10,13 @@ export function loadCachedPerms() {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     const fresh = Date.now() - (parsed.savedAt ?? 0) < TTL_MS;
-    return fresh ? parsed : null;
+    
+    if (fresh) {
+      logCacheHit();
+      return parsed;
+    }
+    
+    return null;
   } catch {
     return null;
   }
