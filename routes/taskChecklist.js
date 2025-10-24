@@ -162,6 +162,41 @@ router.post('/tasks/:taskId/checklist/:itemId/toggle', authenticate, requirePerm
       payload: { task_id: taskId, is_done: newIsDone }
     });
     
+    // Log performance event when marking item as done
+    if (newIsDone) {
+      try {
+        // Fetch created_at and department for duration calculation
+        const metaResult = await pool.query(
+          `SELECT tci.created_at, t.department
+           FROM task_checklist_items tci
+           JOIN tasks t ON t.id = tci.task_id
+           WHERE tci.id = $1
+           LIMIT 1`,
+          [itemId]
+        );
+        
+        if (metaResult.rows.length > 0) {
+          const meta = metaResult.rows[0];
+          const startedAt = new Date(meta.created_at);
+          const finishedAt = new Date(doneAt);
+          const durationMs = Math.max(0, finishedAt.getTime() - startedAt.getTime());
+          
+          await pool.query(
+            `INSERT INTO performance_events
+              (actor_id, actor_email, task_id, checklist_item_id, action, started_at, finished_at, duration_ms, department)
+             VALUES
+              ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+            [actorId, actorEmail || null, taskId, itemId, 'checklist.done', startedAt.toISOString(), finishedAt.toISOString(), durationMs, meta.department || null]
+          );
+          
+          console.log(`[PERF] Event logged: actor=${actorEmail || actorId} duration=${durationMs}ms dept=${meta.department || 'none'}`);
+        }
+      } catch (perfError) {
+        // Log error but don't fail the request
+        console.error('[PERF] Error logging performance event:', perfError);
+      }
+    }
+    
     console.log(`[CHECKLIST] Item toggled: task=${taskId} item=${itemId} is_done=${newIsDone} by=${actorEmail || actorId}`);
     
     return res.json({ 
