@@ -233,6 +233,7 @@ app.use('/api/admin', require('./routes/admin'));
 app.use('/api', require('./routes/audit'));
 app.use('/api', require('./routes/taskChecklist'));
 app.use('/api', require('./routes/performance'));
+app.use('/api/admin/decisions', require('./routes/decisionsAdmin'));
 
 // --- Subtask routes need to be at /api level ---
 app.patch('/api/subtasks/:id', async (req, res) => {
@@ -433,6 +434,24 @@ cron.schedule('5 9 * * *', runDailyIdle, {
 });
 
 console.log('[CRON] Scheduled daily idle reminder check for 9:05 AM America/Toronto');
+
+// --- Auto-Decisions v0 (Safe Rules Engine) ---
+const { runDecisionCycle } = require('./services/decisions');
+
+async function runDecisions() {
+  try {
+    await runDecisionCycle();
+  } catch (err) {
+    console.error('[DECISIONS] Cycle failed:', err);
+  }
+}
+
+// Schedule decision engine every 5 minutes
+cron.schedule('*/5 * * * *', runDecisions, {
+  scheduled: true
+});
+
+console.log('[CRON] Scheduled decision engine (every 5 minutes)');
 
 // --- Start server ---
 const port = process.env.PORT || 3000;
