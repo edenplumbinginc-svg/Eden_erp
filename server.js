@@ -71,9 +71,13 @@ const webhookRateLimiter = rateLimit({
 });
 
 // Sentry request handler and tracing (must be after express.json, before routes)
-if (sentryEnabled) {
-  app.use(Sentry.Handlers.requestHandler());
-  app.use(Sentry.Handlers.tracingHandler());
+if (sentryEnabled && Sentry.Handlers) {
+  if (Sentry.Handlers.requestHandler) {
+    app.use(Sentry.Handlers.requestHandler());
+  }
+  if (Sentry.Handlers.tracingHandler) {
+    app.use(Sentry.Handlers.tracingHandler());
+  }
 }
 
 // Apply metrics collection middleware
@@ -326,7 +330,7 @@ if (fs.existsSync(frontendDistPath)) {
 }
 
 // --- Sentry error handler (must be after routes, before other error handlers) ---
-if (sentryEnabled) {
+if (sentryEnabled && Sentry.Handlers && Sentry.Handlers.errorHandler) {
   app.use(Sentry.Handlers.errorHandler());
 }
 
