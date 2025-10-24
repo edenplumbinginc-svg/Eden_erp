@@ -67,6 +67,21 @@ async function handoffTask({ taskId, toDepartment, actorId, actorEmail, note }) 
       [taskId, fromDepartment, toDepartment, actorEmail || 'system', note || null]
     );
 
+    // Log to ball_in_court_events for comprehensive analytics
+    await client.query(
+      `INSERT INTO ball_in_court_events (task_id, from_role, to_role, from_user_email, to_user_email, reason, triggered_by_policy)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        taskId,
+        fromDepartment,
+        toDepartment,
+        null, // from_user_email (can be enhanced later)
+        null, // to_user_email (can be enhanced later)
+        note || 'handoff',
+        null  // triggered_by_policy (null for manual handoffs, set by automation)
+      ]
+    );
+
     // Update task department
     await client.query(
       `UPDATE tasks SET department = $2, updated_at = NOW() WHERE id = $1`,
