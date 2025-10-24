@@ -1,0 +1,63 @@
+[Mode: Execution]
+
+**Step:** Create a new chat thread and paste the provided “Context Snapshot” as the first message.
+
+**Why it matters:** This locks in scope, links, and telemetry so we can sprint without losing decisions.
+
+**Inputs needed:**
+
+* Replit: `https://replit.com/join/zagabiqjvq-edenplumbinginc`
+* Notion governance pages (ERP Master Plan, RBAC Model, Checklists)
+* (Optional) GitHub mirror link
+
+**Command (paste as the very first message in the new thread):**
+
+```plaintext
+Title: Eden — Auto-Decisions v0 + Performance API (Phase 7/8 Continuation)
+
+Context Snapshot (carry-over):
+- Supabase Auth ✅ | Viewer auto-assign ✅
+- RBAC Admin API ✅ (assign/remove roles)
+- Perf Telemetry ✅ (performance_events + views)
+- Performance API ✅ (/api/perf/fastest-week, /api/perf/dept-month, /api/perf/me/recent)
+- Decisions Engine v0 ✅ (dry-run by default; handoff, idle-escalate, lightning-fast badge)
+- Delta Sync ✅ (Tasks + Projects), ETag ✅, Warm-Boot ✅
+- Checklists ✅ (full RBAC + audit + timestamps)
+
+Links:
+- Replit: https://replit.com/join/zagabiqjvq-edenplumbinginc
+- Notion Master: [ERP Master Plan] + [RBAC Model] + [Checklists/Coordination]
+
+Layer/Stage Telemetry (at thread start):
+- Auth/RBAC: Stable ✅
+- Perf Telemetry: Stable ✅
+- Perf API: Stable ✅
+- Auto-Decisions v0: Enabled ✅ (all policies DRY_RUN=true)
+- UI Leaderboard: Pending ⏳
+- Notion Governance Sync: Pending ⏳
+
+Immediate Objectives (Execution Mode):
+1) Leaderboard UI (consume /api/perf/*)  
+2) Admin → Decisions panel (toggle DRY_RUN per policy)  
+3) Notion mirror for decision_policies (read-only sync)
+
+Request:
+Kick off with Step 1.1 — Leaderboard UI scaffold (Top performers this week + Dept rankings + My recent). Assume axios client exists.
+
+Provide:
+- Folder/file plan,
+- Components to create,
+- Exact code blocks,
+- Success checks.
+```
+
+You can also download the exact payload as a ready-to-paste file:
+[Download the thread starter](sandbox:/mnt/data/Eden_Auto-Decisions_v0_Thread_Starter.txt)
+
+**Success check:**
+
+* New thread exists with the title above.
+* First message contains the full context block.
+* You reply here: “Page created” (or “New thread created”) and confirm.
+
+**Next:** wait for user.
