@@ -1,0 +1,151 @@
+[Mode: Execution]
+
+Step: Add Release Impact badges to the Velocity page: poll /ops/release-impact every 60s and show per-route ↑/↓ deltas (p95, err%). (Layer: Velocity → Release Intel → UI)
+
+Why it matters: After each deploy, you’ll see exactly which routes got faster/slower without opening another screen.
+
+Inputs needed:
+
+Frontend repo (apps/coordination_ui)
+
+Working /ops/release-impact endpoint
+
+RELEASE_SHA set on backend
+
+Command:
+
+Patch apps/coordination_ui/src/pages/Velocity.jsx to fetch release impact and render a column + header strip.
+
+@@
+-  const [err, setErr] = useState(null);
++  const [err, setErr] = useState(null);
++  const [relImpact, setRelImpact] = useState(null);  // from /ops/release-impact
+@@
+-  async function fetchMetrics() {
++  async function fetchMetrics() {
+     try {
+-      const [a, b, c] = await Promise.all([
++      const [a, b, c] = await Promise.all([
+         fetch("/ops/metrics", { cache: "no-store" }),
+         fetch("/ops/metrics/trends", { cache: "no-store" }),
+         fetch("/ops/alarms", { cache: "no-store" }),
+       ]);
+@@
+       setErr(null);
+       setSince(new Date().toLocaleTimeString());
+     } catch (e) {
+       setErr(e.message || String(e));
+     }
+   }
+ 
++  async function fetchReleaseImpact() {
++    try {
++      const r = await fetch("/ops/release-impact?window_min=30", { cache: "no-store" });
++      if (!r.ok) return; // soft-fail
++      const j = await r.json();
++      setRelImpact(j);
++    } catch { /* noop */ }
++  }
++
+   useEffect(() => {
+     fetchMetrics();
+     const id1 = setInterval(fetchMetrics, 10_000); // match 10s bucket
+     return () => clearInterval(id1);
+   }, []);
+ 
++  useEffect(() => {
++    fetchReleaseImpact();
++    const id = setInterval(fetchReleaseImpact, 60_000);
++    return () => clearInterval(id);
++  }, []);
++
+@@
+   return (
+     <div className="p-6 space-y-4">
+       <div className="flex items-center justify-between">
+         <h1 className="text-2xl font-semibold">Velocity Dashboard</h1>
+         <div className="text-sm opacity-70">
+           Env: {snap?.env ?? "—"} • Generated: {snap?.generated_at ?? "—"} • Last fetch: {since ?? "—"}
+         </div>
+       </div>
++
++      {/* Release Impact header strip */}
++      {relImpact && (
++        <div className="flex items-center justify-between rounded-lg border bg-gray-50 px-3 py-2">
++          <div className="text-sm">
++            <span className="opacity-70">Release: </span>
++            <code className="font-mono">{relImpact.current_release || "—"}</code>
++            <span className="opacity-70"> vs prev: </span>
++            <code className="font-mono">{relImpact.previous_release || "—"}</code>
++            <span className="opacity-70"> • window: </span>
++            <span>{relImpact.window_min}m</span>
++          </div>
++          <div className="text-xs opacity-70">
++            {relImpact.previous_release ? "Deltas shown per route" : "No prior release yet — deltas will appear after next deploy"}
++          </div>
++        </div>
++      )}
+@@
+           <thead className="bg-gray-50">
+             <tr>
+               {header("Route", "route")}
+               {header("RPS (1m)", "rps")}
+               {header("p50 ms (1m)", "p50_ms")}
+               {header("p95 ms (1m)", "p95_ms")}
+               {header("Error % (1m)", "err_rate")}
+               {header("Samples (1m)", "count")}
++              <th className="px-3 py-2">Δ p95 / Δ err%</th>
+               <th className="px-3 py-2">p95 (5m)</th>
+               <th className="px-3 py-2">RPS (5m)</th>
+               {header("Regress % (p95)", "regress_pct")}
+               <th className="px-3 py-2">Trace</th>
+             </tr>
+           </thead>
+           <tbody>
+@@
+-                <td className="px-3 py-2">{fmt(r.count)}</td>
++                <td className="px-3 py-2">{fmt(r.count)}</td>
++                {/* Release deltas cell */}
++                <td className="px-3 py-2">
++                  {(() => {
++                    const d = relImpact?.routes?.[r.route]?.delta;
++                    if (!relImpact?.previous_release || !d) return "—";
++                    const badge = (label, val, isGoodDown) => {
++                      if (val == null) return null;
++                      const up = val > 0;
++                      const good = isGoodDown ? !up : up; // p95: down is good; err%: down is good
++                      const cls = good
++                        ? "bg-green-100 text-green-700 border-green-200"
++                        : "bg-red-100 text-red-700 border-red-200";
++                      const arrow = up ? "↑" : "↓";
++                      return (
++                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border ${cls}`} title={label}>
++                          {label} {arrow} {Math.abs(val)}{label.includes("err") ? "%" : "ms"}
++                        </span>
++                      );
++                    };
++                    return (
++                      <div className="flex flex-wrap gap-1">
++                        {badge("p95", d.p95_ms, true)}
++                        {badge("err", d.err_pct, true)}
++                      </div>
++                    );
++                  })()}
++                </td>
+
+
+Success check:
+
+Build & run frontend.
+
+Visit /velocity. In the header strip you should see: Release: <current> vs prev: <prev or —>.
+
+After your next deploy (new RELEASE_SHA), within ~30–60s the Δ p95 / Δ err% column shows per-route badges:
+
+Green when improved (lower p95 or lower err%)
+
+Red when regressed (higher p95 or higher err%)
+
+Sorting and other features remain intact.
+
+Next: wait for user.

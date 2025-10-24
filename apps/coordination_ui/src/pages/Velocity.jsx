@@ -47,6 +47,7 @@ export default function Velocity() {
   const [snap, setSnap] = useState(null);      // from /ops/metrics
   const [trends, setTrends] = useState(null);  // from /ops/metrics/trends
   const [alarms, setAlarms] = useState(null);  // from /ops/alarms
+  const [relImpact, setRelImpact] = useState(null);  // from /ops/release-impact
   const [err, setErr] = useState(null);
   const [sortBy, setSortBy] = useState("rps");
   const [desc, setDesc] = useState(true);
@@ -76,10 +77,25 @@ export default function Velocity() {
     }
   }
 
+  async function fetchReleaseImpact() {
+    try {
+      const r = await fetch("/ops/release-impact?window_min=30", { cache: "no-store" });
+      if (!r.ok) return; // soft-fail
+      const j = await r.json();
+      setRelImpact(j);
+    } catch { /* noop */ }
+  }
+
   useEffect(() => {
     fetchMetrics();
     const id1 = setInterval(fetchMetrics, 10_000); // match 10s bucket
     return () => clearInterval(id1);
+  }, []);
+
+  useEffect(() => {
+    fetchReleaseImpact();
+    const id = setInterval(fetchReleaseImpact, 60_000);
+    return () => clearInterval(id);
   }, []);
 
   // Map alarms by route for quick lookup
@@ -157,6 +173,23 @@ export default function Velocity() {
         </div>
       </div>
 
+      {/* Release Impact header strip */}
+      {relImpact && (
+        <div className="flex items-center justify-between rounded-lg border bg-gray-50 px-3 py-2">
+          <div className="text-sm">
+            <span className="opacity-70">Release: </span>
+            <code className="font-mono">{relImpact.current_release || "—"}</code>
+            <span className="opacity-70"> vs prev: </span>
+            <code className="font-mono">{relImpact.previous_release || "—"}</code>
+            <span className="opacity-70"> • window: </span>
+            <span>{relImpact.window_min}m</span>
+          </div>
+          <div className="text-xs opacity-70">
+            {relImpact.previous_release ? "Deltas shown per route" : "No prior release yet — deltas will appear after next deploy"}
+          </div>
+        </div>
+      )}
+
       {/* Alerts bar */}
       <div className="flex items-center justify-between">
         <div>
@@ -194,6 +227,7 @@ export default function Velocity() {
               {header("p95 ms (1m)", "p95_ms")}
               {header("Error % (1m)", "err_rate")}
               {header("Samples (1m)", "count")}
+              <th className="px-3 py-2">Δ p95 / Δ err%</th>
               <th className="px-3 py-2">Alerts</th>
               <th className="px-3 py-2">p95 (5m)</th>
               <th className="px-3 py-2">RPS (5m)</th>
@@ -203,7 +237,7 @@ export default function Velocity() {
           </thead>
           <tbody>
             {rows.length === 0 ? (
-              <tr><td className="px-3 py-4 text-center" colSpan="11">No data yet — hit some routes</td></tr>
+              <tr><td className="px-3 py-4 text-center" colSpan="12">No data yet — hit some routes</td></tr>
             ) : rows.map((r) => (
               <tr key={r.route} className="border-t">
                 <td className="px-3 py-2 font-mono">{r.route}</td>
@@ -212,6 +246,33 @@ export default function Velocity() {
                 <td className="px-3 py-2">{fmt(r.p95_ms)}</td>
                 <td className={`px-3 py-2 ${r.err_rate > 5 ? "text-red-600 font-medium" : ""}`}>{fmt(r.err_rate)}</td>
                 <td className="px-3 py-2">{fmt(r.count)}</td>
+                {/* Release deltas cell */}
+                <td className="px-3 py-2">
+                  {(() => {
+                    const d = relImpact?.routes?.[r.route]?.delta;
+                    if (!relImpact?.previous_release || !d) return "—";
+                    const badge = (label, val, isGoodDown) => {
+                      if (val == null) return null;
+                      const up = val > 0;
+                      const good = isGoodDown ? !up : up; // p95: down is good; err%: down is good
+                      const cls = good
+                        ? "bg-green-100 text-green-700 border-green-200"
+                        : "bg-red-100 text-red-700 border-red-200";
+                      const arrow = up ? "↑" : "↓";
+                      return (
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border ${cls}`} title={label}>
+                          {label} {arrow} {Math.abs(val)}{label.includes("err") ? "%" : "ms"}
+                        </span>
+                      );
+                    };
+                    return (
+                      <div className="flex flex-wrap gap-1">
+                        {badge("p95", d.p95_ms, true)}
+                        {badge("err", d.err_pct, true)}
+                      </div>
+                    );
+                  })()}
+                </td>
                 <td className="px-3 py-2">
                   {r.alarms.length ? (
                     <div className="flex flex-wrap gap-1">
