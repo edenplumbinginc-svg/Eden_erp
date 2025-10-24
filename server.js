@@ -140,43 +140,63 @@ if (sentryEnabled && Sentry.Handlers) {
 
 // --- Layer: Observability/Tracing — Cross-service propagation ---
 app.use((req, res, next) => {
-  // Capture current span/transaction for trace propagation
-  const scope = Sentry.getCurrentHub().getScope();
-  const span = scope && scope.getSpan && scope.getSpan();
+  try {
+    // Get active span using Sentry v8+ API
+    const span = Sentry.getActiveSpan && Sentry.getActiveSpan();
 
-  // Build outbound headers for client to continue the trace
-  if (span && typeof span.toTraceparent === "function") {
-    res.setHeader("sentry-trace", span.toTraceparent());
-  }
-  
-  const baggage = Sentry.getBaggage
-    ? Sentry.getBaggage()
-    : (Sentry.dynamicSamplingContext && span
-        ? Sentry.dynamicSamplingContext(span)
-        : null);
-  
-  if (baggage) {
-    const baggageValue = Array.isArray(baggage) ? baggage.join(",") : (baggage || "");
-    if (baggageValue) res.setHeader("baggage", baggageValue);
-  }
+    // Build outbound headers for client to continue the trace
+    if (span) {
+      // Try toTraceparent (newer API) or fallback to other methods
+      if (typeof span.toTraceparent === "function") {
+        res.setHeader("sentry-trace", span.toTraceparent());
+      } else if (span.toJSON && span.toJSON().trace_id) {
+        // Fallback: manually construct sentry-trace header
+        const spanContext = span.toJSON();
+        const traceHeader = `${spanContext.trace_id}-${spanContext.span_id}-${spanContext.sampled ? '1' : '0'}`;
+        res.setHeader("sentry-trace", traceHeader);
+      }
+      
+      // Get baggage/dynamic sampling context
+      if (typeof Sentry.getClient === 'function') {
+        const client = Sentry.getClient();
+        if (client && typeof client.getDynamicSamplingContext === 'function') {
+          const dsc = client.getDynamicSamplingContext(span);
+          if (dsc) {
+            const baggageStr = Object.entries(dsc)
+              .map(([key, value]) => `sentry-${key}=${value}`)
+              .join(',');
+            if (baggageStr) res.setHeader("baggage", baggageStr);
+          }
+        }
+      }
+    }
 
-  // Already have req_id? Surface it, too (redundant with requestIdMiddleware but ensures it's set)
-  if (req.id) res.setHeader("X-Request-Id", req.id);
+    // Already have req_id? Surface it, too (redundant with requestIdMiddleware but ensures it's set)
+    if (req.id) res.setHeader("X-Request-Id", req.id);
+  } catch (err) {
+    // Silently fail - don't break requests if Sentry trace headers fail
+    // This ensures the app continues working even if Sentry APIs change
+  }
 
   next();
 });
 
 // --- Layer: Observability/Tracing — Sentry scope enrichment ---
 app.use((req, res, next) => {
-  Sentry.configureScope(scope => {
-    if (req.id) scope.setTag("req_id", req.id);
+  try {
+    // Use Sentry v8+ setTag and setUser methods
+    if (req.id) {
+      Sentry.setTag("req_id", req.id);
+    }
     if (res.locals?.user?.id) {
-      scope.setUser({ 
+      Sentry.setUser({ 
         id: String(res.locals.user.id), 
         email: res.locals.user.email || undefined 
       });
     }
-  });
+  } catch (err) {
+    // Silently fail - don't break requests if Sentry scope methods fail
+  }
   next();
 });
 
