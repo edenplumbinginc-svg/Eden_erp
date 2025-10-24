@@ -236,6 +236,7 @@ app.use('/api', require('./routes/performance'));
 app.use('/api', require('./routes/perfCourtFlow'));
 app.use('/api/admin/decisions', require('./routes/decisionsAdmin'));
 app.use('/api/admin/decisions', require('./routes/decisionsNotionSync'));
+app.use('/api/admin/sla', require('./routes/adminSla'));
 app.use('/api', require('./routes/ballHistory'));
 
 // --- Subtask routes need to be at /api level ---

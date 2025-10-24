@@ -1,0 +1,136 @@
+Step: Phase 9G — Add SLA Controls UI (edit the “Unacknowledged handoff” threshold) and backend config endpoints.
+
+Why it matters: Your new policy is live-capable; giving ops a safe place to tune the SLA (e.g., 24h/48h/72h) avoids code changes and lets you respond to workload spikes.
+
+Inputs needed:
+
+Backend (Express) access
+
+Frontend Admin area (already using RequireAuth and Axios client)
+
+Command (paste/apply exactly):
+
+Backend: admin SLA routes
+Create: src/routes/adminSla.ts
+
+import { Router } from 'express';
+import { requirePermission } from '../auth/requirePermission';
+import { db } from '../db';
+import { sql } from 'drizzle-orm';
+
+export const adminSla = Router();
+
+// GET current SLA seconds
+adminSla.get('/admin/sla/unack-handoff', requirePermission('admin:manage'), async (_req, res) => {
+  const { rows } = await db.execute(sql`
+    SELECT value_seconds FROM sla_thresholds WHERE key = 'unacknowledged_handoff_sla'
+  `);
+  const value = Number(rows?.[0]?.value_seconds ?? 48 * 3600);
+  res.json({ key: 'unacknowledged_handoff_sla', value_seconds: value });
+});
+
+// PUT update SLA seconds
+adminSla.put('/admin/sla/unack-handoff', requirePermission('admin:manage'), async (req, res) => {
+  const v = Number(req.body?.value_seconds);
+  if (!Number.isFinite(v) || v < 0) return res.status(400).json({ ok: false, error: 'value_seconds must be a non-negative number' });
+
+  await db.execute(sql`
+    INSERT INTO sla_thresholds (key, value_seconds)
+    VALUES ('unacknowledged_handoff_sla', ${v})
+    ON CONFLICT (key) DO UPDATE SET value_seconds = EXCLUDED.value_seconds, updated_at = now()
+  `);
+  res.json({ ok: true, key: 'unacknowledged_handoff_sla', value_seconds: v });
+});
+
+
+Wire it in your server:
+
+// src/server.ts
+import { adminSla } from './routes/adminSla';
+app.use('/api', adminSla);
+
+
+Frontend: API client
+File: apps/coordination_ui/src/services/api.js
+
++ export const adminApi = {
++   getUnackSla: () => api.get('/api/admin/sla/unack-handoff').then(r => r.data),
++   setUnackSla: (value_seconds) =>
++     api.put('/api/admin/sla/unack-handoff', { value_seconds }).then(r => r.data),
++ };
+
+
+Frontend: SLA panel in Admin Court Flow
+File: apps/coordination_ui/src/pages/admin/CourtFlowPage.jsx (add just under the <h1> header)
+
++ import { useMutation, useQueryClient } from '@tanstack/react-query';
++ import { adminApi } from '../../services/api';
+...
+ export default function CourtFlowPage() {
+-  const { data, isLoading, error } = useQuery(['court-flow'], perfApi.courtFlow, { refetchInterval: 15000 });
++  const qc = useQueryClient();
++  const { data, isLoading, error } = useQuery(['court-flow'], perfApi.courtFlow, { refetchInterval: 15000 });
++  const { data: slaData } = useQuery(['unack-sla'], adminApi.getUnackSla);
++  const [sla, setSla] = React.useState('');
++  React.useEffect(() => { if (slaData?.value_seconds != null) setSla(String(slaData.value_seconds)); }, [slaData]);
++  const save = useMutation({
++    mutationFn: (v) => adminApi.setUnackSla(Number(v)),
++    onSuccess: () => { qc.invalidateQueries(['unack-sla']); },
++  });
+...
+   return (
+     <div className="p-6 space-y-6">
+       <h1 className="text-2xl font-semibold">Court Flow · Department Bottlenecks (30d)</h1>
++
++      <div className="rounded-2xl border shadow p-4">
++        <div className="font-medium mb-2">SLA · Unacknowledged Handoff</div>
++        <div className="text-sm text-gray-600 mb-3">
++          Escalate when a handoff isn’t acknowledged within this many <b>seconds</b>.
++          Common values: 86400 (24h), 172800 (48h), 259200 (72h).
++        </div>
++        <div className="flex items-center gap-3">
++          <input
++            className="px-3 py-2 border rounded w-48"
++            type="number"
++            min="0"
++            value={sla}
++            onChange={e => setSla(e.target.value)}
++          />
++          <button
++            className="px-3 py-2 rounded bg-black text-white"
++            onClick={() => save.mutate(sla)}
++            disabled={save.isLoading}
++          >
++            {save.isLoading ? 'Saving…' : 'Save SLA'}
++          </button>
++          {slaData?.value_seconds != null && (
++            <div className="text-xs text-gray-500">
++              Current: {slaData.value_seconds}s ({Math.round(slaData.value_seconds/3600)}h)
++            </div>
++          )}
++        </div>
++      </div>
+
+
+(Optional) Decisions Panel hint
+Add a tiny read-only note in /admin/decisions header linking to the SLA control:
+
+// apps/coordination_ui/src/pages/admin/DecisionsPage.jsx
+- <h1 className="text-2xl font-semibold">Automation · Decisions</h1>
++ <h1 className="text-2xl font-semibold">Automation · Decisions</h1>
++ <div className="text-sm text-gray-600">
++   Need to tune the “Unacknowledged handoff” SLA? Adjust it in <a href="/admin/court-flow" className="underline">Admin · Court Flow</a>.
++ </div>
+
+
+Success check:
+
+As an admin, open /admin/court-flow → “SLA · Unacknowledged Handoff” card shows the current seconds.
+
+Change the value to 86400 (24h), click Save SLA → request returns { ok: true }, card reflects 24h.
+
+In /admin/decisions, the policy escalate.unack_48h remains visible; its behavior now uses the updated SLA seconds (no code change required).
+
+Optional: set SLA to 60 for a quick test, create an unacknowledged handoff, wait a minute, hit Run Now on the policy → you see one notify execution (DRY_RUN or LIVE per your toggle).
+
+Next: wait for user.
