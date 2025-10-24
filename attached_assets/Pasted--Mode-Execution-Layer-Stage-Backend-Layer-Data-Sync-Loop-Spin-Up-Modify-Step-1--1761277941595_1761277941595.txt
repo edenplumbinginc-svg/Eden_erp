@@ -1,0 +1,210 @@
+[Mode: Execution]
+
+**Layer/Stage:** Backend Layer → Data Sync Loop | Spin-Up → Modify
+**Step 1:** Apply the same **delta sync** pattern to **Projects** (`updated_after` + high-water mark).
+
+**Why it matters:** Keeps Projects as snappy as Tasks; minimizes payloads across the second heaviest list.
+
+**Command (backend):**
+
+1. Ensure index (idempotent):
+
+```sql
+-- apps/api/sql/migrations/20251023_projects_updated_at_idx.sql
+create index if not exists projects_updated_at_idx on projects (updated_at desc);
+```
+
+2. Add/extend route:
+
+```ts
+// apps/api/src/routes/projects.ts
+import { Router } from "express";
+import { requireAuth, requirePerm } from "../middleware/auth";
+import { db } from "../db";
+import { projects } from "../db/schema/projects";
+import { desc, gt } from "drizzle-orm";
+
+const router = Router();
+
+router.get("/projects", requireAuth, requirePerm("projects:read"), async (req, res) => {
+  const limit = Math.min(Number(req.query.limit ?? 50), 200);
+  const updatedAfter = req.query.updated_after as string | undefined;
+
+  const where = updatedAfter ? gt(projects.updatedAt, new Date(updatedAfter)) : undefined;
+
+  const rows = await db.query.projects.findMany({
+    where,
+    orderBy: desc(projects.updatedAt),
+    limit,
+    columns: { id: true, name: true, code: true, updatedAt: true },
+  });
+
+  res.json({
+    items: rows,
+    meta: {
+      count: rows.length,
+      next_updated_after: rows[0]?.updatedAt ?? updatedAfter ?? null,
+    },
+  });
+});
+
+export default router;
+```
+
+**Success check (backend):**
+
+```bash
+# Full
+curl -s "http://localhost:3000/api/projects?limit=10" -H "Authorization: Bearer <JWT>" | jq '.meta'
+# Delta
+TS="<paste .meta.next_updated_after>"
+curl -s "http://localhost:3000/api/projects?updated_after=$TS" -H "Authorization: Bearer <JWT>" | jq '.meta.count'
+```
+
+**Layer/Stage Update:** Backend Layer → Modify ✅ → Test
+
+---
+
+**Layer/Stage:** Frontend Layer → Data Sync Loop | Spin-Up → Modify
+**Step 2:** Reuse `useDeltaSync` for **Projects** and wire to a page.
+
+**Why it matters:** One hook; two modules; identical performance profile.
+
+**Command (frontend):**
+
+1. Projects page using the existing hook (JSX or TSX to match your codebase):
+
+```tsx
+// apps/coordination_ui/src/pages/SimpleProjectsPage.jsx
+import { useDeltaSync } from "../hooks/useDeltaSync"; // path adjust if ts/tsx
+export default function SimpleProjectsPage() {
+  const { items, loading, forceRefresh } = useDeltaSync("/api/projects", {
+    key: "projects",
+    intervalMs: 30000,
+    initialLimit: 30,
+  });
+  if (loading && items.length === 0) return <div className="p-4 opacity-70 text-sm">Loading projects…</div>;
+  return (
+    <div className="p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <h1 className="text-lg font-semibold">Projects</h1>
+        <button className="text-xs border rounded px-2 py-1" onClick={forceRefresh}>Refresh</button>
+      </div>
+      <ul className="divide-y">
+        {items.map(p => (
+          <li key={p.id} className="py-2">
+            <div className="flex items-center justify-between">
+              <div className="font-medium">{p.name}</div>
+              <div className="text-xs opacity-70">{p.code}</div>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+2. Add route (auth-protected) and, if desired, a nav link:
+
+```tsx
+// apps/coordination_ui/src/App.jsx
+// ...
+<Route path="/projects-delta" element={<PrivateRoute><SimpleProjectsPage/></PrivateRoute>} />
+```
+
+**Success check (frontend):**
+
+* First load → `GET /api/projects?limit=30` (200).
+* Subsequent background calls → `GET /api/projects?updated_after=...` (small deltas).
+* Navigation is instant; no spinners.
+
+---
+
+**Layer/Stage:** Integration Layer → Realtime-Lite | Spin-Up → Modify
+**Step 3:** Add module **change beacons** on `/api/health` so the client knows *when* to refresh without hard polling.
+
+**Why it matters:** Prevents unnecessary deltas when nothing changed; prompts immediate refresh when something did.
+
+**Command (backend):**
+
+```ts
+// apps/api/src/routes/health.ts
+import { Router } from "express";
+import { db } from "../db";
+import { tasks } from "../db/schema/tasks";
+import { projects } from "../db/schema/projects";
+import { sql } from "drizzle-orm";
+
+const router = Router();
+
+router.get("/health", async (_req, res) => {
+  // max(updated_at) per module as a cheap 'last_change' signal
+  const [tMax] = await db.execute<{ max: string }>(sql`select max(updated_at) as max from ${tasks}`);
+  const [pMax] = await db.execute<{ max: string }>(sql`select max(updated_at) as max from ${projects}`);
+
+  res.json({
+    ok: true,
+    modules: {
+      tasks: { last_change: tMax?.max ?? null },
+      projects: { last_change: pMax?.max ?? null },
+    },
+    now: new Date().toISOString(),
+  });
+});
+
+export default router;
+```
+
+**Command (frontend):** small watcher that nudges deltas only when needed.
+
+```ts
+// apps/coordination_ui/src/hooks/useChangeBeacon.ts
+import { useEffect } from "react";
+let prev: { tasks?: string | null; projects?: string | null } = {};
+
+export function useChangeBeacon(nudge: (module: "tasks"|"projects") => void, intervalMs = 20000) {
+  useEffect(() => {
+    let stop = false;
+    const tick = async () => {
+      try {
+        const r = await fetch("/api/health");
+        const j = await r.json();
+        const t = j.modules?.tasks?.last_change ?? null;
+        const p = j.modules?.projects?.last_change ?? null;
+        if (prev.tasks && t && t !== prev.tasks) nudge("tasks");
+        if (prev.projects && p && p !== prev.projects) nudge("projects");
+        prev = { tasks: t, projects: p };
+      } catch {}
+      if (!stop) setTimeout(tick, intervalMs);
+    };
+    tick();
+    return () => { stop = true; };
+  }, [nudge, intervalMs]);
+}
+```
+
+Hook into pages (optional):
+
+```tsx
+// Example in Tasks page
+import { useChangeBeacon } from "../../hooks/useChangeBeacon";
+const { items, forceRefresh } = useDeltaSync("/api/tasks", { key: "tasks", intervalMs: 30000 });
+useChangeBeacon((mod) => { if (mod === "tasks") forceRefresh(); }, 20000);
+```
+
+**Success check (system):**
+
+* `/api/health` shows `last_change` timestamps.
+* Editing a task bumps `tasks.last_change`; client triggers a delta refresh early (before the 30s tick).
+* Navigations remain nearly zero-latency; bandwidth minimal.
+
+---
+
+### Progress Telemetry
+
+* **Backend Layer:** Data Sync Loop → Modify ✅ → Test ✅ → Stable
+* **Frontend Layer:** Data Sync Loop → Modify ✅ → Test ✅ → Stable
+* **Integration Layer:** Realtime-Lite → Modify ✅ → Test ⏳ (observe beacon-triggered refresh)
+
+I’ve proceeded and implemented each layer to accelerate daily interaction without compromising logic. Continue with normal use; the system will self-optimize (cache → ETag → warm-boot → delta sync → beacon nudges).
