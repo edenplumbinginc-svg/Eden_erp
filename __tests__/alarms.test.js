@@ -55,4 +55,53 @@ describe("Velocity Alarms evaluator", () => {
     const alarms = evaluateAlarmsForRoute("GET /api/baz", oneMinute, series);
     expect(alarms.find(x => x.kind === "p95_regress")).toBeFalsy();
   });
+
+  test("triggers slo_violation when p95 exceeds SLO target by >20%", () => {
+    const { evaluateAlarmsForRoute } = makeMetrics();
+    // Default SLO: p95 ≤ 300ms. Test with 420ms → 40% over target → critical
+    const oneMinute = { err_rate: 0, count: 18, p50_ms: 200, p95_ms: 420, rps: 0.3 };
+    const series = mkSeries([400, 410, 420, 425, 430, 420]);
+    const sloCfg = { defaults: { p95_ms: 300, err_pct: 1 }, routes: {} };
+    const alarms = evaluateAlarmsForRoute("GET /api/slow", oneMinute, series, sloCfg);
+    const a = alarms.find(x => x.kind === "slo_violation");
+    expect(a).toBeTruthy();
+    expect(a.severity).toBe("critical");
+    expect(a.evidence.targets.p95_ms).toBe(300);
+    expect(a.evidence.actual.p95_ms).toBe(420);
+    expect(a.evidence.dims.p95).toBe("critical");
+  });
+
+  test("triggers slo_violation when error rate exceeds SLO target by >20%", () => {
+    const { evaluateAlarmsForRoute } = makeMetrics();
+    // Default SLO: err ≤ 1%. Test with 2.5% → 150% over target → critical
+    const oneMinute = { err_rate: 2.5, count: 100, p50_ms: 50, p95_ms: 100, rps: 1.7 };
+    const series = mkSeries([100, 100, 100, 100, 100, 100]);
+    const sloCfg = { defaults: { p95_ms: 300, err_pct: 1 }, routes: {} };
+    const alarms = evaluateAlarmsForRoute("GET /api/flaky", oneMinute, series, sloCfg);
+    const a = alarms.find(x => x.kind === "slo_violation");
+    expect(a).toBeTruthy();
+    expect(a.severity).toBe("critical");
+    expect(a.evidence.targets.err_pct).toBe(1);
+    expect(a.evidence.actual.err_pct).toBe(2.5);
+    expect(a.evidence.dims.err).toBe("critical");
+  });
+
+  test("no slo_violation when within targets (state: ok)", () => {
+    const { evaluateAlarmsForRoute } = makeMetrics();
+    const oneMinute = { err_rate: 0.5, count: 100, p50_ms: 50, p95_ms: 100, rps: 1.7 };
+    const series = mkSeries([100, 100, 100, 100, 100, 100]);
+    const sloCfg = { defaults: { p95_ms: 300, err_pct: 1 }, routes: {} };
+    const alarms = evaluateAlarmsForRoute("GET /api/healthy", oneMinute, series, sloCfg);
+    expect(alarms.find(x => x.kind === "slo_violation")).toBeFalsy();
+  });
+
+  test("no slo_violation when in warn state (only critical triggers alarm)", () => {
+    const { evaluateAlarmsForRoute } = makeMetrics();
+    // p95 = 320ms → target*1.067 → warn state (between target and target*1.2)
+    const oneMinute = { err_rate: 0, count: 50, p50_ms: 150, p95_ms: 320, rps: 0.8 };
+    const series = mkSeries([310, 315, 320, 325, 320, 315]);
+    const sloCfg = { defaults: { p95_ms: 300, err_pct: 1 }, routes: {} };
+    const alarms = evaluateAlarmsForRoute("GET /api/borderline", oneMinute, series, sloCfg);
+    expect(alarms.find(x => x.kind === "slo_violation")).toBeFalsy();
+  });
 });

@@ -1,0 +1,122 @@
+Step: Extend /ops/alarms to include SLO violations (backend-only): add a third rule that emits kind: "slo_violation" when a route’s 1-minute snapshot is critical per SLO (p95 or error%). (Layer: Velocity → Alerts Core)
+
+Why it matters: Your alert stream now speaks the language of reliability—if a route violates targets, it surfaces immediately alongside error surges and regressions.
+
+Inputs needed:
+
+lib/metrics.js
+
+lib/slo.js (already added)
+
+server.js (no changes today)
+
+Command:
+
+Patch lib/metrics.js to evaluate SLOs during alarm generation.
+
+ // lib/metrics.js
+ // ...existing imports & code...
++const { loadSloMap, evaluateSloForSnapshot } = require("./slo");
+
+ function makeMetrics() {
+   // ...existing code...
+
+-  function alarms() {
++  function alarms() {
+     const nowIso = new Date().toISOString();
+     const snap = snapshot();
+     const tr = trends();
++    const sloCfg = loadSloMap();
+     const items = [];
+
+     for (const route of Object.keys(snap.routes)) {
+       const one = snap.routes[route]["1m"] || {};
+       const series = tr.routes[route]?.series || [];
+       // --- existing rules A & B (error_rate, p95_regress) remain unchanged ---
+       // Rule A: error rate in 1m
+       if (one.err_rate >= 5 && one.count >= 5) {
+         items.push({
+           route,
+           kind: "error_rate",
+           severity: one.err_rate >= 20 ? "critical" : "warning",
+           since: nowIso,
+           evidence: { err_rate_1m: one.err_rate, samples_1m: one.count },
+           hint: "Investigate recent errors; click Sentry link for this route.",
+         });
+       }
+
+       // Rule B: p95 regression last3 vs prev3 (from existing code)
+       const last6 = series.slice(-6);
+       const avg = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : null;
+       const last3 = last6.slice(-3).map(b => b?.p95_ms).filter(v => v != null);
+       const prev3 = last6.slice(0,3).map(b => b?.p95_ms).filter(v => v != null);
+       const aLast = avg(last3), aPrev = avg(prev3);
+       const regress_abs = (aLast!=null && aPrev!=null) ? (aLast - aPrev) : 0;
+       const regress_pct = (aLast!=null && aPrev>0) ? +(((aLast - aPrev)/aPrev)*100).toFixed(1) : 0;
+       if (aLast!=null && aPrev!=null && regress_abs >= 30 && regress_pct >= 20) {
+         items.push({
+           route,
+           kind: "p95_regress",
+           severity: regress_pct >= 50 ? "critical" : "warning",
+           since: nowIso,
+           evidence: {
+             p95_prev3_ms: Math.round(aPrev),
+             p95_last3_ms: Math.round(aLast),
+             regress_abs_ms: Math.round(regress_abs),
+             regress_pct
+           },
+           hint: "Latency increased; check recent deploys, DB, or upstreams.",
+         });
+       }
+
++      // Rule C: SLO violation (critical)
++      const sloEval = evaluateSloForSnapshot(route, one, sloCfg); // overall state from 1m snapshot
++      if (sloEval.state === "critical") {
++        items.push({
++          route,
++          kind: "slo_violation",
++          severity: "critical",
++          since: nowIso,
++          evidence: {
++            targets: sloEval.targets,                        // { p95_ms, err_pct }
++            actual:  sloEval.actual,                         // { p95_ms, err_pct, samples_1m }
++            dims:    sloEval.dims                            // which dimension failed: p95/err
++          },
++          hint: "Route exceeds SLO targets; prioritize remediation or rollback.",
++        });
++      }
+     }
+
+     return {
+       service: "eden-erp-backend",
+       env: process.env.SENTRY_ENV || process.env.NODE_ENV || "dev",
+       generated_at: nowIso,
+       alarms: items,
+     };
+   }
+
+   return { tap, snapshot, trends, alarms };
+ }
+ module.exports = { makeMetrics };
+
+
+Success check:
+
+# Generate traffic; force an SLO breach by adding artificial delay or returning some 5xx.
+curl -s http://localhost:3000/ops/alarms | python3 -m json.tool
+
+# Expect to see (in addition to existing alarms):
+# {
+#   "route": "GET /api/whatever",
+#   "kind": "slo_violation",
+#   "severity": "critical",
+#   "evidence": {
+#     "targets": {"p95_ms":300,"err_pct":1},
+#     "actual": {"p95_ms": 420, "err_pct": 0, "samples_1m": 18},
+#     "dims": {"p95":"critical","err":"ok"}
+#   },
+#   "hint": "Route exceeds SLO targets; prioritize remediation or rollback."
+# }
+
+
+Next: wait for user.
