@@ -25,6 +25,7 @@ import AuditLogViewer from './pages/AuditLogViewer';
 import IntakeQueue from './pages/IntakeQueue';
 import TeamOverview from './pages/TeamOverview';
 import ArchiveView from './pages/ArchiveView';
+import AdminRbacPage from './pages/AdminRbacPage';
 
 const queryClient = new QueryClient();
 
@@ -229,6 +230,14 @@ function AppContent() {
             element={
               <RequireAuth>
                 <ArchiveView />
+              </RequireAuth>
+            } 
+          />
+          <Route 
+            path="/admin/rbac" 
+            element={
+              <RequireAuth>
+                <AdminRbacPage />
               </RequireAuth>
             } 
           />
