@@ -102,6 +102,21 @@ async function requireAuth(req, res, next) {
   }
 
   req.user = user;
+  
+  // Set Sentry user context for better error tracking
+  if (user.id || user.email) {
+    try {
+      const Sentry = require('@sentry/node');
+      Sentry.setUser({
+        id: user.id,
+        email: user.email,
+        role: user.role
+      });
+    } catch (err) {
+      // Sentry not initialized, skip user tagging
+    }
+  }
+  
   next();
 }
 

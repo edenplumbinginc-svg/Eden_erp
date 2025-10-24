@@ -1,0 +1,103 @@
+You’re on Sentry’s **“Configure Node.js SDK”** page. Here’s exactly what to do on **this** screen, line-by-line, with nothing skipped.
+
+---
+
+### 1) Install (top box)
+
+1. In the **Install** box, click the **npm** tab if it isn’t already selected.
+2. Click the little **copy** icon on the right of:
+   `npm install @sentry/node --save`
+3. Paste it in your Replit shell and run it.
+
+   * When it finishes, also install the profiler add-on (needed for the page’s “Profiling” feature):
+     `npm install @sentry/profiling-node --save`
+
+> Result you should see: both packages appear in `package.json` under `dependencies`.
+
+---
+
+### 2) Configure SDK (first code block titled `instrument.(js|mjs)`)
+
+Sentry shows a snippet that hardcodes the DSN. We’ll follow the **structure** but keep the DSN in a Secret.
+
+1. **Create a new file** at your project root named **`instrument.js`**.
+2. In Sentry’s first code block, click **Copy DSN** (or copy the `dsn: "https://…"` string).
+3. **Do not** paste the DSN into code. Instead:
+
+   * In Replit, open **Secrets** (lock icon).
+   * Add:
+
+     * **Key:** `SENTRY_DSN` → **Value:** *paste your DSN URL here*
+     * **Key:** `SENTRY_ENV` → **Value:** `production` (or `staging`)
+4. Paste this **adjusted** code into your new `instrument.js` (uses the env var, includes profiling as the screen promises “Profiling”):
+
+```js
+// instrument.js — load this BEFORE anything else in your app
+const Sentry = require("@sentry/node");
+const { nodeProfilingIntegration } = require("@sentry/profiling-node");
+
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,                   // from Replit Secrets
+  environment: process.env.SENTRY_ENV || "dev",
+  sendDefaultPii: true,                          // as shown in the guide
+  integrations: [nodeProfilingIntegration()],    // enables Profiling per this page
+  tracesSampleRate: 0.2,                         // Tracing (20% sampling)
+  profilesSampleRate: 0.1,                       // Profiling (10% sampling)
+});
+
+module.exports = Sentry;
+```
+
+---
+
+### 3) Import `instrument.js` at the very top (second code block on screen)
+
+1. Open your **main server entry** file (whatever starts your app: `index.js`, `server.js`, or similar).
+2. At the **very first line**, add:
+
+```js
+require("./instrument");
+```
+
+3. Keep all other imports **below** this line (exactly as the on-screen note says).
+
+---
+
+### 4) (Optional boxes on the screen)
+
+* **Upload Source Maps (Optional):** skip for now (we can enable later when we wire build output).
+* **AI Rules for Code Editors (Optional):** skip.
+
+---
+
+### 5) Verify (bottom “Verify” snippet on screen)
+
+Sentry provides a tiny test that throws and captures an error. Use it once to confirm events arrive.
+
+1. In your entry file **temporarily**, add this **under** your other imports (or put it inside a small `setTimeout` so it runs once):
+
+```js
+const Sentry = require("@sentry/node");
+
+try {
+  // Intentional error for verification
+  notDefined__sentry_test();
+} catch (e) {
+  Sentry.captureException(e);
+}
+```
+
+2. Start your app.
+3. Go back to Sentry → Project issues. Within a minute, you should see an event.
+4. **Remove** that test block after you see the event (we don’t want noise).
+
+---
+
+### What you should see after completing this screen
+
+* `@sentry/node` and `@sentry/profiling-node` installed.
+* `instrument.js` created, using **env** DSN.
+* Your entry file requires `"./instrument"` at the very top.
+* An initial test error appears in Sentry under your `eden-erp` project.
+
+Reply with **“Step 2 done”** (or paste any Replit error log) and we’ll do the next micro-step: attach the Express request/trace + error handlers so every request and crash is auto-captured.

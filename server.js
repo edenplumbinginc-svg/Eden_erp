@@ -10,12 +10,15 @@ if (process.env.SENTRY_DSN && process.env.SENTRY_DSN.startsWith('https://')) {
   try {
     Sentry.init({
       dsn: process.env.SENTRY_DSN,
-      environment: process.env.NODE_ENV || 'development',
+      environment: process.env.SENTRY_ENV || 'development',
+      release: process.env.RELEASE_SHA,
       integrations: [
-        nodeProfilingIntegration()
+        nodeProfilingIntegration(),
+        Sentry.httpIntegration(),
+        ...(Sentry.expressIntegration ? [Sentry.expressIntegration()] : [])
       ],
-      tracesSampleRate: 0.2,
-      profilesSampleRate: 0.2,
+      tracesSampleRate: 0.3,
+      profilesSampleRate: 0.1,
       beforeSend(event) {
         const scrub = (obj) => {
           if (!obj || typeof obj !== 'object') return obj;
@@ -296,8 +299,8 @@ app.get('/routes', (_, res) => {
 
 // --- Sentry test route (development only) ---
 if (process.env.NODE_ENV !== 'production') {
-  app.get('/boom', (req, res) => {
-    throw new Error('Sentry test error');
+  app.get('/api/_sentry-test', (req, res) => {
+    throw new Error('Sentry test crash: boom 💥');
   });
 }
 

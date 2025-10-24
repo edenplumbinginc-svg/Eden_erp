@@ -25,12 +25,16 @@ function errorHandler(err, req, res, next) {
   // Don't leak error details in production
   const isDevelopment = process.env.NODE_ENV !== 'production';
   
+  // Get Sentry event ID if available (set by Sentry.Handlers.errorHandler)
+  const sentryEventId = res.sentry || res.__sentry_event_id;
+  
   res.status(err.statusCode || 500).json({
     error: {
       code: err.code || 'INTERNAL_ERROR',
       message: isDevelopment ? err.message : 'An internal error occurred',
       ...(isDevelopment && err.stack ? { stack: err.stack.split('\n').slice(0, 5) } : {})
-    }
+    },
+    ...(sentryEventId ? { sentry_event_id: sentryEventId } : {})
   });
 }
 
