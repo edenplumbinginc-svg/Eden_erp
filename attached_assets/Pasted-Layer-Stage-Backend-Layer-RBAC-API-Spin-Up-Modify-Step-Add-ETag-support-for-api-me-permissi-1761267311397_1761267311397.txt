@@ -1,0 +1,144 @@
+Layer/Stage: Backend Layer → RBAC API | Spin-Up → Modify
+Step: Add ETag support for /api/me/permissions to eliminate redundant payloads (304 on no change).
+
+Why it matters: Cuts bandwidth/latency for permission checks ~90% after first load; keeps UI instantly fresh without hammering the API.
+
+Inputs needed:
+
+Express API with existing /api/me/permissions handler
+
+Access to roles, permissions, role_permissions, user_roles tables
+
+Command (backend):
+
+Create a small hashing util.
+
+// apps/api/src/lib/etag.ts
+import crypto from "crypto";
+export function etagFor(obj: unknown) {
+  const json = JSON.stringify(obj);
+  return `"perm-${crypto.createHash("sha256").update(json).digest("base64url")}"`;
+}
+
+
+Enhance the permissions route to emit/compare ETag.
+
+// apps/api/src/routes/me.ts
+import { Router } from "express";
+import { requireAuth } from "../middleware/auth";
+import { etagFor } from "../lib/etag";
+
+const router = Router();
+
+router.get("/me/permissions", requireAuth, async (req: any, res) => {
+  const { roleSlugs, permSet } = req.rbac;
+  const payload = { roles: roleSlugs, permissions: Array.from(permSet) };
+
+  const tag = etagFor(payload);
+  res.setHeader("ETag", tag);
+
+  const clientTag = req.headers["if-none-match"];
+  if (clientTag === tag) return res.status(304).end();
+
+  res.json(payload);
+});
+
+export default router;
+
+
+Success check (backend):
+
+# first call (no If-None-Match) -> 200 with ETag
+curl -i http://localhost:3000/api/me/permissions -H "Authorization: Bearer <JWT>" | sed -n '1,10p'
+
+# second call reusing ETag -> 304 Not Modified
+curl -i http://localhost:3000/api/me/permissions -H "Authorization: Bearer <JWT>" -H 'If-None-Match: "perm-XXXX"'
+
+
+Layer/Stage: Frontend Layer → RBAC Bridge | Spin-Up → Modify
+Step: Teach the client to send If-None-Match and honor 304.
+
+Why it matters: Zero JSON parsing when perms unchanged; plays perfectly with your 5-min cache TTL.
+
+Command (frontend):
+
+Extend the cached structure to store the last ETag.
+
+// apps/web/src/lib/permissionsCache.ts
+export type CachedPerms = {
+  roles: string[];
+  permissions: string[];
+  savedAt: number;
+  etag?: string;             // <-- add
+};
+
+
+Update save/load helpers (no change needed beyond type unless you want to enforce presence).
+
+Send If-None-Match and update ETag on 200.
+
+// apps/web/src/lib/permissionsClient.ts
+import { saveCachedPerms, loadCachedPerms } from "./permissionsCache";
+
+let inflight: Promise<{ roles: string[]; permissions: string[]; etag?: string }> | null = null;
+
+export async function fetchPermissions(jwt: string) {
+  if (!jwt) throw new Error("Missing JWT");
+  if (!inflight) {
+    const cached = loadCachedPerms();
+    const headers: Record<string, string> = { Authorization: `Bearer ${jwt}` };
+    if (cached?.etag) headers["If-None-Match"] = cached.etag;
+
+    inflight = fetch("/api/me/permissions", { headers }).then(async (r) => {
+      if (r.status === 304 && cached) return cached;
+      if (!r.ok) throw new Error(`Perm fetch failed: ${r.status}`);
+      const etag = r.headers.get("ETag") || undefined;
+      const body = await r.json();
+      const result = { ...body, etag };
+      saveCachedPerms(result);
+      return result;
+    }).finally(() => { inflight = null; });
+  }
+  return inflight;
+}
+
+
+Success check (frontend):
+
+First navigation after login: Network tab shows /me/permissions → 200 with ETag.
+
+Subsequent navigations: /me/permissions → 304 (tiny response), UI remains correct.
+
+After role change server-side, the next request returns 200 with a new ETag and updated permissions.
+
+Layer/Stage: System Instruction Layer | Spin-Up → Modify
+Step: Bake Layer/Circling progress reporting into your master instruction set.
+
+Why it matters: Every future change will announce: which layer is active, which stage it’s in, and whether a component is spinning up, modifying, testing, or stabilized — your INFJ clarity rule, codified.
+
+Command (add to Master Instructions):
+
+“For every action, report:
+
+Layer: (Frontend, Backend, RBAC, UI Shell, Data, Integration, Verification, Optimization, System Instruction)
+
+Stage: (Spin-Up → Modify → Test → Stable → Observe)
+
+State: (starting up / changing / shutting down / stable)
+
+One-line intent + expected observable outcome.”
+
+Success check: All future responses from me include this telemetry.
+
+Progress Telemetry (this message):
+
+Backend Layer: Spin-Up → Modify → Stable (ETag added)
+
+Frontend Layer: Spin-Up → Modify → Stable (304-aware client)
+
+Integration Layer: Spin-Up → Test (observe 304/200 pattern)
+
+System Instruction Layer: Spin-Up → Stable (INFJ visibility rule embedded)
+
+Next: wait for user.
+When the 304s appear in your Network panel and the UI remains correct after role changes, reply “ETag verified”. I’ll then move to Optimization Step 3: Header role badge + ‘view-only’ hints consolidation across modules (Tasks, Projects) with a shared <PermissionGate> utility you can drop anywhere.

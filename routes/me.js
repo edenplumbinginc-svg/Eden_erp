@@ -3,6 +3,7 @@ const router = express.Router();
 const { requireAuth } = require('../middleware/auth');
 const { loadRbacPermissions } = require('../middleware/loadRbacPermissions');
 const { ensureDefaultRole } = require('../services/assignDefaultRole');
+const { etagFor } = require('../lib/etag');
 
 router.get('/me/permissions', requireAuth, loadRbacPermissions, async (req, res) => {
   try {
@@ -23,12 +24,22 @@ router.get('/me/permissions', requireAuth, loadRbacPermissions, async (req, res)
       permissions = req.rbac?.permissions || new Set();
     }
     
-    res.json({
+    const payload = {
       userId: req.user.id,
       email: req.user.email,
       roles,
       permissions: Array.from(permissions)
-    });
+    };
+    
+    const tag = etagFor(payload);
+    res.setHeader('ETag', tag);
+    
+    const clientTag = req.headers['if-none-match'];
+    if (clientTag === tag) {
+      return res.status(304).end();
+    }
+    
+    res.json(payload);
   } catch (err) {
     console.error('Error in /me/permissions:', err);
     res.status(500).json({ error: 'Internal server error' });
