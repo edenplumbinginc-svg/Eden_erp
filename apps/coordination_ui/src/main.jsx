@@ -9,6 +9,7 @@ if (import.meta.env.VITE_SENTRY_DSN) {
   Sentry.init({
     dsn: import.meta.env.VITE_SENTRY_DSN,
     environment: import.meta.env.VITE_SENTRY_ENV || 'development',
+    release: import.meta.env.VITE_RELEASE_SHA,
     integrations: [
       Sentry.browserTracingIntegration(),
       Sentry.replayIntegration({ maskAllText: false, blockAllMedia: false }),
@@ -17,6 +18,11 @@ if (import.meta.env.VITE_SENTRY_DSN) {
     replaysSessionSampleRate: 0.05,
     replaysOnErrorSampleRate: 1.0,
   });
+  
+  // Set release tag for build identification
+  if (import.meta.env.VITE_RELEASE_SHA) {
+    Sentry.setTag("release", import.meta.env.VITE_RELEASE_SHA);
+  }
 }
 
 const Fallback = () => (
