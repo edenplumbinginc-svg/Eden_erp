@@ -18,6 +18,7 @@ import SignupPage from './pages/SignupPage';
 import { ToasterProvider } from './components/Toaster';
 import GuestView from './pages/GuestView';
 import AllTasksView from './components/AllTasksView';
+import SimpleTasksPage from './pages/SimpleTasksPage';
 import ProjectRequestForm from './pages/ProjectRequestForm';
 import AuditLogViewer from './pages/AuditLogViewer';
 import IntakeQueue from './pages/IntakeQueue';
@@ -139,6 +140,14 @@ function AppContent() {
             element={
               <RequireAuth>
                 <AllTasksView />
+              </RequireAuth>
+            } 
+          />
+          <Route 
+            path="/tasks-delta" 
+            element={
+              <RequireAuth>
+                <SimpleTasksPage />
               </RequireAuth>
             } 
           />
