@@ -1,0 +1,117 @@
+[Mode: Execution]
+
+Step: Add **liveness/readiness health endpoints** (`/healthz`, `/ready`) plus a lightweight health aggregator that pings the DB and reports version/env. (Layer: **Resilience → Health**)
+
+Why it matters: This is Phase 10C’s foundation. Ops needs fast, machine-readable checks to detect crashes early, auto-restart safely, and gate rollouts.
+
+Inputs needed:
+
+* Your Express server file (e.g., `server.js`)
+* Drizzle `db` instance import you already use
+* Optional envs: `RELEASE_SHA`, `BUILD_TIME` (we’ll read them if present)
+
+Command:
+
+1. Create `lib/health.js`:
+
+```js
+// lib/health.js  — Active Layer: Resilience/Health
+const os = require("os");
+
+// Pass { db } from your app. Returns an async getter.
+function buildHealth({ db }) {
+  return async function getHealth() {
+    const started = Date.now();
+
+    // --- DB probe ---
+    let db_ok = true;
+    let db_ms = null;
+    try {
+      const t0 = Date.now();
+      // Works with Drizzle: a trivial round trip
+      await db.execute({ sql: "SELECT 1", params: [] });
+      db_ms = Date.now() - t0;
+    } catch (e) {
+      db_ok = false;
+    }
+
+    // --- Resources ---
+    const mu = process.memoryUsage();
+    const rss_mb = +(mu.rss / 1024 / 1024).toFixed(1);
+    const heap_mb = +(mu.heapUsed / 1024 / 1024).toFixed(1);
+    const load1 = +os.loadavg()[0].toFixed(2);
+
+    const status = db_ok ? "ok" : "degraded";
+
+    return {
+      status,
+      checks: {
+        db: { ok: db_ok, ms: db_ms },
+      },
+      env: process.env.SENTRY_ENV || process.env.NODE_ENV || "dev",
+      version: process.env.RELEASE_SHA || "dev",
+      build_time: process.env.BUILD_TIME || null,
+      uptime_s: Math.floor(process.uptime()),
+      resources: { rss_mb, heap_mb, load1 },
+      latency_ms: Date.now() - started,
+    };
+  };
+}
+
+module.exports = { buildHealth };
+```
+
+2. Wire it in your Express app (near your other middleware/routers):
+
+```js
+// server.js  — Active Layer: Resilience/Health
+const { buildHealth } = require("./lib/health");
+// import/require your Drizzle db instance:
+const { db } = require("./db"); // adjust path if different
+
+const getHealth = buildHealth({ db });
+
+// Liveness: app is up; returns 200 if process is healthy enough to serve
+app.get("/healthz", async (req, res) => {
+  const h = await getHealth();
+  const code = h.status === "ok" ? 200 : 503; // degrade flips to 503
+  res.status(code).json({ endpoint: "healthz", ...h });
+});
+
+// Readiness: stricter (fail fast if DB isn’t reachable)
+app.get("/ready", async (req, res) => {
+  const h = await getHealth();
+  const ready = h.checks.db.ok;
+  res.status(ready ? 200 : 503).json({ endpoint: "ready", ...h });
+});
+
+// Optional: expose version for dashboards
+app.get("/version", (_req, res) => {
+  res.json({
+    version: process.env.RELEASE_SHA || "dev",
+    env: process.env.SENTRY_ENV || process.env.NODE_ENV || "dev",
+    build_time: process.env.BUILD_TIME || null,
+    uptime_s: Math.floor(process.uptime()),
+  });
+});
+```
+
+3. (Optional) Add envs to help observability:
+
+* `RELEASE_SHA` → your current git short SHA
+* `BUILD_TIME` → ISO timestamp of last build
+
+Success check:
+
+* Run:
+
+  ```bash
+  curl -s http://localhost:3000/healthz | python3 -m json.tool | head
+  curl -s http://localhost:3000/ready  | python3 -m json.tool | head
+  curl -s http://localhost:3000/version | python3 -m json.tool
+  ```
+* Expect `/healthz` → `status: "ok"` and HTTP 200.
+* Expect `/ready` → HTTP 200 (turns **503** if DB is down).
+* Sentry should remain quiet during these calls; no errors should be generated.
+
+Next: wait for user.

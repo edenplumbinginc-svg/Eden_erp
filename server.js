@@ -230,10 +230,6 @@ app.use('/api/health', require('./routes/health'));
 // --- Public health check endpoint (simple alias) ---
 app.get('/health', (_, res) => res.json({ status: 'ok' }));
 
-// --- Self-contained health check with TLS configuration ---
-const { healthz } = require('./routes/healthz');
-app.get('/healthz', healthz);
-
 app.get('/db/ping', async (_, res) => {
   if (!process.env.DATABASE_URL)
     return res.status(200).json({ db: 'not_configured' });
@@ -357,6 +353,34 @@ app.get('/routes', (_, res) => {
     });
   }
   res.json(routes);
+});
+
+// --- Ops Health Endpoints (Resilience Layer) ---
+const { buildHealth } = require('./lib/health');
+const getHealth = buildHealth({ pool });
+
+// Liveness: app is up; returns 200 if process is healthy enough to serve
+app.get('/healthz', async (req, res) => {
+  const h = await getHealth();
+  const code = h.status === 'ok' ? 200 : 503;
+  res.status(code).json({ endpoint: 'healthz', ...h });
+});
+
+// Readiness: stricter (fail fast if DB isn't reachable)
+app.get('/ready', async (req, res) => {
+  const h = await getHealth();
+  const ready = h.checks.db.ok;
+  res.status(ready ? 200 : 503).json({ endpoint: 'ready', ...h });
+});
+
+// Version: expose version for dashboards
+app.get('/version', (_req, res) => {
+  res.json({
+    version: process.env.RELEASE_SHA || 'dev',
+    env: process.env.SENTRY_ENV || process.env.NODE_ENV || 'dev',
+    build_time: process.env.BUILD_TIME || null,
+    uptime_s: Math.floor(process.uptime()),
+  });
 });
 
 // --- Sentry test route (development only) ---
