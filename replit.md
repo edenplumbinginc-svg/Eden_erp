@@ -23,6 +23,8 @@ Core modules include `coordination` (projects, tasks, comments, attachments) and
 
 **Performance API**: Read-only REST endpoints exposing performance metrics for UI consumption. Three endpoints protected by authentication: `/api/perf/fastest-week` (top 20 performers this week), `/api/perf/dept-month` (department rankings last 30 days), `/api/perf/me/recent` (user's 30 most recent completions). Queries pre-computed database views for optimal performance. Ready for leaderboard UI implementation.
 
+**Auto-Decisions v0 (Safe Rules Engine)**: Automated low-risk decision engine with full auditability. Runs every 5 minutes evaluating policies stored in `decision_policies` table. All executions logged to `decision_executions` for audit trail. Ships with 3 safe policies (all in DRY_RUN mode by default): auto-handoff from Estimation→Procurement when checklist hits 100%, idle task escalation (>7 days), and speed badges for checklist items completed in <60 minutes. Admin API (`/api/admin/decisions/*`) provides policy management, manual execution, toggle controls, and execution history. Only enables low-risk effects: notify, create_task (templated), and label assignment.
+
 ### System Design Choices
 The project adopts a monolithic architecture with a scalable PostgreSQL database. It emphasizes observability through monitoring, logging, and health checks, and is designed for security with enforced authentication and multi-layered database validation. An `autosync.sh` script automates Git commits and pushes.
 
