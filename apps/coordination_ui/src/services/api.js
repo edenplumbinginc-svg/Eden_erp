@@ -92,7 +92,12 @@ export const apiService = {
   listSubtasks: (taskId) => api.get(`/tasks/${taskId}/subtasks`).then(res => res.data),
   createSubtask: (taskId, payload) => api.post(`/tasks/${taskId}/subtasks`, payload).then(res => res.data),
   updateSubtask: (subtaskId, payload) => api.patch(`/tasks/subtasks/${subtaskId}`, payload).then(res => res.data),
-  deleteSubtask: (subtaskId) => api.delete(`/tasks/subtasks/${subtaskId}`).then(res => res.data)
+  deleteSubtask: (subtaskId) => api.delete(`/tasks/subtasks/${subtaskId}`).then(res => res.data),
+
+  // Performance Leaderboard
+  getFastestPerformersWeek: () => api.get('/perf/fastest-week').then(res => res.data),
+  getDepartmentPerformanceMonth: () => api.get('/perf/dept-month').then(res => res.data),
+  getMyRecentPerformance: () => api.get('/perf/me/recent').then(res => res.data)
 };
 
 // Export the raw axios instance for direct use

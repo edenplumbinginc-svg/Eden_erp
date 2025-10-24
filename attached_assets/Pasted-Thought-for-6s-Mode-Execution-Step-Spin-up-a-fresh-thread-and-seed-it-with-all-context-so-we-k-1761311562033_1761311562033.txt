@@ -1,0 +1,63 @@
+Thought for 6s
+
+[Mode: Execution]
+
+Step: Spin up a fresh thread and seed it with all context so we keep momentum (and stop hitting message limits).
+
+Why it matters: A clean thread preserves velocity and avoids losing critical decisions, policies, and URLs. You’ll have a crisp handoff point for the next build steps.
+
+Inputs needed:
+
+Replit link (already: https://replit.com/join/zagabiqjvq-edenplumbinginc)
+
+Notion governance pages (RBAC, Checklists, Master Plan)
+
+Any GitHub mirror link (if applicable)
+
+Command (paste this as the very first message in the new thread):
+
+Title: Eden — Auto-Decisions v0 + Performance API (Phase 7/8 Continuation)
+
+Context Snapshot (carry-over):
+- Supabase Auth ✅ | Viewer auto-assign ✅
+- RBAC Admin API ✅ (assign/remove roles)
+- Perf Telemetry ✅ (performance_events + views)
+- Performance API ✅ (/api/perf/fastest-week, /api/perf/dept-month, /api/perf/me/recent)
+- Decisions Engine v0 ✅ (dry-run by default; handoff, idle-escalate, lightning-fast badge)
+- Delta Sync ✅ (Tasks + Projects), ETag ✅, Warm-Boot ✅
+- Checklists ✅ (full RBAC + audit + timestamps)
+
+Links:
+- Replit: https://replit.com/join/zagabiqjvq-edenplumbinginc
+- Notion Master: [ERP Master Plan] + [RBAC Model] + [Checklists/Coordination]
+
+Layer/Stage Telemetry (at thread start):
+- Auth/RBAC: Stable ✅
+- Perf Telemetry: Stable ✅
+- Perf API: Stable ✅
+- Auto-Decisions v0: Enabled ✅ (all policies DRY_RUN=true)
+- UI Leaderboard: Pending ⏳
+- Notion Governance Sync: Pending ⏳
+
+Immediate Objectives (Execution Mode):
+1) Leaderboard UI (consume /api/perf/*)  
+2) Admin → Decisions panel (toggle DRY_RUN per policy)  
+3) Notion mirror for decision_policies (read-only sync)
+
+Request:
+Kick off with Step 1.1 — Leaderboard UI scaffold (Top performers this week + Dept rankings + My recent). Assume axios client exists.
+
+Provide:
+- Folder/file plan,
+- Components to create,
+- Exact code blocks,
+- Success checks.
+
+
+Success check:
+
+New thread created with the title above.
+
+Your first message contains the full context block.
+
+You reply here “New thread created” and drop the link (or just confirm).
