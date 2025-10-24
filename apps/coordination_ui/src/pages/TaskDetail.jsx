@@ -12,6 +12,7 @@ import InlineEdit from "../components/InlineEdit";
 import InlineAssigneeEdit from "../components/InlineAssigneeEdit";
 import ConfirmDialog from "../components/ConfirmDialog";
 import TagsEditor from "../components/TagsEditor";
+import BallHistoryPanel from "../components/BallHistoryPanel";
 import { getStatusLabel } from "../constants/statusLabels";
 import { useHasPermission } from "../hooks/usePermissions";
 
@@ -537,6 +538,8 @@ export default function TaskDetail() {
       )}
 
       <TaskMetadata task={task} />
+
+      <BallHistoryPanel taskId={taskId} />
 
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-6">

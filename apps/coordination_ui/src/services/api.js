@@ -106,6 +106,12 @@ export const apiService = {
   listDecisionExecutions: (limit = 50) => api.get('/admin/decisions/executions', { params: { limit } }).then(res => res.data)
 };
 
+// Ball-in-Court Events API
+export const ballApi = {
+  getHistory: (taskId) =>
+    api.get(`/api/tasks/${taskId}/ball-history`).then(r => r.data),
+};
+
 // Export the raw axios instance for direct use
 export { api };
 
