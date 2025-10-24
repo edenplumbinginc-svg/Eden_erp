@@ -46,23 +46,29 @@ function Sparkline({ points, accessor = (x)=>x, height = 28, width = 120, stroke
 export default function Velocity() {
   const [snap, setSnap] = useState(null);      // from /ops/metrics
   const [trends, setTrends] = useState(null);  // from /ops/metrics/trends
+  const [alarms, setAlarms] = useState(null);  // from /ops/alarms
   const [err, setErr] = useState(null);
   const [sortBy, setSortBy] = useState("rps");
   const [desc, setDesc] = useState(true);
   const [since, setSince] = useState(null);
+  const [showAlerts, setShowAlerts] = useState(false);
 
   async function fetchMetrics() {
     try {
-      const [a, b] = await Promise.all([
+      const [a, b, c] = await Promise.all([
         fetch("/ops/metrics", { cache: "no-store" }),
         fetch("/ops/metrics/trends", { cache: "no-store" }),
+        fetch("/ops/alarms", { cache: "no-store" }),
       ]);
       if (!a.ok) throw new Error(`/ops/metrics HTTP ${a.status}`);
       if (!b.ok) throw new Error(`/ops/metrics/trends HTTP ${b.status}`);
-      const j1 = await a.json();
-      const j2 = await b.json();
+      if (!c.ok) throw new Error(`/ops/alarms HTTP ${c.status}`);
+      const j1 = await a.json();   // snapshot
+      const j2 = await b.json();   // trends
+      const j3 = await c.json();   // alarms
       setSnap(j1);
       setTrends(j2);
+      setAlarms(j3);
       setErr(null);
       setSince(new Date().toLocaleTimeString());
     } catch (e) {
@@ -75,6 +81,17 @@ export default function Velocity() {
     const id1 = setInterval(fetchMetrics, 10_000); // match 10s bucket
     return () => clearInterval(id1);
   }, []);
+
+  // Map alarms by route for quick lookup
+  const alarmIndex = useMemo(() => {
+    const idx = new Map();
+    const list = alarms?.alarms || [];
+    for (const a of list) {
+      if (!idx.has(a.route)) idx.set(a.route, []);
+      idx.get(a.route).push(a);
+    }
+    return idx;
+  }, [alarms]);
 
   const rows = useMemo(() => {
     if (!snap?.routes) return [];
@@ -109,6 +126,7 @@ export default function Velocity() {
         regress_abs,
         regress_pct,
         is_regress,
+        alarms: alarmIndex.get(route) || [],
       });
     }
     return out.sort((a, b) => {
@@ -116,7 +134,7 @@ export default function Velocity() {
       const vb = b[sortBy] ?? -Infinity;
       return desc ? (vb - va) : (va - vb);
     });
-  }, [snap, trends, sortBy, desc]);
+  }, [snap, trends, alarmIndex, sortBy, desc]);
 
   function header(label, key) {
     return (
@@ -139,6 +157,27 @@ export default function Velocity() {
         </div>
       </div>
 
+      {/* Alerts bar */}
+      <div className="flex items-center justify-between">
+        <div>
+          {alarms?.alarms?.length
+            ? <span className="inline-flex items-center gap-2 px-3 py-1 rounded-lg border bg-amber-50 text-amber-800 border-amber-200">
+                ⚠️ Current Alerts: <b>{alarms.alarms.length}</b>
+              </span>
+            : <span className="inline-flex items-center gap-2 px-3 py-1 rounded-lg border bg-green-50 text-green-700 border-green-200">
+                ✅ No active alerts
+              </span>}
+        </div>
+        <button
+          className="px-3 py-1.5 rounded-lg border hover:bg-gray-50"
+          onClick={() => setShowAlerts(true)}
+          disabled={!alarms?.alarms?.length}
+          title="Show current alerts"
+        >
+          View Alerts
+        </button>
+      </div>
+
       {err && (
         <div className="p-3 rounded-md bg-red-50 text-red-700 border border-red-200">
           Failed to load metrics: {err}
@@ -155,6 +194,7 @@ export default function Velocity() {
               {header("p95 ms (1m)", "p95_ms")}
               {header("Error % (1m)", "err_rate")}
               {header("Samples (1m)", "count")}
+              <th className="px-3 py-2">Alerts</th>
               <th className="px-3 py-2">p95 (5m)</th>
               <th className="px-3 py-2">RPS (5m)</th>
               {header("Regress % (p95)", "regress_pct")}
@@ -163,7 +203,7 @@ export default function Velocity() {
           </thead>
           <tbody>
             {rows.length === 0 ? (
-              <tr><td className="px-3 py-4 text-center" colSpan="10">No data yet — hit some routes</td></tr>
+              <tr><td className="px-3 py-4 text-center" colSpan="11">No data yet — hit some routes</td></tr>
             ) : rows.map((r) => (
               <tr key={r.route} className="border-t">
                 <td className="px-3 py-2 font-mono">{r.route}</td>
@@ -172,6 +212,20 @@ export default function Velocity() {
                 <td className="px-3 py-2">{fmt(r.p95_ms)}</td>
                 <td className={`px-3 py-2 ${r.err_rate > 5 ? "text-red-600 font-medium" : ""}`}>{fmt(r.err_rate)}</td>
                 <td className="px-3 py-2">{fmt(r.count)}</td>
+                <td className="px-3 py-2">
+                  {r.alarms.length ? (
+                    <div className="flex flex-wrap gap-1">
+                      {r.alarms.map((a, i) => (
+                        <span key={i}
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border
+                            ${a.severity === "critical" ? "bg-red-100 text-red-700 border-red-200"
+                                                       : "bg-amber-100 text-amber-800 border-amber-200"}`}>
+                          {a.kind === "error_rate" ? "errors" : "p95↑"} {a.severity}
+                        </span>
+                      ))}
+                    </div>
+                  ) : "—"}
+                </td>
                 <td className="px-3 py-1">
                   <Sparkline
                     points={r.trend}
@@ -222,8 +276,63 @@ export default function Velocity() {
         </table>
       </div>
 
+      {/* Alerts Drawer */}
+      {showAlerts && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setShowAlerts(false)} />
+          <div className="absolute right-0 top-0 h-full w-full max-w-lg bg-white shadow-2xl p-6 overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Current Alerts</h2>
+              <button className="px-2 py-1 rounded-md border hover:bg-gray-50" onClick={() => setShowAlerts(false)}>Close</button>
+            </div>
+            {!alarms?.alarms?.length ? (
+              <p className="text-sm opacity-70">No active alerts.</p>
+            ) : (
+              <ul className="space-y-3">
+                {alarms.alarms.map((a, i) => (
+                  <li key={i} className="border rounded-lg p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="font-mono text-sm">{a.route}</div>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border
+                        ${a.severity === "critical" ? "bg-red-100 text-red-700 border-red-200"
+                                                   : "bg-amber-100 text-amber-800 border-amber-200"}`}>
+                        {a.kind === "error_rate" ? "errors" : "p95↑"} {a.severity}
+                      </span>
+                    </div>
+                    <div className="text-xs mt-2 opacity-80">
+                      {a.kind === "error_rate" ? (
+                        <>err% (1m): <b>{a.evidence.err_rate_1m}%</b> • samples: <b>{a.evidence.samples_1m}</b></>
+                      ) : (
+                        <>p95 prev3: <b>{a.evidence.p95_prev3_ms}ms</b> → last3: <b>{a.evidence.p95_last3_ms}ms</b> &nbsp;(+{a.evidence.regress_abs_ms}ms, {a.evidence.regress_pct}%)</>
+                      )}
+                    </div>
+                    <div className="flex gap-2 mt-3">
+                      <button
+                        className="px-2 py-1 rounded-md border hover:bg-gray-50"
+                        onClick={async () => {
+                          try {
+                            const res = await fetch(`/ops/sentry-link?route=${encodeURIComponent(a.route)}`, { cache: "no-store" });
+                            const j = await res.json();
+                            if (j?.url) return window.open(j.url, "_blank", "noopener,noreferrer");
+                            if (j?.missing) alert("Configure SENTRY_ORG_SLUG and SENTRY_PROJECT_SLUG secrets to enable Sentry deep links.");
+                          } catch { /* noop */ }
+                        }}
+                      >
+                        Sentry →
+                      </button>
+                    </div>
+                    <div className="text-xs mt-2 opacity-60">{a.hint}</div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
       <p className="text-xs opacity-70">
         Data sources: <code>/ops/metrics</code> (1m snapshot) & <code>/ops/metrics/trends</code> (5m, 10s buckets).
+        Alerts: <code>/ops/alarms</code> (error surges & p95 regressions).
       </p>
     </div>
   );
