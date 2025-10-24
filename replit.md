@@ -1,7 +1,7 @@
 # Eden ERP - Project Documentation
 
 ## Overview
-Eden ERP is a monolithic ERP shell for Eden Plumbing Inc., providing a robust backend with a defined database schema, organizational structure, and a basic REST API. Its purpose is to streamline business operations, starting with coordination and procurement, offering a scalable platform for future application modules to efficiently manage projects, tasks, and resources.
+Eden ERP is a monolithic ERP shell for Eden Plumbing Inc., designed to streamline business operations, starting with coordination and procurement. It provides a robust backend with a defined database schema and a basic REST API, serving as a scalable platform for future application modules to efficiently manage projects, tasks, and resources.
 
 ## User Preferences
 I prefer iterative development, with a focus on delivering functional increments. Please ask before making major architectural changes or introducing new dependencies. I appreciate clear and concise explanations for complex topics. Ensure the codebase remains clean, well-documented, and adheres to established patterns.
@@ -9,62 +9,19 @@ I prefer iterative development, with a focus on delivering functional increments
 ## System Architecture
 
 ### UI/UX Decisions
-- **Frontend Framework**: React 18 with Vite.
-- **Styling**: 100% Google Material Design with custom CSS (Tailwind removed October 2025). Professional Google Workspace aesthetic with Roboto font, Material color palette, 4-level elevation system, 8px spacing grid, and smooth transitions.
-- **Development Authentication**: `DevAuthSwitcher` for quick user role switching, with collapsible/minimizable UI for clean testing views.
-- **API Integration**: Axios-based client with interceptors for development auth headers.
-- **Project Structure**: Monorepo with frontend in `apps/coordination_ui/`. Vite proxies `/api` to backend on port 3000.
-- **Material Design System**: Complete implementation with color variables (--md-primary: #1a73e8), elevation shadows (4 levels), spacing tokens (8/16/24/32/40/48px), typography scale (Roboto 300/400/500/700), button styles (raised, outlined, danger, success), form inputs with focus states, navigation tabs, cards with proper shadows, loading skeletons, and Material animations.
-- **Components**: StatusSelect, BICChip, Overdue Badge, Idle Badge, Notifications Bell, Toast System, SummaryCard, TasksByStatusChart, TasksByAssigneeChart, RecentActivityFeed.
-- **UI Terminology Standards**: Centralized status labels in `constants/statusLabels.js` with consistent mapping: "New" (instead of "Open"), "To Do", "In Progress", "Review", "Done". Ball in Court always capitalized (capital "C", lowercase "in"). All components use `getStatusLabel()` helper for consistency. Browser cache headers configured in Vite to prevent stale UI.
+The frontend uses React 18 with Vite, styled with 100% Google Material Design and custom CSS, emulating a professional Google Workspace aesthetic. This includes a specific color palette, typography (Roboto), an 8px spacing grid, a 4-level elevation system, and smooth transitions. A `DevAuthSwitcher` is implemented for development-time user role switching. API integration is handled via an Axios-based client. The project follows a monorepo structure with the frontend in `apps/coordination_ui/`.
 
 ### Technical Implementations
-- **Backend Framework**: Express.js.
-- **Database**: Supabase PostgreSQL with Drizzle ORM.
-- **Runtime**: Node.js 20.
-- **Authentication**: Production Supabase Auth with JWT verification. Global authentication on `/api/*` routes. Frontend AuthProvider with session management, Login/Signup pages with Material Design styling. DevAuthSwitcher hidden in production mode.
-- **RBAC (Role-Based Access Control)**: Complete production-ready system with 4 roles (Administrator, Operations, Contributor, Read-Only Viewer), 35+ granular permissions (project.view/create/edit/delete, task.view/create/edit/delete, task.comment, comments:read/write), backend enforcement via `requirePerm()` middleware on 27+ API endpoints, frontend permission-aware UI using `useHasPermission()` hook, database normalized role/permission tables, auto-assign viewer role service for new signups, and architect-verified security (no privilege escalation holes).
-- **Performance Optimization System**: Five-layer optimization stack for instant UI and minimal network overhead:
-  - **Layer 1 (Cache):** 5-minute TTL localStorage cache with in-flight request guard, reduces API calls by 67%, enables instant UI rendering with cache-first/background-refresh pattern.
-  - **Layer 2 (UI Feedback):** Role badge in header (color-coded), PermissionGate component for conditional rendering with hints, memoized permission checks (O(1) Set lookups, 100x faster), telemetry tracking (cache hits/misses/latency).
-  - **Layer 3 (ETag):** HTTP ETag-based conditional requests using SHA-256 hashes, server returns 304 Not Modified when permissions unchanged, reduces bandwidth by 95% and latency by 62% after first load.
-  - **Layer 4 (Warm-Boot Preloader):** Parallel preload of tasks/projects lists immediately after auth resolves, stores in window.__eden for instant navigation, eliminates loading spinners (500-1000ms saved), fire-and-forget pattern with graceful error handling.
-  - **Layer 5 (Delta Sync):** **[COMPLETE - October 24, 2025]** Incremental fetching for both Tasks and Projects using composite cursors (timestamp + id) to handle pagination ties correctly. Backend: API accepts `cursor_ts` and `cursor_id` parameters with fallback to legacy `updated_after`, returns `next_cursor` metadata, uses database indexes on updated_at columns, implements `ORDER BY updated_at DESC, id DESC` for stable pagination. Frontend: `useDeltaSync` hook with composite cursor support, backward compatibility for legacy timestamp-only cursors, background refresh (30s interval), `SimpleTasksPage` at `/tasks-delta` and `SimpleProjectsPage` at `/projects-delta`, warm-boot integration, localStorage persistence. Combined system achieves 89-99% bandwidth savings with zero duplicate/missing records. Architect-verified production-ready.
-  - **Layer 6 (Realtime-lite):** **[COMPLETE - October 24, 2025]** Change beacon system using `/api/health` endpoint polling. Backend returns `last_change` timestamps for Tasks and Projects modules via MAX(updated_at) queries. Frontend `useChangeBeacon` hook polls every 20s and triggers delta refreshes when changes detected. Provides pseudo-realtime updates (20-30s latency) without WebSockets. Total overhead: ~36KB/hour per active tab.
-- **Airtight Layer**: Middleware for Zod schema validation, Rate Limiting, Audit Logs, Idempotency, Background Job Queue, and PII Scrubbing.
-- **Monitoring**: Health checks, structured JSON logging, Sentry integration, and automated post-deploy gates.
-- **Smoke Tests**: Automated API health checks.
-- **Database Safety**: Multi-layered validation and diagnostics.
-- **Automation**: Background job queue for async tasks (emails, syncs, exports).
-- **In-App Notifications System**: Complete real-time notification loop that closes the coordination cycle. Automatically creates notifications for ball handoffs (all department users), comments (creator/assignee/ball-holder), and status changes (task creator). Features include `services/notifications.js` service layer, `GET /api/notifications/recent` (user-scoped, unread by default), `PATCH /api/notifications/:id/read` and mark-all-read endpoints, NotificationsBell component with unread badge and dropdown, rich emoji-based notification text (🏀 handoffs, 💬 comments, 📊 status), click-to-navigate, and 30-second polling. Includes deduplication (actors don't notify themselves) and proper error handling. Background job queue still handles `notify-user` and `daily-summary` for email digests.
-- **User Preferences System**: Database table and API endpoints for managing user settings like `default_project_id` and `tasks_group_by`.
-- **Automated Overdue Task Tracking**: `is_overdue` and `overdue_snoozed_until` fields, `recomputeOverdue` service, daily cron job at 3:00 AM, and manual admin endpoint.
-- **Automated Idle Task Reminders**: `needs_idle_reminder` and `idle_snoozed_until` fields, `recomputeIdle` service with 3-day threshold, daily cron job at 9:05 AM, snooze endpoint, and UI badge.
-- **Auto-Complete Parent Task**: Service to auto-manage parent task status based on subtask completion, with manual override (`status_locked`).
-- **Email Summary**: Nodemailer service for daily digest with smart fallback.
-- **Coordination Phase 1A (Voice/Email Intake Prep)**: Schema extended to support future AI-powered task creation from voice and email. Added `voiceUrl`, `voiceTranscript`, and `ballInCourtNote` fields to tasks table. Multi-project linking enabled via `tasks_projects` join table. Origin tracking defaults to 'UI' for all tasks. Backward compatible with existing 80+ tasks.
+The backend is built with Express.js, Node.js 20, and uses Supabase PostgreSQL with Drizzle ORM. Authentication relies on Supabase Auth with JWT verification and a comprehensive RBAC system with four roles and over 35 granular permissions, enforced via middleware and a permission-aware UI. A five-layer performance optimization stack includes localStorage caching, ETag-based conditional requests, warm-boot preloading, and a delta sync mechanism for incremental data fetching. A "realtime-lite" change beacon system uses polling to provide pseudo-realtime updates. Middleware handles Zod schema validation, rate limiting, audit logs, and idempotency. The system includes an in-app notification system, user preferences, automated overdue and idle task tracking, and auto-completion of parent tasks based on subtask status. The architecture supports future AI-powered task creation from voice and email, integrating `voiceUrl`, `voiceTranscript`, and `ballInCourtNote` fields.
 
 ### Feature Specifications
-- **Core Modules**: `coordination` (projects, tasks, comments, attachments) and `procurement`.
-- **Core Services**: Authentication, email, notifications, permissions, reporting, storage, and utilities.
-- **API Endpoints**: CRUD for Projects and Tasks, nested task creation, comment management, time-boxed guest links, and specialized reporting endpoints (status, priority, overdue, performance leaderboard).
-- **Task Filtering**: Server-side filtering with pagination and sorting on `GET /api/tasks`. Supports filtering by status, priority, assignee, project, department, ball-in-court, due date ranges, overdue/idle flags, and text search. Configurable pagination (default 20, max 100) and sorting by created_at, updated_at, due_at, title, status, or priority.
-- **Shareable Views (URL-Bound Filtering)**: Frontend task filtering with URL query parameter synchronization for shareable views. Features include `useQueryState` and `useTasksQuery` hooks with shared subscription model, debounced API calls (300ms), status chips, search bar, advanced filters, "Copy View Link" button, and "All Tasks" view toggle. All filter state persists in URL for bookmarking and sharing.
-- **Notifications**: Supports `in_app`, `email`, and `push` channels.
-- **Frontend UI**: Coordination dashboard with "+ Create Task" button, project detail view with "+ Create Task" button, full-featured task view, guest view (public read-only), task create page/modal, reports page, and 5 additional pages (Project Request Form, Audit Log Viewer, Intake Queue, Team Overview, Archive View).
-- **Task Creation**: Unified task creation interface with modal (in-context) and standalone page (/tasks/new for deep-linking). Features include required title field, optional fields (description, status, priority, assignee, due date, project), department/ball-in-court selection, and collapsible advanced options for voice/email intake (origin, voice_url, voice_transcript, ball_in_court_note). Form validation, toast notifications, react-query cache invalidation, and auto-navigation to created task.
-- **Reporting**: Four card layout (Tasks by Status, Tasks by Owner, Overdue Tasks, Recent Activity) with deep-linking. Performance leaderboard with 7/30-day task completion metrics and CSV export.
-- **Guest View**: Public read-only access to tasks and projects via token, with rate limiting and audit logging.
-- **Ball Handoff UX**: Complete department handoff workflow with "Pass Ball 🏀" button on TaskDetail page. Select target department (Operations, Procurement, Accounting, Service, Estimating, Scheduling), add optional note explaining reason for handoff, 24-hour duplicate guard prevents accidental re-handoffs, full audit trail stored in `handoff_events` table with notes, toast notifications on success/duplicate, automatic task refresh. Ready for future AI-suggested handoff reasons.
+Core modules include `coordination` (projects, tasks, comments, attachments) and `procurement`. The API provides CRUD operations for Projects and Tasks, nested task creation, comment management, and specialized reporting. Server-side task filtering with pagination and sorting is supported, along with shareable URL-bound views. A unified task creation interface is available via modal or a dedicated page. Reporting features include dashboard cards and a performance leaderboard with CSV export. A guest view offers public read-only access to tasks and projects. A complete department ball handoff workflow is implemented with an audit trail and notifications.
 
 ### System Design Choices
-- **Monolithic Architecture**: Single, cohesive unit.
-- **Scalable Database**: PostgreSQL with a session pooler.
-- **Observability**: Built-in monitoring, logging, and health checks.
-- **Secure by Design**: Enforced authentication and multi-layered database configuration validation.
-- **Auto-Sync to GitHub**: Background workflow `autosync.sh` commits and pushes changes every 5 minutes using `GITHUB_TOKEN`.
+The project adopts a monolithic architecture with a scalable PostgreSQL database. It emphasizes observability through monitoring, logging, and health checks, and is designed for security with enforced authentication and multi-layered database validation. An `autosync.sh` script automates Git commits and pushes.
 
 ## External Dependencies
+
 ### Backend
 - **Database**: Supabase PostgreSQL
 - **Backend Framework**: Express.js
@@ -80,37 +37,5 @@ I prefer iterative development, with a focus on delivering functional increments
 - **Framework**: React 18
 - **Build Tool**: Vite 5
 - **HTTP Client**: Axios
-- **Styling**: Google Material Design (custom CSS, Tailwind removed October 2025)
+- **Styling**: Google Material Design (custom CSS)
 - **Data Fetching**: React Query
-- **Dev Server**: Runs on port 5000 with proxy to backend on port 3000
-
-## Production Deployment
-### Configuration
-- **Deployment Target**: Reserved VM (stateful app with cron jobs and background queue)
-- **Build Process**: `npm run build` - Installs dependencies and builds React frontend to dist/
-- **Production Server**: `node server.js` (serves API + static frontend from dist/)
-- **Static File Serving**: Backend automatically serves production build when `apps/coordination_ui/dist/` exists
-- **Database**: Supabase PostgreSQL (aws-1-us-east-2.pooler.supabase.com) - Transaction Pooler
-- **Production URL**: https://edenerp-edenplumbinginc.replit.app
-
-### Deployment Complete (October 23, 2025)
-✅ **Successfully deployed to Replit Reserved VM**
-✅ Database migrated from Replit Neon to Supabase PostgreSQL
-✅ 34 projects and 37 tasks loaded successfully
-✅ Cron jobs operational (3:00 AM overdue check, 9:05 AM idle reminders)
-✅ Background queue processing emails and notifications
-✅ Health checks passing (API: OK, DB: Connected with TLS relaxed mode)
-✅ Frontend build successful and serving from production
-✅ DevAuthSwitcher enabled for pilot testing
-
-### Deployment Notes
-- **Database Secret Management**: Manual deployment secrets required (DATABASE_URL, EXPECTED_DB_HOST, EXPECTED_DB_PROJECT_REF). Removed auto-injected PGDATABASE, PGHOST, PGUSER, PGPASSWORD to prevent conflicts.
-- **TLS Configuration**: Using DB_SSL_REJECT_UNAUTHORIZED=false for Supabase transaction pooler compatibility.
-- **Port Configuration**: Internal port 3000 mapped to external port 80 for web access.
-
-### Post-Deployment Status
-✅ **Ready for internal pilot testing** (2 family members)
-- DevAuthSwitcher provides instant user role switching for testing
-- All core features operational (tasks, projects, notifications, reporting)
-- Daily email summaries sending successfully
-- Monitor production logs via Publishing → Logs tab
