@@ -43,7 +43,7 @@ SELECT
   pe.duration_ms,
   pe.department,
   pe.created_at,
-  t.name AS task_name,
+  t.title AS task_title,
   tci.label AS checklist_item_label
 FROM performance_events pe
 LEFT JOIN tasks t ON t.id = pe.task_id
