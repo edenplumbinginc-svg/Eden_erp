@@ -29,6 +29,8 @@ Core modules include `coordination` (projects, tasks, comments, attachments) and
 
 **Ball-in-Court Analytics**: Comprehensive handoff tracking and bottleneck analysis system. `ball_in_court_events` table captures all department handoffs with acknowledgment workflow. SQL views (`v_ball_hold_time`, `v_court_flow_30d`) provide real-time metrics on hold times, acknowledgment rates, and departmental KPIs. REST API (`/api/perf/court-flow`) exposes 30-day metrics with avg/median/max hold times per department. UI components include task detail Responsibility Chain panel (15s auto-refresh, color-coded hold-time badges), Court Flow Dashboard (`/admin/court-flow`) with recharts visualizations and SLA configuration controls, and Task-level SLA Banner on task detail pages. The SLA banner shows yellow/red warnings when handoffs exceed thresholds, displays age/SLA/recipient info, and allows admins to send one-off nudge reminders directly from the task page. Supports automated SLA enforcement via decision policies.
 
+**Monitoring & Observability**: Production-grade observability stack with Sentry error monitoring and Pino structured JSON logging. Sentry integration (configured via SENTRY_DSN and SENTRY_ENV secrets) provides crash reporting with 30% trace sampling and 10% profile sampling, user context tagging, and `sentry_event_id` in error responses for incident correlation. Request correlation IDs system generates UUID per request via middleware, sets `req.id` and `X-Request-Id` header, and propagates through all log entries. Pino logger emits structured JSON logs with service/env base fields, sensitive data redaction (auth headers, tokens, passwords), and custom serializers for HTTP requests. All logs include `req_id`, user context (`user_email`, `role`), request/response details (`method`, `url`, `statusCode`), and performance metrics (`duration_ms`, `responseTime`). Error handler logs unhandled errors with full correlation context (req_id, user info, stack trace) for end-to-end trace correlation across Sentry events and structured logs.
+
 ### System Design Choices
 The project adopts a monolithic architecture with a scalable PostgreSQL database. It emphasizes observability through monitoring, logging, and health checks, and is designed for security with enforced authentication and multi-layered database validation. An `autosync.sh` script automates Git commits and pushes.
 
@@ -44,6 +46,9 @@ The project adopts a monolithic architecture with a scalable PostgreSQL database
 - **Email**: Nodemailer
 - **Scheduling**: `node-cron`
 - **Timezone**: `luxon`
+- **Error Monitoring**: Sentry with profiling
+- **Logging**: Pino (structured JSON), pino-http
+- **Request IDs**: `uuid` for correlation
 
 ### Frontend
 - **Framework**: React 18
