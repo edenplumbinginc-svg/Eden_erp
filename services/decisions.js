@@ -107,7 +107,7 @@ async function taskHasLabel(taskId, label) {
   const result = await pool.query(`
     SELECT COUNT(*) as count
     FROM tasks
-    WHERE id = $1 AND $2 = ANY(labels)
+    WHERE id = $1 AND $2 = ANY(tags)
   `, [taskId, label]);
 
   return parseInt(result.rows[0]?.count || 0) > 0;
@@ -124,7 +124,7 @@ async function createTaskFromTemplate(sourceTaskId, projectId, template) {
       SELECT id FROM tasks
       WHERE project_id = $1
         AND department = $2
-        AND labels @> ARRAY[$3]::text[]
+        AND tags @> ARRAY[$3]::text[]
         AND created_at >= now() - interval '30 days'
       LIMIT 1
     `, [projectId, template.department, template.label]);
@@ -146,7 +146,7 @@ async function createTaskFromTemplate(sourceTaskId, projectId, template) {
     const label = template.label || null;
 
     const result = await pool.query(`
-      INSERT INTO tasks (title, project_id, department, labels, status, created_at, updated_at)
+      INSERT INTO tasks (title, project_id, department, tags, status, created_at, updated_at)
       VALUES ($1, $2, $3, $4, 'open', now(), now())
       RETURNING id
     `, [
@@ -172,10 +172,10 @@ async function addTaskLabel(taskId, label) {
     // Only add if label doesn't already exist
     await pool.query(`
       UPDATE tasks
-      SET labels = COALESCE(labels, ARRAY[]::text[]) || $1,
+      SET tags = COALESCE(tags, ARRAY[]::text[]) || $1,
           updated_at = now()
       WHERE id = $2
-        AND NOT ($1 = ANY(COALESCE(labels, ARRAY[]::text[])))
+        AND NOT ($1 = ANY(COALESCE(tags, ARRAY[]::text[])))
     `, [label, taskId]);
   } catch (err) {
     console.error('[DECISIONS] Failed to add label:', err.message);
