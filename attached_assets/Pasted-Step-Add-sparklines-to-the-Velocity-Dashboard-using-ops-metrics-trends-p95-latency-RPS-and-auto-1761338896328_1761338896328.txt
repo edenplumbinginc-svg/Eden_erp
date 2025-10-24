@@ -1,3 +1,18 @@
+Step: Add sparklines to the Velocity Dashboard using /ops/metrics/trends (p95 latency, RPS) and auto-refresh every 10s. (Layer: Velocity → UI)
+
+Why it matters: Snapshots are static; sparklines reveal performance drift and regressions at a glance.
+
+Inputs needed:
+
+Frontend repo (apps/coordination_ui)
+
+Working /ops/metrics and /ops/metrics/trends endpoints
+
+Command:
+
+Patch the Velocity page to fetch trends and render inline SVG sparklines.
+
+// apps/coordination_ui/src/pages/Velocity.jsx
 import { useEffect, useMemo, useState } from "react";
 
 function fmt(n) {
@@ -177,3 +192,22 @@ export default function Velocity() {
     </div>
   );
 }
+
+
+No routing change needed if /velocity already exists. If not, register it:
+
+import Velocity from "./pages/Velocity.jsx";
+<Route path="/velocity" element={<Velocity />} />
+
+
+Success check:
+
+Visit /velocity. Within ~10s, two sparkline columns appear:
+
+p95 (5m) shows recent latency trend.
+
+RPS (5m) shows traffic trend.
+
+Hit a couple of API routes; sparklines move on the next refresh and the 1m snapshot updates.
+
+Next: wait for user.
