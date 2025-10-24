@@ -2,10 +2,26 @@ const express = require('express');
 const router = express.Router();
 const { requireAuth } = require('../middleware/auth');
 const { loadRbacPermissions } = require('../middleware/loadRbacPermissions');
+const { ensureDefaultRole } = require('../services/assignDefaultRole');
 
 router.get('/me/permissions', requireAuth, loadRbacPermissions, async (req, res) => {
   try {
-    const { roles = [], permissions = new Set() } = req.rbac || {};
+    let { roles = [], permissions = new Set() } = req.rbac || {};
+    
+    // Auto-assign viewer role if user has no roles
+    if (roles.length === 0) {
+      await ensureDefaultRole(req.user.id);
+      // Reload permissions after assignment
+      const { loadRbacPermissions: reloadPerms } = require('../middleware/loadRbacPermissions');
+      await new Promise((resolve, reject) => {
+        reloadPerms(req, res, (err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+      roles = req.rbac?.roles || [];
+      permissions = req.rbac?.permissions || new Set();
+    }
     
     res.json({
       userId: req.user.id,

@@ -7,7 +7,6 @@ import RequireAuth from './components/RequireAuth';
 import ProjectList from './components/ProjectList';
 import TaskList from './components/TaskList';
 import Reports from './components/Reports';
-import DevAuthSwitcher from './components/DevAuthSwitcher';
 import EdenHeader from './components/EdenHeader';
 import TaskDetail from './pages/TaskDetail';
 import ProjectDetail from './pages/ProjectDetail';
@@ -72,10 +71,11 @@ function AppContent() {
       <EdenHeader />
       
       <div className="container">
-        <DevAuthSwitcher onUserChange={() => {
+        {/* DevAuthSwitcher hidden - using real Supabase authentication */}
+        {/* <DevAuthSwitcher onUserChange={() => {
           loadProjects();
           loadUsers();
-        }} />
+        }} /> */}
 
       {error && <div className="error">{error}</div>}
 

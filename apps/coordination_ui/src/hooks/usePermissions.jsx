@@ -1,25 +1,6 @@
 import { useState, useEffect } from 'react';
-import { devAuth } from '../services/api';
-
-// Mock permission data for each role (will be replaced with real API call later)
-const ROLE_PERMISSIONS = {
-  'admin@edenplumbing.com': [
-    'projects:read', 'projects:write', 'project.view', 'project.create', 'project.edit', 'project.delete',
-    'tasks:read', 'tasks:write', 'task.view', 'task.create', 'task.edit', 'task.delete',
-    'task.comment', 'comments:read', 'comments:write'
-  ],
-  'test@edenplumbing.com': [
-    'tasks:read', 'tasks:write', 'task.view', 'task.create', 'task.edit',
-    'task.comment', 'comments:read', 'comments:write', 'project.view'
-  ],
-  'contributor@edenplumbing.com': [
-    'task.view', 'task.create', 'task.edit', 'task.comment',
-    'comments:read', 'comments:write', 'project.view'
-  ],
-  'viewer@edenplumbing.com': [
-    'tasks:read', 'task.view', 'project.view', 'comments:read'
-  ]
-};
+import { api } from '../services/api';
+import { useAuth } from './AuthProvider';
 
 /**
  * Hook to check if current user has a specific permission
@@ -28,62 +9,67 @@ const ROLE_PERMISSIONS = {
  */
 export function useHasPermission(permission) {
   const [hasPermission, setHasPermission] = useState(false);
-  const [currentUserEmail, setCurrentUserEmail] = useState('');
+  const { user } = useAuth();
   
   useEffect(() => {
-    // Get current dev user from devAuth
-    const currentUser = devAuth.getCurrentUser();
-    const userEmail = currentUser?.email || '';
-    setCurrentUserEmail(userEmail);
-    
-    if (!userEmail) {
+    if (!user) {
       setHasPermission(false);
       return;
     }
 
-    // Check if user has permission
-    const userPermissions = ROLE_PERMISSIONS[userEmail] || [];
-    setHasPermission(userPermissions.includes(permission));
-    
-    // Listen for user changes (custom event fired by DevAuthSwitcher)
-    const handleUserChange = () => {
-      const updatedUser = devAuth.getCurrentUser();
-      const updatedEmail = updatedUser?.email || '';
-      setCurrentUserEmail(updatedEmail);
-      
-      const updatedPermissions = ROLE_PERMISSIONS[updatedEmail] || [];
-      setHasPermission(updatedPermissions.includes(permission));
+    const loadPermissions = async () => {
+      try {
+        const response = await api.get('/me/permissions');
+        const userPermissions = response.data?.permissions || [];
+        setHasPermission(userPermissions.includes(permission));
+      } catch (err) {
+        console.error('Failed to load permissions:', err);
+        setHasPermission(false);
+      }
     };
-    
-    window.addEventListener('dev-user-changed', handleUserChange);
-    return () => window.removeEventListener('dev-user-changed', handleUserChange);
-  }, [permission]);
+
+    loadPermissions();
+  }, [permission, user]);
 
   return hasPermission;
 }
 
 /**
- * Hook to get all permissions for current user
- * @returns {string[]} - Array of permission codes
+ * Hook to get all roles and permissions for current user
+ * @returns {{ roles: string[], permissions: Set, loading: boolean }} - User's roles and permissions
  */
 export function usePermissions() {
-  const [permissions, setPermissions] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [permissions, setPermissions] = useState(new Set());
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
-    // Get current dev user from devAuth
-    const currentUser = devAuth.getCurrentUser();
-    const userEmail = currentUser?.email || '';
-    
-    if (!userEmail) {
-      setPermissions([]);
+    if (!user) {
+      setRoles([]);
+      setPermissions(new Set());
+      setLoading(false);
       return;
     }
 
-    const userPermissions = ROLE_PERMISSIONS[userEmail] || [];
-    setPermissions(userPermissions);
-  }, []);
+    const loadPermissions = async () => {
+      try {
+        const response = await api.get('/me/permissions');
+        setRoles(response.data?.roles || []);
+        setPermissions(new Set(response.data?.permissions || []));
+      } catch (err) {
+        console.error('Failed to load permissions:', err);
+        setRoles([]);
+        setPermissions(new Set());
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  return permissions;
+    loadPermissions();
+  }, [user]);
+
+  return { roles, permissions, loading };
 }
 
 /**
