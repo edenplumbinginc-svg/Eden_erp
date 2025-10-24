@@ -594,8 +594,8 @@ if (fs.existsSync(frontendDistPath)) {
   
   // Catch-all route for SPA (must be after all API routes)
   app.use((req, res, next) => {
-    // Skip if it's an API, health check, or database route
-    if (req.path.startsWith('/api') || req.path.startsWith('/db') || req.path.startsWith('/health') || req.path.startsWith('/diag') || req.path.startsWith('/routes')) {
+    // Skip if it's an API, health check, database, or ops route
+    if (req.path.startsWith('/api') || req.path.startsWith('/db') || req.path.startsWith('/health') || req.path.startsWith('/diag') || req.path.startsWith('/routes') || req.path.startsWith('/ops')) {
       return next();
     }
     // Serve index.html for all other routes (SPA client-side routing)

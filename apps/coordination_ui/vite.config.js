@@ -20,6 +20,10 @@ export default defineConfig({
       '/db': {
         target: 'http://localhost:3000',
         changeOrigin: true
+      },
+      '/ops': {
+        target: 'http://localhost:3000',
+        changeOrigin: true
       }
     }
   }
