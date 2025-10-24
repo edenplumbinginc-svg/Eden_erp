@@ -17,6 +17,10 @@ The backend is built with Express.js, Node.js 20, and uses Supabase PostgreSQL w
 ### Feature Specifications
 Core modules include `coordination` (projects, tasks, comments, attachments) and `procurement`. The API provides CRUD operations for Projects and Tasks, nested task creation, comment management, and specialized reporting. Server-side task filtering with pagination and sorting is supported, along with shareable URL-bound views. A unified task creation interface is available via modal or a dedicated page. Reporting features include dashboard cards and a performance leaderboard with CSV export. A guest view offers public read-only access to tasks and projects. A complete department ball handoff workflow is implemented with an audit trail and notifications. An Admin RBAC UI (`/admin/rbac`) provides email-based user lookup, direct role assignment/removal, and role template quick-apply (operations, contributor, manager, admin_full) for streamlined user management.
 
+**Task Checklists**: Full-featured checklist system with RBAC-protected endpoints, Material Design UI, drag-and-drop reordering, optimistic updates, and 20-second delta sync. Mounted on task detail pages with permission-based controls (read/write/delete). Captures completion timestamps for performance tracking.
+
+**Performance Events**: Micro-telemetry system that automatically logs completion metrics when checklist items are marked as done. Tracks actor, task, duration, and department for "who finishes fast" analytics. Provides foundation for badges, points, and leaderboards. Includes 3 analytical views (v_perf_fastest_week, v_perf_dept_month, v_perf_recent) for performance insights.
+
 ### System Design Choices
 The project adopts a monolithic architecture with a scalable PostgreSQL database. It emphasizes observability through monitoring, logging, and health checks, and is designed for security with enforced authentication and multi-layered database validation. An `autosync.sh` script automates Git commits and pushes.
 
