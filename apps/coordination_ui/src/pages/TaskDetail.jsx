@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiService, api } from "../services/api";
 import Countdown from "../components/Countdown";
 import Alert from "../components/Alert";
-import ChecklistEditor from "../components/ChecklistEditor";
+import Checklist from "../components/Checklist";
 import { useToaster } from "../components/Toaster";
 import HandoffModal from "../components/HandoffModal";
 import Breadcrumbs from "../components/Breadcrumbs";
@@ -540,7 +540,7 @@ export default function TaskDetail() {
 
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-6">
-          <ChecklistEditor taskId={taskId} canEdit={canEditTask} />
+          <Checklist taskId={taskId} />
           <Comments taskId={taskId} />
         </div>
         <div className="space-y-6">
