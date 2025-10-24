@@ -2,8 +2,11 @@ import React from "react";
 import { NavLink } from "react-router-dom";
 import NotificationsBell from "./NotificationsBell";
 import RoleBadge from "./RoleBadge";
+import { useHasPermission } from "../hooks/usePermissions";
 
 export default function EdenHeader() {
+  const isAdmin = useHasPermission('admin:manage');
+  
   return (
     <header className="w-full" style={{
       borderBottom: '1px solid var(--md-divider)',
@@ -80,6 +83,18 @@ export default function EdenHeader() {
             >
               ⚡ Leaderboard
             </NavLink>
+            {isAdmin && (
+              <NavLink 
+                to="/admin/decisions" 
+                className={({ isActive }) => isActive ? 'text-body font-medium' : 'text-body text-link hover:underline'}
+                style={({ isActive }) => ({
+                  color: isActive ? 'var(--md-primary)' : undefined,
+                  fontWeight: isActive ? 500 : undefined
+                })}
+              >
+                🤖 Admin
+              </NavLink>
+            )}
             <RoleBadge />
             <NotificationsBell />
           </nav>
