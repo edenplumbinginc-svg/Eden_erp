@@ -336,46 +336,29 @@ async function runDecisionCycle() {
       `, [dept]);
 
       for (const row of handoffResult.rows) {
-        // IDEMPOTENCY: Check if we already created a handoff task for this SOURCE task
-        // Key on source task ID, not project ID, to prevent duplicate handoffs per task
-        const alreadyHandedOff = await alreadyExecuted(
-          handoffPolicy.slug,
-          'create_task',
-          'task',
-          row.task_id,
-          720 // within last 30 days
-        );
-
-        if (alreadyHandedOff) {
-          totalSkipped++;
-          continue;
-        }
-
         const payload = {
           fromTask: row.task_id,
           fromTitle: row.title,
           projectId: row.project_id
         };
 
-        // Only record execution AFTER successful task creation (or in dry_run mode)
-        if (handoffPolicy.dry_run) {
-          // In dry_run, record intent without creating task
-          await recordExec(handoffPolicy, true, 'create_task', { type: 'task', id: row.task_id }, payload);
-          totalExecutions++;
-        } else {
-          // In live mode, create task first, then record execution
-          const createdId = await createTaskFromTemplate(row.task_id, row.project_id, handoffPolicy.action.template);
-          if (createdId) {
-            // Record successful execution with both source and created task info
-            await recordExec(handoffPolicy, true, 'create_task', { type: 'task', id: row.task_id }, {
-              ...payload,
-              createdTaskId: createdId
-            });
-            totalExecutions++;
-          } else {
-            // Task creation failed, don't record execution (will retry next cycle)
-            console.warn(`[DECISIONS] Failed to create handoff task for ${row.task_id}, will retry`);
+        const result = await executeAction(
+          handoffPolicy,
+          'create_task',
+          { type: 'task', id: row.task_id },
+          payload,
+          async () => {
+            const createdId = await createTaskFromTemplate(row.task_id, row.project_id, handoffPolicy.action.template);
+            if (!createdId) {
+              throw new Error('Failed to create task from template');
+            }
           }
+        );
+
+        if (result.executed) {
+          totalExecutions++;
+        } else if (result.reason === 'already_done') {
+          totalSkipped++;
         }
       }
     }
