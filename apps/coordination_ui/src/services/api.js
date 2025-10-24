@@ -97,7 +97,13 @@ export const apiService = {
   // Performance Leaderboard
   getFastestPerformersWeek: () => api.get('/perf/fastest-week').then(res => res.data),
   getDepartmentPerformanceMonth: () => api.get('/perf/dept-month').then(res => res.data),
-  getMyRecentPerformance: () => api.get('/perf/me/recent').then(res => res.data)
+  getMyRecentPerformance: () => api.get('/perf/me/recent').then(res => res.data),
+
+  // Admin Decisions
+  listDecisionPolicies: () => api.get('/admin/decisions/policies').then(res => res.data),
+  toggleDecisionPolicy: (slug, enabled, dry_run) => api.post('/admin/decisions/toggle', { slug, enabled, dry_run }).then(res => res.data),
+  runDecisionCycleNow: () => api.post('/admin/decisions/run-once').then(res => res.data),
+  listDecisionExecutions: (limit = 50) => api.get('/admin/decisions/executions', { params: { limit } }).then(res => res.data)
 };
 
 // Export the raw axios instance for direct use
