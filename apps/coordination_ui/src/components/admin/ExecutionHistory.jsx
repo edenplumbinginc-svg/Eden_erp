@@ -97,6 +97,12 @@ export default function ExecutionHistory() {
                 <th style={{ textAlign: 'center', padding: '12px 16px', color: '#666', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>
                   Mode
                 </th>
+                <th style={{ textAlign: 'center', padding: '12px 16px', color: '#666', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>
+                  Result
+                </th>
+                <th style={{ textAlign: 'left', padding: '12px 16px', color: '#666', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>
+                  Error
+                </th>
                 <th style={{ textAlign: 'left', padding: '12px 16px', color: '#666', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>
                   Payload
                 </th>
@@ -161,6 +167,31 @@ export default function ExecutionHistory() {
                       }}>
                         {exec.dry_run ? 'DRY_RUN' : 'LIVE'}
                       </span>
+                    </td>
+                    <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                      <span style={{
+                        padding: '4px 8px',
+                        backgroundColor: exec.success ? '#e8f5e9' : '#ffebee',
+                        color: exec.success ? '#2e7d32' : '#d32f2f',
+                        borderRadius: '4px',
+                        fontSize: '11px',
+                        fontWeight: '600'
+                      }}>
+                        {exec.success ? '✓ Success' : '✗ Failed'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px 16px', fontSize: '12px', maxWidth: '250px', color: '#666' }}>
+                      {exec.error_text ? (
+                        <span title={exec.error_text} style={{ 
+                          display: 'block',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          color: '#d32f2f'
+                        }}>
+                          {exec.error_text}
+                        </span>
+                      ) : '—'}
                     </td>
                     <td style={{ padding: '12px 16px', fontSize: '13px' }}>
                       <details>
