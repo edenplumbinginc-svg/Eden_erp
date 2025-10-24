@@ -362,20 +362,23 @@ export const taskDependencies = pgTable("task_dependencies", {
 
 export const auditLogs = pgTable("audit_logs", {
         id: uuid().defaultRandom().primaryKey().notNull(),
-        userId: uuid("user_id"),
+        actorId: uuid("actor_id").notNull(),
+        actorEmail: text("actor_email"),
         action: text().notNull(),
-        entity: text().notNull(),
-        meta: jsonb().default({}),
+        targetType: text("target_type").notNull(),
+        targetId: text("target_id"),
+        payload: jsonb().default({}),
         createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 }, (table) => [
         foreignKey({
-                        columns: [table.userId],
+                        columns: [table.actorId],
                         foreignColumns: [users.id],
-                        name: "audit_logs_user_id_fkey"
+                        name: "audit_logs_actor_id_fkey"
                 }),
-        index("idx_audit_logs_user").using("btree", table.userId.asc().nullsLast()),
+        index("idx_audit_logs_actor").using("btree", table.actorId.asc().nullsLast()),
         index("idx_audit_logs_action").using("btree", table.action.asc().nullsLast()),
         index("idx_audit_logs_created").using("btree", table.createdAt.desc().nullsFirst()),
+        index("idx_audit_logs_target").using("btree", table.targetType.asc().nullsLast(), table.targetId.asc().nullsLast()),
 ]);
 
 export const idempotency = pgTable("idempotency", {

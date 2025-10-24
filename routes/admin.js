@@ -2,6 +2,8 @@
 const express = require('express');
 const { requirePerm } = require('../middleware/permissions');
 const { pool } = require('../services/database');
+const { writeAudit } = require('../lib/audit');
+const { getActor } = require('../lib/actor');
 
 const router = express.Router();
 
@@ -60,8 +62,18 @@ router.post('/users/:userId/roles/:roleSlug', requirePerm('admin:manage'), async
       [userId, role.id]
     );
 
-    // Log the action for audit trail
-    console.log(`[RBAC] Role assigned: user=${userId} role=${roleSlug} by=${req.user?.email || req.user?.id}`);
+    // Write audit log
+    const { actorId, actorEmail } = getActor(req);
+    await writeAudit({
+      actorId,
+      actorEmail,
+      action: 'rbac.role.assign',
+      targetType: 'user',
+      targetId: userId,
+      payload: { role: roleSlug, roleName: role.name }
+    });
+
+    console.log(`[RBAC] Role assigned: user=${userId} role=${roleSlug} by=${actorEmail || actorId}`);
 
     return res.status(204).end();
   } catch (error) {
@@ -115,8 +127,18 @@ router.delete('/users/:userId/roles/:roleSlug', requirePerm('admin:manage'), asy
       [userId, role.id]
     );
 
-    // Log the action for audit trail
-    console.log(`[RBAC] Role removed: user=${userId} role=${roleSlug} by=${req.user?.email || req.user?.id} affected=${deleteResult.rowCount}`);
+    // Write audit log
+    const { actorId, actorEmail } = getActor(req);
+    await writeAudit({
+      actorId,
+      actorEmail,
+      action: 'rbac.role.remove',
+      targetType: 'user',
+      targetId: userId,
+      payload: { role: roleSlug, roleName: role.name, affected: deleteResult.rowCount }
+    });
+
+    console.log(`[RBAC] Role removed: user=${userId} role=${roleSlug} by=${actorEmail || actorId} affected=${deleteResult.rowCount}`);
 
     return res.status(204).end();
   } catch (error) {
