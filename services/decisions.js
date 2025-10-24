@@ -36,9 +36,16 @@ async function recordExec(policy, effect, target, payload, success, errorText = 
 
   await pool.query(`
     INSERT INTO decision_executions 
-      (policy_slug, matched, dry_run, effect, target_type, target_id, payload, success, error_text, action_hash)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-    ON CONFLICT (action_hash) DO NOTHING
+      (policy_slug, matched, dry_run, effect, target_type, target_id, payload, success, error_text, action_hash, created_at)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, now())
+    ON CONFLICT (action_hash) 
+    DO UPDATE SET
+      success = EXCLUDED.success,
+      error_text = EXCLUDED.error_text,
+      payload = EXCLUDED.payload,
+      dry_run = EXCLUDED.dry_run,
+      matched = EXCLUDED.matched
+    WHERE decision_executions.success = false OR decision_executions.dry_run = true
   `, [
     policy.slug,
     true,
