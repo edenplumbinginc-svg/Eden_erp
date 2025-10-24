@@ -503,6 +503,11 @@ app.get('/ops/metrics', (_req, res) => {
   res.json(metrics.snapshot());
 });
 
+app.get('/ops/metrics/trends', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json(metrics.trends());
+});
+
 // --- Sentry test route (development only) ---
 if (process.env.NODE_ENV !== 'production') {
   app.get('/api/_sentry-test', (req, res) => {

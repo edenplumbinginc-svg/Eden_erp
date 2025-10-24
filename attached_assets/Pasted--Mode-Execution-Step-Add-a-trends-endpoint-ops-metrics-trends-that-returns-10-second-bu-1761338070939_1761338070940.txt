@@ -1,0 +1,100 @@
+[Mode: Execution]
+
+Step: Add a **trends endpoint** `/ops/metrics/trends` that returns 10-second buckets over the last 5 minutes per route (RPS + p95). Backend-only; UI comes next. (Layer: **Velocity → Metrics Core**)
+
+Why it matters: Tables are snapshots; trends reveal regressions. Buckets let the UI draw sparklines without heavy client math.
+
+Inputs needed:
+
+* `lib/metrics.js`
+* `server.js`
+
+Command:
+
+1. Patch `lib/metrics.js` to expose bucketed trends:
+
+```js
+// --- add near top ---
+const WINDOW_SIZES = [60_000, 300_000, 900_000]; // keep consistent
+const TREND_SPAN_MS = 300_000;  // 5m
+const TREND_BUCKET_MS = 10_000; // 10s
+
+// --- below summarize(), add: ---
+function bucketize(points, spanMs, bucketMs) {
+  const nowTs = Date.now();
+  const start = nowTs - spanMs;
+  const bucketCount = Math.ceil(spanMs / bucketMs);
+  const buckets = Array.from({ length: bucketCount }, (_, i) => ({
+    t: start + i * bucketMs, // bucket start
+    count: 0,
+    durs: [],
+    ok: 0,
+  }));
+
+  let idx = 0;
+  while (idx < points.length && points[idx].t < start) idx++; // skip old
+  for (; idx < points.length; idx++) {
+    const p = points[idx];
+    const bi = Math.min(bucketCount - 1, Math.floor((p.t - start) / bucketMs));
+    if (bi >= 0) {
+      buckets[bi].count++;
+      buckets[bi].durs.push(p.dur_ms);
+      if (p.ok) buckets[bi].ok++;
+    }
+  }
+
+  return buckets.map(b => ({
+    t: new Date(b.t).toISOString(),
+    rps: +(b.count / (bucketMs / 1000)).toFixed(3),
+    p95_ms: b.durs.length ? Math.round(percentile(b.durs, 0.95)) : null,
+    err_rate: b.count ? +(((b.count - b.ok) / b.count) * 100).toFixed(2) : 0,
+  }));
+}
+
+// --- inside makeMetrics(), add this method before return: ---
+function trends() {
+  const out = {};
+  for (const [k, wins] of perRoute.entries()) {
+    // use the 5m window (index 1) as the source of raw points
+    const w5 = wins[1];
+    out[k] = {
+      span_ms: TREND_SPAN_MS,
+      bucket_ms: TREND_BUCKET_MS,
+      series: bucketize(w5.points, TREND_SPAN_MS, TREND_BUCKET_MS),
+    };
+  }
+  return {
+    service: "eden-erp-backend",
+    env: process.env.SENTRY_ENV || process.env.NODE_ENV || "dev",
+    generated_at: new Date().toISOString(),
+    routes: out,
+  };
+}
+
+// --- and update the return object: ---
+return { tap, snapshot, trends };
+```
+
+2. Wire the new endpoint in `server.js`:
+
+```js
+// after /ops/metrics
+app.get("/ops/metrics/trends", (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.json(metrics.trends());
+});
+```
+
+Success check:
+
+```bash
+# Warm up by hitting a few routes, then:
+curl -s http://localhost:3000/ops/metrics/trends | python3 -m json.tool | head -80
+```
+
+You should see:
+
+* top-level `service`, `env`, `generated_at`
+* `routes` → per route: `span_ms`, `bucket_ms`, and `series` (≈30 buckets for 5m at 10s each) with `t`, `rps`, `p95_ms`, `err_rate`.
+
+Next: wait for user.
