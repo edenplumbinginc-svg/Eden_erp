@@ -1,0 +1,182 @@
+tep: Add unit tests for Velocity Alarms by exporting a tiny evaluator and testing both rules (error surge & p95 regression). (Layer: Velocity → Quality Gate)
+
+Why it matters: Locks the behavior so future refactors don’t silently break your alerts.
+
+Inputs needed:
+
+lib/metrics.js
+
+package.json
+
+Command:
+
+Patch lib/metrics.js to export a pure evaluator used by /ops/alarms and by tests.
+
+--- a/lib/metrics.js
++++ b/lib/metrics.js
+@@
+-  function alarms() {
++  // Exportable pure evaluator (1m summary + last 6 buckets series)
++  function evaluateAlarmsForRoute(route, oneMinute, series) {
++    const items = [];
++    const nowIso = new Date().toISOString();
++    const last6 = (series || []).slice(-6);
++    const last3 = last6.slice(-3).map(b => b?.p95_ms).filter(v => v != null);
++    const prev3 = last6.slice(0, 3).map(b => b?.p95_ms).filter(v => v != null);
++    const avg = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : null;
++    const aLast = avg(last3);
++    const aPrev = avg(prev3);
++    const regress_abs = (aLast!=null && aPrev!=null) ? (aLast - aPrev) : 0;
++    const regress_pct = (aLast!=null && aPrev>0) ? +(((aLast - aPrev)/aPrev)*100).toFixed(1) : 0;
++
++    // Rule A: error rate surge in 1m (with minimum sample guard)
++    if (oneMinute?.err_rate >= 5 && oneMinute?.count >= 5) {
++      items.push({
++        route,
++        kind: "error_rate",
++        severity: oneMinute.err_rate >= 20 ? "critical" : "warning",
++        since: nowIso,
++        evidence: { err_rate_1m: oneMinute.err_rate, samples_1m: oneMinute.count },
++        hint: "Investigate recent errors; click Sentry link for this route.",
++      });
++    }
++
++    // Rule B: regression in p95 (last3 vs prev3)
++    if (aLast!=null && aPrev!=null && regress_abs >= 30 && regress_pct >= 20) {
++      items.push({
++        route,
++        kind: "p95_regress",
++        severity: regress_pct >= 50 ? "critical" : "warning",
++        since: nowIso,
++        evidence: {
++          p95_prev3_ms: Math.round(aPrev),
++          p95_last3_ms: Math.round(aLast),
++          regress_abs_ms: Math.round(regress_abs),
++          regress_pct
++        },
++        hint: "Latency increased; check recent deploys, DB, or upstreams.",
++      });
++    }
++    return items;
++  }
++
++  function alarms() {
+     const nowIso = new Date().toISOString();
+     const snap = snapshot();
+     const tr = trends();
+     const items = [];
+ 
+     for (const route of Object.keys(snap.routes)) {
+-      const one = snap.routes[route]["1m"] || {};
+-      const series = tr.routes[route]?.series || [];
+-      const last6 = series.slice(-6);
+-      const last3 = last6.slice(-3).map(b => b?.p95_ms).filter(v => v != null);
+-      const prev3 = last6.slice(0, 3).map(b => b?.p95_ms).filter(v => v != null);
+-      const avg = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : null;
+-      const aLast = avg(last3);
+-      const aPrev = avg(prev3);
+-      const regress_abs = (aLast!=null && aPrev!=null) ? (aLast - aPrev) : 0;
+-      const regress_pct = (aLast!=null && aPrev>0) ? +(((aLast - aPrev)/aPrev)*100).toFixed(1) : 0;
+-
+-      // Rule A...
+-      if (one.err_rate >= 5 && one.count >= 5) { /* ...push... */ }
+-      // Rule B...
+-      if (aLast!=null && aPrev!=null && regress_abs >= 30 && regress_pct >= 20) { /* ...push... */ }
++      const one = snap.routes[route]["1m"] || {};
++      const series = tr.routes[route]?.series || [];
++      evaluateAlarmsForRoute(route, one, series).forEach(a => items.push(a));
+     }
+@@
+-  return { tap, snapshot, trends, alarms };
++  return { tap, snapshot, trends, alarms, evaluateAlarmsForRoute };
+ }
+ 
+-module.exports = { makeMetrics };
++module.exports = { makeMetrics };
+
+
+Add tests: __tests__/alarms.test.js
+
+// __tests__/alarms.test.js
+const { makeMetrics } = require("../lib/metrics");
+
+function mkSeries(vals) {
+  // vals: array of p95 values for 6 buckets; null allowed
+  // produce objects like { t, rps, p95_ms, err_rate } (only p95_ms is used by evaluator)
+  const now = Date.now();
+  const bucketMs = 10_000;
+  return vals.map((v, i) => ({
+    t: new Date(now - (vals.length - 1 - i) * bucketMs).toISOString(),
+    rps: 1,
+    p95_ms: v,
+    err_rate: 0,
+  }));
+}
+
+describe("Velocity Alarms evaluator", () => {
+  test("triggers error_rate warning at ≥5% with sample guard", () => {
+    const { evaluateAlarmsForRoute } = makeMetrics(); // get pure fn
+    const oneMinute = { err_rate: 7.5, count: 10, p50_ms: 50, p95_ms: 120, rps: 0.2 };
+    const series = mkSeries([120,130,110, 115,118,119]); // irrelevant for error rule
+    const alarms = evaluateAlarmsForRoute("GET /api/foo", oneMinute, series);
+    const a = alarms.find(x => x.kind === "error_rate");
+    expect(a).toBeTruthy();
+    expect(a.severity).toBe("warning");
+    expect(a.evidence.err_rate_1m).toBeCloseTo(7.5);
+    expect(a.evidence.samples_1m).toBe(10);
+  });
+
+  test("does not trigger error_rate if samples < 5", () => {
+    const { evaluateAlarmsForRoute } = makeMetrics();
+    const oneMinute = { err_rate: 50, count: 3, p95_ms: 100 };
+    const alarms = evaluateAlarmsForRoute("GET /api/foo", oneMinute, mkSeries([100,100,100,100,100,100]));
+    expect(alarms.find(x => x.kind === "error_rate")).toBeFalsy();
+  });
+
+  test("triggers p95_regress when last3 ≥20% and ≥30ms above prev3", () => {
+    const { evaluateAlarmsForRoute } = makeMetrics();
+    // prev3 avg = 100ms, last3 avg = 140ms → +40ms, +40%
+    const series = mkSeries([90,100,110, 130,140,150]);
+    const oneMinute = { err_rate: 0, count: 30, p95_ms: 140 };
+    const alarms = evaluateAlarmsForRoute("GET /api/bar", oneMinute, series);
+    const a = alarms.find(x => x.kind === "p95_regress");
+    expect(a).toBeTruthy();
+    expect(a.severity).toBe("warning"); // +40% < 50% threshold for critical
+    expect(a.evidence.regress_abs_ms).toBeGreaterThanOrEqual(30);
+    expect(a.evidence.regress_pct).toBeGreaterThanOrEqual(20);
+  });
+
+  test("no p95_regress if absolute delta < 30ms even if pct ≥20%", () => {
+    const { evaluateAlarmsForRoute } = makeMetrics();
+    // prev3 avg = 100ms, last3 avg = 118ms → +18ms, +18%
+    const series = mkSeries([95,100,105, 110,118,126].map(x => x - 8)); // keep delta < 30ms and <20%
+    const oneMinute = { err_rate: 0, count: 30, p95_ms: 118 };
+    const alarms = evaluateAlarmsForRoute("GET /api/baz", oneMinute, series);
+    expect(alarms.find(x => x.kind === "p95_regress")).toBeFalsy();
+  });
+});
+
+
+Ensure Jest is configured in package.json:
+
+--- a/package.json
++++ b/package.json
+@@
+   "scripts": {
+-    "start": "node server.js"
++    "start": "node server.js",
++    "test": "jest --runInBand"
+   },
++  "devDependencies": {
++    "jest": "^29.7.0"
++  }
+
+
+Success check:
+
+npm i -D jest
+npm test
+# Expect 4 passing tests validating both alarm rules and guards.
+
+
+Next: wait for user.
