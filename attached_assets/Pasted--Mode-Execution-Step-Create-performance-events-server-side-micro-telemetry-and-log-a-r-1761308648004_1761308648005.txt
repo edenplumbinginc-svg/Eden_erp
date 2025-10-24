@@ -1,0 +1,96 @@
+[Mode: Execution]
+
+**Step:** Create `performance_events` (server-side micro-telemetry) and log a row on checklist **done** with computed duration.
+
+**Why it matters:** Captures “who finished fast” without extra UI calls. This is the minimal backbone for points, badges, and leaderboards—directly from real usage.
+
+**Inputs needed:**
+
+* Postgres access (same DB)
+* Checklist toggle endpoint already live
+* `req.user` (id/email) available in middleware
+
+**Command:**
+
+1. **DB migration** – `apps/api/sql/migrations/20251024_performance_events.sql`
+
+```sql
+create table if not exists performance_events (
+  id uuid primary key default gen_random_uuid(),
+  actor_id uuid not null,
+  actor_email text,
+  task_id uuid not null,
+  checklist_item_id uuid not null,
+  action text not null,                   -- 'checklist.done'
+  started_at timestamptz not null,
+  finished_at timestamptz not null,
+  duration_ms bigint not null,            -- (finished - started) in ms
+  department text,                        -- optional: copy from task for dept rankings
+  created_at timestamptz not null default now()
+);
+
+create index if not exists perf_events_actor_time_idx on performance_events (actor_id, created_at desc);
+create index if not exists perf_events_task_idx on performance_events (task_id);
+create index if not exists perf_events_action_idx on performance_events (action);
+```
+
+2. **Server hook** – inside your checklist toggle handler (when flipping to `done = true`)
+
+```ts
+// after you set newVal=true and have: taskId, itemId, actorId, actorEmail, done_at
+// fetch the checklist item's created_at to compute duration
+const [meta] = await db.execute(sql`
+  select tci.created_at, t.department
+  from task_checklist_items tci
+  join tasks t on t.id = tci.task_id
+  where tci.id = ${itemId}
+  limit 1
+`);
+const startedAt = meta?.created_at;
+const finishedAt = new Date(); // or the same value you wrote into done_at
+const durationMs = startedAt ? Math.max(0, finishedAt.getTime() - new Date(startedAt).getTime()) : 0;
+
+await db.execute(sql`
+  insert into performance_events
+    (actor_id, actor_email, task_id, checklist_item_id, action, started_at, finished_at, duration_ms, department)
+  values
+    (${actorId}, ${actorEmail ?? null}, ${taskId}, ${itemId},
+     'checklist.done', ${startedAt}, ${finishedAt.toISOString()}, ${durationMs}, ${meta?.department ?? null})
+`);
+```
+
+3. **(Optional quick view)** – `apps/api/sql/migrations/20251024_perf_views.sql`
+
+```sql
+create or replace view v_perf_fastest_week as
+select
+  actor_id,
+  actor_email,
+  count(*) as items_done,
+  avg(duration_ms) as avg_ms,
+  percentile_cont(0.5) within group (order by duration_ms) as p50_ms
+from performance_events
+where action = 'checklist.done'
+  and created_at >= now() - interval '7 days'
+group by actor_id, actor_email
+order by p50_ms asc
+limit 20;
+```
+
+**Success check:**
+
+```bash
+# 1) Run migrations
+psql "$DATABASE_URL" -f apps/api/sql/migrations/20251024_performance_events.sql
+psql "$DATABASE_URL" -f apps/api/sql/migrations/20251024_perf_views.sql
+
+# 2) In the app, mark a checklist item as done.
+
+# 3) Verify an event was recorded:
+psql "$DATABASE_URL" -c "select actor_email, duration_ms from performance_events order by created_at desc limit 3;"
+
+# 4) Preview leaderboard basis:
+psql "$DATABASE_URL" -c "select actor_email, round(avg_ms/60000.0,2) as avg_minutes from v_perf_fastest_week;"
+```
+
+**Next:** wait for user.
