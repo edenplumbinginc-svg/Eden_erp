@@ -552,3 +552,49 @@ app.listen(port, () => {
   logger.info('API server started', { port, env: process.env.NODE_ENV || 'development' });
   console.log(`API server running on port :${port}`);
 });
+
+// --- Active Layer: Resilience/Auto-Restart Guard — Startup gate ---
+(async () => {
+  try {
+    const h = await getHealth();
+    const ok = h?.checks?.db?.ok === true;
+    if (!ok) {
+      console.error(JSON.stringify({ level: 50, msg: "startup_gate_failed", health: h }));
+      process.exit(42);
+    } else {
+      console.log(JSON.stringify({ level: 30, msg: "startup_gate_ok", health: { status: h.status, db_ms: h.checks.db.ms } }));
+    }
+  } catch (e) {
+    console.error(JSON.stringify({ level: 50, msg: "startup_gate_exception", error: String(e) }));
+    process.exit(42);
+  }
+})();
+
+// --- Active Layer: Resilience/Auto-Restart Guard — Periodic watchdog ---
+const WATCH_MS = Number(process.env.WATCHDOG_INTERVAL_MS || 30000); // 30s
+const FAILS_TO_EXIT = Number(process.env.WATCHDOG_FAILS_TO_EXIT || 4); // ~2 min default
+let consecutiveFails = 0;
+
+setInterval(async () => {
+  try {
+    const h = await getHealth();
+    const ok = h?.checks?.db?.ok === true;
+    if (ok) {
+      if (consecutiveFails > 0) {
+        console.log(JSON.stringify({ level: 30, msg: "watchdog_recovered", consecutiveFails }));
+      }
+      consecutiveFails = 0;
+      return;
+    }
+    consecutiveFails += 1;
+    console.warn(JSON.stringify({ level: 40, msg: "watchdog_degraded", consecutiveFails, health: { status: h.status, db_ok: h.checks.db.ok, db_ms: h.checks.db.ms } }));
+    if (consecutiveFails >= FAILS_TO_EXIT) {
+      console.error(JSON.stringify({ level: 50, msg: "watchdog_exit", reason: "consecutive_degraded", count: consecutiveFails }));
+      process.exit(43);
+    }
+  } catch (e) {
+    consecutiveFails += 1;
+    console.error(JSON.stringify({ level: 50, msg: "watchdog_exception", error: String(e), consecutiveFails }));
+    if (consecutiveFails >= FAILS_TO_EXIT) process.exit(44);
+  }
+}, WATCH_MS);
