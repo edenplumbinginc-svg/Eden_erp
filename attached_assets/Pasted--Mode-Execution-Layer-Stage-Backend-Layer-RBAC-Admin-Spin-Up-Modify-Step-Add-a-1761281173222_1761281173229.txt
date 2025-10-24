@@ -1,0 +1,107 @@
+[Mode: Execution]
+
+**Layer/Stage:** Backend Layer → RBAC Admin | Spin-Up → Modify
+**Step:** Add a secure API to assign/remove roles to a user (`POST /api/admin/users/:userId/roles/:roleSlug`, `DELETE …`) gated by `rbac:manage`.
+
+**Why it matters:** This gives you a minimal, auditable control surface to manage access in production. The UI can plug in later; first we ship the spine.
+
+**Inputs needed:**
+
+* Express API with `requireAuth`/`requirePerm` middleware
+* Tables: `users` (Supabase `auth.users` ids), `roles{ id, slug }`, `user_roles{ user_id, role_id }`
+* Permission string present: `rbac:manage`
+
+**Command (copy–paste):**
+
+1. **Route file:** `apps/api/src/routes/adminRbac.ts`
+
+```ts
+import { Router } from "express";
+import { requireAuth, requirePerm } from "../middleware/auth";
+import { db } from "../db";
+import { roles, userRoles } from "../db/schema/rbac";
+import { eq } from "drizzle-orm";
+
+const router = Router();
+
+// Assign role to user
+router.post(
+  "/admin/users/:userId/roles/:roleSlug",
+  requireAuth,
+  requirePerm("rbac:manage"),
+  async (req, res) => {
+    const { userId, roleSlug } = req.params;
+
+    const [role] = await db.select().from(roles).where(eq(roles.slug, roleSlug));
+    if (!role) return res.status(404).json({ error: "role_not_found" });
+
+    await db
+      .insert(userRoles)
+      .values({ userId: userId as any, roleId: role.id })
+      .onConflictDoNothing();
+
+    return res.status(204).end();
+  }
+);
+
+// Remove role from user
+router.delete(
+  "/admin/users/:userId/roles/:roleSlug",
+  requireAuth,
+  requirePerm("rbac:manage"),
+  async (req, res) => {
+    const { userId, roleSlug } = req.params;
+
+    const [role] = await db.select().from(roles).where(eq(roles.slug, roleSlug));
+    if (!role) return res.status(404).json({ error: "role_not_found" });
+
+    await db.delete(userRoles)
+      .where(eq(userRoles.userId, userId as any))
+      .where(eq(userRoles.roleId, role.id));
+
+    return res.status(204).end();
+  }
+);
+
+export default router;
+```
+
+2. **Wire routes:** in `apps/api/src/app.ts` (or your server bootstrap)
+
+```ts
+import adminRbac from "./routes/adminRbac";
+// …
+app.use("/api", adminRbac);
+```
+
+3. **(Optional) Audit log hook:** add a quick console or DB insert where you assign/remove roles for traceability (can be added later to your `rbac_audit_logs`).
+
+**Success check (terminal):**
+
+```bash
+# acquire a JWT for an admin user (has rbac:manage)
+JWT=<paste_admin_jwt>
+
+# assign contributor to a viewer
+curl -i -X POST http://localhost:3000/api/admin/users/<USER_UUID>/roles/contributor \
+  -H "Authorization: Bearer $JWT"
+
+# expect 204 No Content
+
+# remove contributor
+curl -i -X DELETE http://localhost:3000/api/admin/users/<USER_UUID>/roles/contributor \
+  -H "Authorization: Bearer $JWT"
+
+# expect 204 No Content
+
+# probe permissions (should reflect change)
+curl -s http://localhost:3000/api/me/permissions -H "Authorization: Bearer $JWT" | jq .
+```
+
+**Progress telemetry:**
+
+* Backend Layer: Spin-Up → Modify ✅ → Test (via curl)
+* RBAC Layer: Stable (enforcement unchanged; control surface added)
+* Integration Layer: Pending (UI page will call these endpoints next)
+
+**Next:** wait for user.
