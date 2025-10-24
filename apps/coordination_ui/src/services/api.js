@@ -109,24 +109,24 @@ export const apiService = {
 // Ball-in-Court Events API
 export const ballApi = {
   getHistory: (taskId) =>
-    api.get(`/api/tasks/${taskId}/ball-history`).then(r => r.data),
+    api.get(`/tasks/${taskId}/ball-history`).then(r => r.data),
   acknowledge: (taskId, eventId) =>
-    api.patch(`/api/tasks/${taskId}/ball-history/${eventId}/ack`).then(r => r.data),
+    api.patch(`/tasks/${taskId}/ball-history/${eventId}/ack`).then(r => r.data),
   getLate: (taskId) =>
-    api.get(`/api/tasks/${taskId}/ball-late`).then(r => r.data),
+    api.get(`/tasks/${taskId}/ball-late`).then(r => r.data),
   nudge: (taskId) =>
-    api.post(`/api/tasks/${taskId}/ball-nudge`).then(r => r.data),
+    api.post(`/tasks/${taskId}/ball-nudge`).then(r => r.data),
 };
 
 // Performance Analytics API
 export const perfApi = {
-  courtFlow: () => api.get('/api/perf/court-flow').then(r => r.data),
+  courtFlow: () => api.get('/perf/court-flow').then(r => r.data),
 };
 
 // Admin Configuration API
 export const adminApi = {
-  getUnackSla: () => api.get('/api/admin/sla/unack-handoff').then(r => r.data),
-  setUnackSla: (value_seconds) => api.put('/api/admin/sla/unack-handoff', { value_seconds }).then(r => r.data),
+  getUnackSla: () => api.get('/admin/sla/unack-handoff').then(r => r.data),
+  setUnackSla: (value_seconds) => api.put('/admin/sla/unack-handoff', { value_seconds }).then(r => r.data),
 };
 
 // Export the raw axios instance for direct use
