@@ -545,6 +545,11 @@ app.get('/ops/metrics/trends', (_req, res) => {
   res.json(metrics.trends());
 });
 
+app.get('/ops/alarms', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json(metrics.alarms());
+});
+
 // Velocity → Sentry correlation: deep link to filtered Discover view
 app.get('/ops/sentry-link', (req, res) => {
   const org = process.env.SENTRY_ORG_SLUG || "";
