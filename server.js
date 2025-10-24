@@ -464,6 +464,12 @@ app.get('/version', (_req, res) => {
   });
 });
 
+// Velocity Metrics: per-route KPIs with rolling windows
+app.get('/ops/metrics', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json(metrics.snapshot());
+});
+
 // --- Sentry test route (development only) ---
 if (process.env.NODE_ENV !== 'production') {
   app.get('/api/_sentry-test', (req, res) => {
