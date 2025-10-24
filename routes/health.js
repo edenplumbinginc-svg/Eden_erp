@@ -5,6 +5,7 @@ const express = require('express');
 const router = express.Router();
 const { runHealthChecks, quickHealthCheck } = require('../lib/health-checks');
 const { metrics } = require('../lib/metrics');
+const { pool } = require('../services/database');
 
 /**
  * Comprehensive health check endpoint
@@ -41,6 +42,38 @@ router.get('/quick', async (req, res) => {
       healthy: false,
       status: 'error',
       timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * Simple health endpoint with module change beacons
+ * Returns last_change timestamps for tasks and projects
+ * Used by frontend for realtime-lite refresh detection
+ */
+router.get('/', async (req, res) => {
+  try {
+    const [tasksResult, projectsResult] = await Promise.all([
+      pool.query('SELECT MAX(updated_at) as max FROM tasks'),
+      pool.query('SELECT MAX(updated_at) as max FROM projects')
+    ]);
+
+    const tasksMax = tasksResult.rows[0]?.max;
+    const projectsMax = projectsResult.rows[0]?.max;
+
+    res.json({
+      ok: true,
+      modules: {
+        tasks: { last_change: tasksMax || null },
+        projects: { last_change: projectsMax || null }
+      },
+      now: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      error: error.message,
+      now: new Date().toISOString()
     });
   }
 });
