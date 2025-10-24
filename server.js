@@ -119,19 +119,8 @@ function routeKey(req) {
 
 // Request timing + metrics collection hook + Sentry tagging
 function requestTimingMiddleware(req, res, next) {
-  // Name Sentry transaction by route for better grouping
-  if (sentryEnabled) {
-    const tx = Sentry.getCurrentHub && Sentry.getCurrentHub().getScope && Sentry.getCurrentHub().getScope().getTransaction && Sentry.getCurrentHub().getScope().getTransaction();
-    if (tx) tx.setName(routeKey(req));
-
-    // Add per-request tags early
-    Sentry.setTag("route", req.route?.path || req.path);
-    Sentry.setTag("method", req.method);
-    if (process.env.RELEASE_SHA) Sentry.setTag("release", process.env.RELEASE_SHA);
-    if (process.env.BUILD_TIME) Sentry.setTag("build_time", process.env.BUILD_TIME);
-  }
-
   const start = process.hrtime.bigint();
+  
   res.on('finish', () => {
     const end = process.hrtime.bigint();
     const duration_ms = Number(end - start) / 1e6;
@@ -143,22 +132,34 @@ function requestTimingMiddleware(req, res, next) {
     // Keep Pino structured logging
     req.log.info({ req_id: req.id, duration_ms, statusCode: res.statusCode }, 'req_complete');
 
-    // Add outcome tags for Sentry breadcrumbs
+    // Enrich Sentry with per-request tags (after route resolution)
     if (sentryEnabled) {
-      Sentry.setTag("status_code", res.statusCode);
-      Sentry.setTag("duration_ms", Math.round(duration_ms));
+      const scope = Sentry.getCurrentHub && Sentry.getCurrentHub().getScope && Sentry.getCurrentHub().getScope();
+      if (scope) {
+        // Name transaction by stable route key
+        const tx = scope.getTransaction && scope.getTransaction();
+        if (tx) tx.setName(routeKey(req));
 
-      // If a 5xx slipped through without throwing, report it explicitly
-      if (res.statusCode >= 500) {
-        Sentry.captureMessage("HTTP 5xx response", {
-          level: "error",
-          tags: {
-            route: req.route?.path || req.path,
-            method: req.method,
-            status_code: res.statusCode,
-            duration_ms: Math.round(duration_ms),
-          },
-        });
+        // Add per-request tags using the request scope
+        scope.setTag("route", req.route?.path || req.path);
+        scope.setTag("method", req.method);
+        scope.setTag("status_code", res.statusCode);
+        scope.setTag("duration_ms", Math.round(duration_ms));
+        if (process.env.RELEASE_SHA) scope.setTag("release", process.env.RELEASE_SHA);
+        if (process.env.BUILD_TIME) scope.setTag("build_time", process.env.BUILD_TIME);
+
+        // If a 5xx slipped through without throwing, report it explicitly
+        if (res.statusCode >= 500) {
+          Sentry.captureMessage("HTTP 5xx response", {
+            level: "error",
+            tags: {
+              route: req.route?.path || req.path,
+              method: req.method,
+              status_code: res.statusCode,
+              duration_ms: Math.round(duration_ms),
+            },
+          });
+        }
       }
     }
   });
