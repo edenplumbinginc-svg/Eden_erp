@@ -112,6 +112,10 @@ export const ballApi = {
     api.get(`/api/tasks/${taskId}/ball-history`).then(r => r.data),
   acknowledge: (taskId, eventId) =>
     api.patch(`/api/tasks/${taskId}/ball-history/${eventId}/ack`).then(r => r.data),
+  getLate: (taskId) =>
+    api.get(`/api/tasks/${taskId}/ball-late`).then(r => r.data),
+  nudge: (taskId) =>
+    api.post(`/api/tasks/${taskId}/ball-nudge`).then(r => r.data),
 };
 
 // Performance Analytics API
