@@ -159,11 +159,11 @@ if (process.env.NODE_ENV !== 'production') {
 }
 // ⚙️ --- END DEBUG ---
 
-// --- Public health check endpoints (legacy) ---
-app.get(['/health', '/api/health'], (_, res) => res.json({ status: 'ok' }));
-
-// --- Mount comprehensive health check routes ---
+// --- Mount comprehensive health check routes with module change beacons ---
 app.use('/api/health', require('./routes/health'));
+
+// --- Public health check endpoint (simple alias) ---
+app.get('/health', (_, res) => res.json({ status: 'ok' }));
 
 // --- Self-contained health check with TLS configuration ---
 const { healthz } = require('./routes/healthz');
