@@ -83,6 +83,16 @@ export default function EdenHeader() {
             >
               ⚡ Leaderboard
             </NavLink>
+            <NavLink 
+              to="/velocity" 
+              className={({ isActive }) => isActive ? 'text-body font-medium' : 'text-body text-link hover:underline'}
+              style={({ isActive }) => ({
+                color: isActive ? 'var(--md-primary)' : undefined,
+                fontWeight: isActive ? 500 : undefined
+              })}
+            >
+              ⚡ Velocity
+            </NavLink>
             {isAdmin && (
               <div className="flex items-center gap-3">
                 <NavLink 
