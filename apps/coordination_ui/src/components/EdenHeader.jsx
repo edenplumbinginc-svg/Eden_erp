@@ -70,6 +70,16 @@ export default function EdenHeader() {
             >
               Reports
             </NavLink>
+            <NavLink 
+              to="/leaderboard" 
+              className={({ isActive }) => isActive ? 'text-body font-medium' : 'text-body text-link hover:underline'}
+              style={({ isActive }) => ({
+                color: isActive ? 'var(--md-primary)' : undefined,
+                fontWeight: isActive ? 500 : undefined
+              })}
+            >
+              ⚡ Leaderboard
+            </NavLink>
             <RoleBadge />
             <NotificationsBell />
           </nav>

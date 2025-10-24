@@ -26,6 +26,7 @@ import IntakeQueue from './pages/IntakeQueue';
 import TeamOverview from './pages/TeamOverview';
 import ArchiveView from './pages/ArchiveView';
 import AdminRbacPage from './pages/AdminRbacPage';
+import PerformanceLeaderboardPage from './pages/PerformanceLeaderboardPage';
 
 const queryClient = new QueryClient();
 
@@ -238,6 +239,14 @@ function AppContent() {
             element={
               <RequireAuth>
                 <AdminRbacPage />
+              </RequireAuth>
+            } 
+          />
+          <Route 
+            path="/leaderboard" 
+            element={
+              <RequireAuth>
+                <PerformanceLeaderboardPage />
               </RequireAuth>
             } 
           />
