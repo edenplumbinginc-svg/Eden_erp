@@ -4,6 +4,7 @@
 
 const { Router } = require('express');
 const { requireAuth } = require('../middleware/auth');
+const { requirePerm } = require('../middleware/permissions');
 const { pool } = require('../services/database');
 
 const router = Router();
@@ -93,6 +94,108 @@ router.patch('/tasks/:taskId/ball-history/:eventId/ack', requireAuth, async (req
     res.status(500).json({
       ok: false,
       error: { code: 'INTERNAL_ERROR', message: 'Failed to acknowledge handoff' }
+    });
+  }
+});
+
+/**
+ * GET /api/tasks/:id/ball-late
+ * Get the latest unacknowledged event with SLA status
+ * Returns null if no unacknowledged events exist
+ */
+router.get('/tasks/:id/ball-late', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await pool.query(`
+      WITH sla AS (
+        SELECT COALESCE(
+          (SELECT value_seconds FROM sla_thresholds WHERE key='unacknowledged_handoff_sla'), 
+          48*3600
+        ) AS v
+      )
+      SELECT 
+        e.id, 
+        e.task_id, 
+        e.to_role, 
+        e.created_at,
+        EXTRACT(EPOCH FROM (now() - e.created_at))::bigint AS age_s,
+        (SELECT v FROM sla) AS sla_s,
+        (EXTRACT(EPOCH FROM (now() - e.created_at))::bigint) > (SELECT v FROM sla) AS late
+      FROM ball_in_court_events e
+      WHERE e.task_id = $1 AND e.acknowledged = false
+      ORDER BY e.created_at DESC
+      LIMIT 1
+    `, [id]);
+
+    res.json({ 
+      ok: true, 
+      late: result.rows?.[0] ?? null 
+    });
+  } catch (err) {
+    console.error('[BALL-LATE] Failed to check SLA status:', err);
+    res.status(500).json({
+      ok: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to check SLA status' }
+    });
+  }
+});
+
+/**
+ * POST /api/tasks/:id/ball-nudge
+ * Send a one-off reminder to the recipient of the latest unacknowledged handoff
+ * Requires admin:manage permission
+ */
+router.post('/tasks/:id/ball-nudge', requirePerm('admin:manage'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await pool.query(`
+      SELECT e.id, e.task_id, e.to_role, e.created_at
+      FROM ball_in_court_events e
+      WHERE e.task_id = $1 AND e.acknowledged = false
+      ORDER BY e.created_at DESC
+      LIMIT 1
+    `, [id]);
+
+    const ev = result.rows?.[0];
+    if (!ev) {
+      return res.status(404).json({ 
+        ok: false, 
+        error: 'No unacknowledged handoff for this task' 
+      });
+    }
+
+    // Create one-off notification (NOT logged as decision execution; this is a manual nudge)
+    await pool.query(`
+      INSERT INTO notifications (user_id, channel, event_code, payload, type, created_at)
+      SELECT ur.user_id, 'inapp', 'BALL_NUDGE', $1::jsonb, 'nudge', now()
+      FROM user_roles ur
+      JOIN roles r ON ur.role_id = r.id
+      WHERE r.slug = $2
+    `, [
+      JSON.stringify({ 
+        message: `Reminder: Please acknowledge the handoff for this task.`,
+        target_type: 'task', 
+        target_id: ev.task_id,
+        kind: 'handoff_nudge',
+        event_id: ev.id
+      }),
+      ev.to_role || 'ops'
+    ]);
+
+    console.log(`[BALL-NUDGE] Sent nudge for task ${id}, event ${ev.id}, to role ${ev.to_role}`);
+
+    res.json({ 
+      ok: true, 
+      nudged: true, 
+      event_id: ev.id 
+    });
+  } catch (err) {
+    console.error('[BALL-NUDGE] Failed to send nudge:', err);
+    res.status(500).json({
+      ok: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to send nudge' }
     });
   }
 });

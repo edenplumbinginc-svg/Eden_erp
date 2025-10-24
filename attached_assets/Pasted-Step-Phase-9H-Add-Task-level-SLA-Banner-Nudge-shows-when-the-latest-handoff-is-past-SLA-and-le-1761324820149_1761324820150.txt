@@ -1,0 +1,167 @@
+Step: Phase 9H — Add Task-level SLA Banner + Nudge (shows when the latest handoff is past SLA and lets an admin send a one-off reminder).
+
+Why it matters: Court Flow is the radar; this puts the warning on the task so the owner can nudge the receiver without visiting admin screens.
+
+Inputs needed:
+
+Backend (Express)
+
+Frontend Task Detail page path
+
+Existing auth/RBAC (admin:manage or tasks:nudge—use whichever you have)
+
+Command (paste exactly):
+
+1) Backend — expose latest unacked event + nudge endpoint
+File: src/routes/ballHistory.ts (augment your router)
+
+import { requirePermission } from '../auth/requirePermission';
+import { sql } from 'drizzle-orm';
+import { db } from '../db';
+// reuse your notifier:
+import { decisionsNotify } from '../decisions/shared/notify';
+
+// latest unacknowledged event for a task
+ballHistory.get('/tasks/:id/ball-late', requireAuth, async (req, res) => {
+  const { id } = req.params;
+  const { rows } = await db.execute(sql`
+    WITH sla AS (
+      SELECT COALESCE( (SELECT value_seconds FROM sla_thresholds WHERE key='unacknowledged_handoff_sla'), 48*3600 ) AS v
+    )
+    SELECT e.id, e.task_id, e.to_role, e.created_at,
+           EXTRACT(EPOCH FROM (now() - e.created_at))::bigint AS age_s,
+           (SELECT v FROM sla) AS sla_s,
+           (EXTRACT(EPOCH FROM (now() - e.created_at))::bigint) > (SELECT v FROM sla) AS late
+    FROM ball_in_court_events e
+    WHERE e.task_id = ${id} AND e.acknowledged = false
+    ORDER BY e.created_at DESC
+    LIMIT 1
+  `);
+  res.json({ ok: true, late: rows?.[0] ?? null });
+});
+
+// nudge the recipient of the latest unacknowledged event
+ballHistory.post('/tasks/:id/ball-nudge', requirePermission('admin:manage'), async (req, res) => {
+  const { id } = req.params;
+  const { rows } = await db.execute(sql`
+    SELECT e.id, e.task_id, e.to_role, e.created_at
+    FROM ball_in_court_events e
+    WHERE e.task_id=${id} AND e.acknowledged=false
+    ORDER BY e.created_at DESC
+    LIMIT 1
+  `);
+  const ev = rows?.[0];
+  if (!ev) return res.status(404).json({ ok:false, error:'No unacknowledged handoff for this task' });
+
+  // one-off notify (NOT logged as decision execution; this is a manual nudge)
+  await decisionsNotify({
+    toRole: ev.to_role,
+    taskId: ev.task_id,
+    payload: {
+      kind: 'handoff_nudge',
+      message: `Reminder: Please acknowledge the handoff for this task.`,
+      event_id: ev.id
+    }
+  });
+
+  res.json({ ok:true, nudged:true, event_id: ev.id });
+});
+
+
+2) Frontend API client
+File: apps/coordination_ui/src/services/api.js
+
+ export const ballApi = {
+   getHistory: (taskId) =>
+     api.get(`/api/tasks/${taskId}/ball-history`).then(r => r.data),
+   acknowledge: (taskId, eventId) =>
+     api.patch(`/api/tasks/${taskId}/ball-history/${eventId}/ack`).then(r => r.data),
++  getLate: (taskId) =>
++    api.get(`/api/tasks/${taskId}/ball-late`).then(r => r.data),
++  nudge: (taskId) =>
++    api.post(`/api/tasks/${taskId}/ball-nudge`).then(r => r.data),
+ };
+
+
+3) Task banner component
+Create: apps/coordination_ui/src/components/TaskSlaBanner.jsx
+
+import React from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { ballApi } from '../services/api';
+
+function hhmmFromSeconds(s=0){
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
+  return `${h}h ${m}m`;
+}
+
+export default function TaskSlaBanner({ taskId, canNudge=false }) {
+  const { data, isLoading, error, refetch } = useQuery(['ball-late', taskId], () => ballApi.getLate(taskId), { refetchInterval: 15000 });
+  const nudge = useMutation(() => ballApi.nudge(taskId), { onSuccess: () => refetch() });
+
+  if (isLoading || error) return null;
+  const late = data?.late;
+  if (!late) return null;
+
+  const over = late.late === true;
+  const age = hhmmFromSeconds(late.age_s || 0);
+  const sla = hhmmFromSeconds(late.sla_s || 0);
+
+  return (
+    <div className={`rounded-2xl border p-4 ${over ? 'bg-red-50 border-red-300' : 'bg-yellow-50 border-yellow-300'}`}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="space-y-1">
+          <div className="font-medium">
+            {over ? 'Unacknowledged handoff — SLA Breached' : 'Unacknowledged handoff — Pending Acknowledgment'}
+          </div>
+          <div className="text-sm text-gray-700">
+            To: <b>{late.to_role || '—'}</b> · Age: <b>{age}</b> · SLA: <b>{sla}</b>
+          </div>
+        </div>
+        {canNudge && (
+          <button
+            className="px-3 py-2 rounded bg-black text-white"
+            onClick={() => nudge.mutate()}
+            disabled={nudge.isLoading}
+            title="Send a one-time reminder to the receiving department"
+          >
+            {nudge.isLoading ? 'Nudging…' : 'Nudge recipient'}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+4) Mount on Task Detail
+File: apps/coordination_ui/src/pages/TaskDetailPage.jsx (or your equivalent)
+
++ import TaskSlaBanner from '../components/TaskSlaBanner';
++ import { usePermissions } from '../hooks/usePermissions'; // or however you check RBAC
+
+ export default function TaskDetailPage() {
+   const { taskId } = useParams();
++  const { has } = usePermissions?.() || { has: () => false };
+
+   return (
+     <div className="p-6 space-y-6">
++      <TaskSlaBanner taskId={taskId} canNudge={has('admin:manage') || has('tasks:nudge')} />
+       {/* existing header/cards */}
+       {/* existing panels */}
+     </div>
+   );
+ }
+
+
+Success check:
+
+Open a task with an unacknowledged handoff: a yellow banner appears (red if age > SLA).
+
+As admin (or role with tasks:nudge), Nudge recipient calls POST /api/tasks/:id/ball-nudge → 200 { ok:true }.
+
+Banner refreshes automatically; no page reload; no console errors.
+
+If no unacknowledged event exists, the banner doesn’t render.
+
+Next: wait for user.
