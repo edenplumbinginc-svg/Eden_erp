@@ -127,6 +127,18 @@ const alerter = makeAlerter({
 
 alerter.start(logger);
 
+// Velocity Layer: Persistence (historical metrics snapshots)
+const { makeHistory } = require('./lib/history');
+
+const history = makeHistory({
+  pool,
+  metrics,
+  logger,
+  cfg: {},
+});
+
+history.start();
+
 // Helper to get stable route key (for both Metrics and Sentry)
 function routeKey(req) {
   return `${req.method} ${req.route?.path || req.path}`;
@@ -563,6 +575,30 @@ app.get('/ops/metrics/trends', (_req, res) => {
 app.get('/ops/alarms', (_req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.json(metrics.alarms());
+});
+
+app.get('/ops/metrics/history', async (req, res) => {
+  const route = req.query.route;
+  const from = req.query.from;
+  const to = req.query.to;
+  if (!route || !from || !to) {
+    return res.status(400).json({ error: "route, from, to required" });
+  }
+
+  try {
+    const rows = await pool.query(
+      `SELECT ts, rps, p50_ms, p95_ms, err_rate_pct, samples_1m
+         FROM velocity_metrics
+        WHERE route = $1 AND ts BETWEEN $2::timestamptz AND $3::timestamptz
+        ORDER BY ts ASC`,
+      [route, from, to]
+    );
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ route, from, to, points: rows.rows });
+  } catch (err) {
+    logger.error({ err }, 'velocity_history_query_failed');
+    res.status(500).json({ error: 'Query failed' });
+  }
 });
 
 // Velocity → Sentry correlation: deep link to filtered Discover view

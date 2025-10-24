@@ -1,0 +1,206 @@
+Step: Add Historical Metrics Persistence — snapshot the 1-minute KPIs to Postgres every 30s with 14-day retention. (Layer: Velocity → Persistence)
+
+Why it matters: Your dashboard stops forgetting. You’ll be able to see regressions and error surges from earlier today, yesterday, or last week.
+
+Inputs needed:
+
+Postgres access (same DB as backend)
+
+server.js
+
+lib/metrics.js (already in place)
+
+Command:
+
+Create table + indexes (run once in your DB)
+
+-- velocity_metrics: rollup of /ops/metrics "1m" window, sampled ~30s
+CREATE TABLE IF NOT EXISTS velocity_metrics (
+  id           bigserial PRIMARY KEY,
+  ts           timestamptz NOT NULL,          -- sample time
+  env          text         NOT NULL,
+  route        text         NOT NULL,         -- "METHOD /path"
+  rps          double precision,
+  p50_ms       integer,
+  p95_ms       integer,
+  err_rate_pct double precision,
+  samples_1m   integer,
+  release_sha  text,
+  build_time   text
+);
+
+-- hot query helpers
+CREATE INDEX IF NOT EXISTS vm_ts_idx     ON velocity_metrics (ts DESC);
+CREATE INDEX IF NOT EXISTS vm_route_idx  ON velocity_metrics (route);
+CREATE INDEX IF NOT EXISTS vm_env_idx    ON velocity_metrics (env);
+CREATE INDEX IF NOT EXISTS vm_route_ts   ON velocity_metrics (route, ts DESC);
+
+
+Add a lightweight writer lib/history.js
+
+// lib/history.js — Velocity/Persistence (historical metrics snapshots)
+const DEFAULTS = {
+  everyMs: +(process.env.HISTORY_SNAPSHOT_SEC || 30) * 1000,
+  retentionDays: +(process.env.HISTORY_RETENTION_DAYS || 14),
+  batchMax: 500, // safety for massive route maps
+};
+
+function rowsFromSnapshot(snap) {
+  const out = [];
+  const env = snap.env || process.env.SENTRY_ENV || process.env.NODE_ENV || "dev";
+  const ts = new Date(snap.generated_at || new Date().toISOString());
+  const rel = process.env.RELEASE_SHA || null;
+  const bld = process.env.BUILD_TIME || null;
+
+  for (const [route, wins] of Object.entries(snap.routes || {})) {
+    const w = wins["1m"] || {};
+    if (!w || !Number.isFinite(w.rps)) continue;        // skip empty
+    if (!w.count || w.count <= 0) continue;              // no samples
+    out.push({
+      ts,
+      env,
+      route,
+      rps: w.rps,
+      p50_ms: w.p50_ms ?? null,
+      p95_ms: w.p95_ms ?? null,
+      err_rate_pct: w.err_rate ?? 0,
+      samples_1m: w.count ?? 0,
+      release_sha: rel,
+      build_time: bld,
+    });
+  }
+  return out;
+}
+
+async function insertBatch(pool, rows) {
+  if (!rows.length) return;
+  // Using pg Pool; adapt if using another client.
+  const text = `
+    INSERT INTO velocity_metrics
+      (ts, env, route, rps, p50_ms, p95_ms, err_rate_pct, samples_1m, release_sha, build_time)
+    VALUES ${rows.map((_, i) =>
+      `($${i*10+1}, $${i*10+2}, $${i*10+3}, $${i*10+4}, $${i*10+5}, $${i*10+6}, $${i*10+7}, $${i*10+8}, $${i*10+9}, $${i*10+10})`
+    ).join(",")}
+  `;
+  const values = rows.flatMap(r => [
+    r.ts, r.env, r.route, r.rps, r.p50_ms, r.p95_ms, r.err_rate_pct, r.samples_1m, r.release_sha, r.build_time
+  ]);
+  await pool.query(text, values);
+}
+
+async function pruneOld(pool, retentionDays) {
+  await pool.query(`DELETE FROM velocity_metrics WHERE ts < now() - ($1 || ' days')::interval`, [retentionDays]);
+}
+
+function chunk(arr, n) {
+  const out = [];
+  for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n));
+  return out;
+}
+
+function makeHistory({ pool, metrics, logger = console, cfg = {} }) {
+  const opts = { ...DEFAULTS, ...cfg };
+  let running = false;
+
+  async function tick() {
+    if (running) return;
+    running = true;
+    try {
+      const snap = metrics.snapshot();
+      const rows = rowsFromSnapshot(snap).slice(0, opts.batchMax);
+      if (rows.length) {
+        for (const part of chunk(rows, 100)) {
+          await insertBatch(pool, part);
+        }
+        logger.info?.({ count: rows.length }, "velocity_history_inserted");
+      }
+      // prune roughly once per hour (cheap guard using modulo)
+      const m = new Date().getMinutes();
+      if (m % 60 === 0) {
+        await pruneOld(pool, opts.retentionDays);
+        logger.info?.({ days: opts.retentionDays }, "velocity_history_pruned");
+      }
+    } catch (e) {
+      logger.error?.({ err: String(e) }, "velocity_history_error");
+    } finally {
+      running = false;
+    }
+  }
+
+  function start() {
+    const id = setInterval(() => tick(), opts.everyMs);
+    id.unref?.();
+    return { stop: () => clearInterval(id), tick };
+  }
+
+  return { start, tick };
+}
+
+module.exports = { makeHistory };
+
+
+Wire it in server.js
+
+// after metrics is created and DB pool is available
+const { makeHistory } = require("./lib/history");
+
+// If you already have a pg Pool instance `pool`, reuse it.
+// const { Pool } = require("pg");
+// const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+
+const history = makeHistory({
+  pool,
+  metrics,
+  logger: (req?.log) || console, // use pino if available
+  cfg: {
+    // override via env if desired:
+    // everyMs: 30_000,
+    // retentionDays: 14,
+  }
+});
+history.start();
+
+
+(Optional) Read API for charts later — add a narrow history query
+
+// server.js — quick readonly query for a single route over a time range
+app.get("/ops/metrics/history", async (req, res) => {
+  const route = req.query.route;
+  const from = req.query.from; // ISO
+  const to   = req.query.to;   // ISO
+  if (!route || !from || !to) return res.status(400).json({ error: "route, from, to required" });
+
+  const rows = await pool.query(
+    `SELECT ts, rps, p50_ms, p95_ms, err_rate_pct, samples_1m
+       FROM velocity_metrics
+      WHERE route = $1 AND ts BETWEEN $2::timestamptz AND $3::timestamptz
+      ORDER BY ts ASC`,
+    [route, from, to]
+  );
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ route, from, to, points: rows.rows });
+});
+
+
+Success check:
+
+Run server, generate traffic for ~1–2 minutes.
+
+Verify rows are landing:
+
+# Count rows in the last hour
+psql $DATABASE_URL -c "SELECT count(*) FROM velocity_metrics WHERE ts > now() - interval '1 hour';"
+
+# Peek at a route’s last few snapshots
+psql $DATABASE_URL -c "SELECT ts, route, rps, p95_ms, err_rate_pct FROM velocity_metrics ORDER BY ts DESC LIMIT 10;"
+
+
+Optional: test the read API
+
+# Use actual ISO times for from/to and a real route key like 'GET /api/jobs'
+curl -s "https://<your-domain>/ops/metrics/history?route=GET%20/api/jobs&from=2025-10-24T20:00:00Z&to=2025-10-24T21:00:00Z" | python3 -m json.tool | head -60
+
+
+You should see time-ordered points for rps/p95/err%.
+
+Next: wait for user.
