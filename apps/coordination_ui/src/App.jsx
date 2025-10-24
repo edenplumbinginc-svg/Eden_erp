@@ -27,6 +27,7 @@ import TeamOverview from './pages/TeamOverview';
 import ArchiveView from './pages/ArchiveView';
 import AdminRbacPage from './pages/AdminRbacPage';
 import DecisionsPage from './pages/admin/DecisionsPage';
+import CourtFlowPage from './pages/admin/CourtFlowPage';
 import PerformanceLeaderboardPage from './pages/PerformanceLeaderboardPage';
 
 const queryClient = new QueryClient();
@@ -248,6 +249,14 @@ function AppContent() {
             element={
               <RequireAuth requiredPermission="admin:manage">
                 <DecisionsPage />
+              </RequireAuth>
+            } 
+          />
+          <Route 
+            path="/admin/court-flow" 
+            element={
+              <RequireAuth requiredPermission="admin:manage">
+                <CourtFlowPage />
               </RequireAuth>
             } 
           />

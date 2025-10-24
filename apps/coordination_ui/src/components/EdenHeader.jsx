@@ -84,16 +84,28 @@ export default function EdenHeader() {
               ⚡ Leaderboard
             </NavLink>
             {isAdmin && (
-              <NavLink 
-                to="/admin/decisions" 
-                className={({ isActive }) => isActive ? 'text-body font-medium' : 'text-body text-link hover:underline'}
-                style={({ isActive }) => ({
-                  color: isActive ? 'var(--md-primary)' : undefined,
-                  fontWeight: isActive ? 500 : undefined
-                })}
-              >
-                🤖 Admin
-              </NavLink>
+              <div className="flex items-center gap-3">
+                <NavLink 
+                  to="/admin/decisions" 
+                  className={({ isActive }) => isActive ? 'text-body font-medium' : 'text-body text-link hover:underline'}
+                  style={({ isActive }) => ({
+                    color: isActive ? 'var(--md-primary)' : undefined,
+                    fontWeight: isActive ? 500 : undefined
+                  })}
+                >
+                  Admin · Decisions
+                </NavLink>
+                <NavLink 
+                  to="/admin/court-flow" 
+                  className={({ isActive }) => isActive ? 'text-body font-medium' : 'text-body text-link hover:underline'}
+                  style={({ isActive }) => ({
+                    color: isActive ? 'var(--md-primary)' : undefined,
+                    fontWeight: isActive ? 500 : undefined
+                  })}
+                >
+                  Admin · Court Flow
+                </NavLink>
+              </div>
             )}
             <RoleBadge />
             <NotificationsBell />

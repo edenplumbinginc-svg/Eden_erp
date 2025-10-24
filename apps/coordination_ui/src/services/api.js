@@ -114,6 +114,11 @@ export const ballApi = {
     api.patch(`/api/tasks/${taskId}/ball-history/${eventId}/ack`).then(r => r.data),
 };
 
+// Performance Analytics API
+export const perfApi = {
+  courtFlow: () => api.get('/api/perf/court-flow').then(r => r.data),
+};
+
 // Export the raw axios instance for direct use
 export { api };
 
