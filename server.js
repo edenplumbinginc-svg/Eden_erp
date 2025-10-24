@@ -601,6 +601,110 @@ app.get('/ops/metrics/history', async (req, res) => {
   }
 });
 
+app.get('/ops/release-impact', async (req, res) => {
+  const rawWindow = Number(req.query.window_min);
+  const windowMin = Number.isFinite(rawWindow) ? Math.max(5, Math.min(240, rawWindow)) : 30;
+  const routeFilter = req.query.route || null;
+
+  const current = process.env.RELEASE_SHA || null;
+  if (!current) return res.status(400).json({ error: "RELEASE_SHA not set" });
+
+  const prevSql = `
+    SELECT release_sha
+    FROM velocity_metrics
+    WHERE release_sha IS NOT NULL AND release_sha <> $1
+    GROUP BY release_sha
+    ORDER BY MAX(ts) DESC
+    LIMIT 1
+  `;
+  const prevRow = await pool.query(prevSql, [current]);
+  const previous = prevRow.rows[0]?.release_sha || null;
+  if (!previous) {
+    return res.json({
+      service: "eden-erp-backend",
+      generated_at: new Date().toISOString(),
+      current_release: current,
+      previous_release: null,
+      window_min: windowMin,
+      routes: {},
+      note: "No prior release with data found.",
+    });
+  }
+
+  const baseWhere = routeFilter ? `AND route = $3` : ``;
+  const paramsCur = routeFilter ? [current, windowMin, routeFilter] : [current, windowMin];
+  const paramsPrev = routeFilter ? [previous, windowMin, routeFilter] : [previous, windowMin];
+
+  const rollupSql = (releaseParamCount) => `
+    SELECT
+      route,
+      AVG(p95_ms)::int         AS p95_ms_avg,
+      AVG(p50_ms)::int         AS p50_ms_avg,
+      AVG(rps)                 AS rps_avg,
+      CASE WHEN SUM(samples_1m) > 0
+           THEN SUM(err_rate_pct * samples_1m) / SUM(samples_1m)
+           ELSE 0 END         AS err_rate_wavg,
+      SUM(samples_1m)          AS samples
+    FROM velocity_metrics
+    WHERE release_sha = $1
+      AND ts > now() - ($2 || ' minutes')::interval
+      ${releaseParamCount === 3 ? "AND route = $3" : ""}
+    GROUP BY route
+  `;
+
+  const cur = await pool.query(rollupSql(paramsCur.length), paramsCur);
+  const prev = await pool.query(rollupSql(paramsPrev.length), paramsPrev);
+
+  const byPrev = new Map(prev.rows.map(r => [r.route, r]));
+  const out = {};
+  for (const r of cur.rows) {
+    const p = byPrev.get(r.route);
+    const toNum = (x) => (x == null ? null : Number(x));
+    const curRoute = {
+      current: {
+        p95_ms: toNum(r.p95_ms_avg),
+        p50_ms: toNum(r.p50_ms_avg),
+        rps:    Number(r.rps_avg?.toFixed(3) ?? 0),
+        err_pct: Number((r.err_rate_wavg ?? 0).toFixed(2)),
+        samples: Number(r.samples ?? 0),
+      },
+      previous: p ? {
+        p95_ms: toNum(p.p95_ms_avg),
+        p50_ms: toNum(p.p50_ms_avg),
+        rps:    Number(p.rps_avg?.toFixed(3) ?? 0),
+        err_pct: Number((p.err_rate_wavg ?? 0).toFixed(2)),
+        samples: Number(p.samples ?? 0),
+      } : null,
+      delta: null
+    };
+    if (curRoute.previous) {
+      const d = {
+        p95_ms: curRoute.current.p95_ms - curRoute.previous.p95_ms,
+        p50_ms: curRoute.current.p50_ms - curRoute.previous.p50_ms,
+        rps:    +(curRoute.current.rps - curRoute.previous.rps).toFixed(3),
+        err_pct: +(curRoute.current.err_pct - curRoute.previous.err_pct).toFixed(2),
+      };
+      curRoute.delta = {
+        ...d,
+        p95_pct: (curRoute.previous.p95_ms > 0) ? +((d.p95_ms / curRoute.previous.p95_ms) * 100).toFixed(1) : null,
+        err_pct_rel: (curRoute.previous.err_pct > 0) ? +((d.err_pct / curRoute.previous.err_pct) * 100).toFixed(1) : null,
+      };
+    }
+    out[r.route] = curRoute;
+  }
+
+  res.setHeader("Cache-Control", "no-store");
+  res.json({
+    service: "eden-erp-backend",
+    generated_at: new Date().toISOString(),
+    current_release: current,
+    previous_release: previous,
+    window_min: windowMin,
+    route_filter: routeFilter,
+    routes: out,
+  });
+});
+
 // Velocity → Sentry correlation: deep link to filtered Discover view
 app.get('/ops/sentry-link', (req, res) => {
   const org = process.env.SENTRY_ORG_SLUG || "";
