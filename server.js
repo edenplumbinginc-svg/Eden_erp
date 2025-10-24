@@ -112,6 +112,21 @@ const httpLogger = pinoHttp({
 const { makeMetrics } = require('./lib/metrics');
 const metrics = makeMetrics();
 
+// Velocity Layer: Alerts Core (Slack)
+const { makeAlerter } = require('./lib/alerts');
+const fetchImpl = global.fetch || require('node-fetch');
+const slackWebhook = process.env.SLACK_VELOCITY_WEBHOOK;
+const envName = process.env.SENTRY_ENV || process.env.NODE_ENV || "dev";
+
+const alerter = makeAlerter({
+  metrics,
+  fetchImpl,
+  webhookUrl: slackWebhook,
+  env: envName,
+});
+
+alerter.start(logger);
+
 // Helper to get stable route key (for both Metrics and Sentry)
 function routeKey(req) {
   return `${req.method} ${req.route?.path || req.path}`;

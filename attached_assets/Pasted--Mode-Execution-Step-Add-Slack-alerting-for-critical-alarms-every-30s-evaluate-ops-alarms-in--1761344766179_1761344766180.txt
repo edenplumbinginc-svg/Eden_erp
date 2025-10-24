@@ -1,0 +1,141 @@
+[Mode: Execution]
+
+Step: Add Slack alerting for critical alarms: every 30s, evaluate /ops/alarms in-process and post a message for any new critical items (dedup for 5 minutes per route+kind). (Layer: Velocity → Alerts Core)
+
+Why it matters: You’ll get a proactive ping when something’s on fire, not after staring at the dashboard.
+
+Inputs needed:
+
+server.js
+
+lib/metrics.js (already exporting alarms())
+
+A Slack Incoming Webhook URL
+
+Command:
+
+Create lib/alerts.js
+
+// lib/alerts.js — Velocity/Alerts Core (Slack)
+const DEDUP_MS = 5 * 60 * 1000; // 5 minutes
+const INTERVAL_MS = 30 * 1000;  // check every 30s
+
+function makeAlerter({ metrics, fetchImpl, webhookUrl, env = "dev" }) {
+  const sent = new Map(); // key -> lastSentTs
+
+  function keyOf(a) {
+    return `${a.kind} :: ${a.route}`; // per-kind, per-route
+  }
+
+  function gc(now) {
+    for (const [k, ts] of sent.entries()) {
+      if (now - ts > DEDUP_MS) sent.delete(k);
+    }
+  }
+
+  async function postSlack(blocks) {
+    if (!webhookUrl) return;
+    const body = { blocks };
+    const res = await fetchImpl(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => "");
+      throw new Error(`Slack webhook ${res.status}: ${txt}`);
+    }
+  }
+
+  function alarmToBlocks(a) {
+    const color = a.severity === "critical" ? "#B91C1C" : "#D97706"; // red / amber
+    const title = a.kind === "error_rate" ? "High error rate" : "p95 regression";
+    const details = a.kind === "error_rate"
+      ? `err% (1m): *${a.evidence.err_rate_1m}%* — samples(1m): *${a.evidence.samples_1m}*`
+      : `p95: *${a.evidence.p95_prev3_ms}ms → ${a.evidence.p95_last3_ms}ms* (+${a.evidence.regress_abs_ms}ms, ${a.evidence.regress_pct}%)`;
+    return [
+      { type: "section", text: { type: "mrkdwn", text: `*${title}* — \`${a.route}\` (${a.severity.toUpperCase()})` } },
+      { type: "context", elements: [{ type: "mrkdwn", text: `Env: *${env}* • ${a.since}` }] },
+      { type: "section", text: { type: "mrkdwn", text: details } },
+      { type: "divider" },
+    ];
+  }
+
+  async function tick() {
+    const now = Date.now();
+    gc(now);
+    const payload = metrics.alarms(); // { alarms: [...] }
+    const list = (payload.alarms || []).filter(a => a.severity === "critical");
+    const fresh = list.filter(a => {
+      const k = keyOf(a);
+      const last = sent.get(k) || 0;
+      if (now - last > DEDUP_MS) {
+        sent.set(k, now);
+        return true;
+      }
+      return false;
+    });
+    if (!fresh.length) return;
+
+    // Batch into one Slack message (n blocks)
+    const blocks = fresh.flatMap(alarmToBlocks);
+    await postSlack(blocks);
+  }
+
+  function start() {
+    if (!webhookUrl) return { stop() {} };
+    const id = setInterval(() => tick().catch(() => {}), INTERVAL_MS);
+    id.unref?.();
+    return { stop: () => clearInterval(id) };
+  }
+
+  return { start, tick }; // expose tick for manual triggering/tests
+}
+
+module.exports = { makeAlerter };
+
+
+Wire it in server.js
+
+// server.js (after metrics is created)
+const { makeAlerter } = require("./lib/alerts");
+
+// Prefer global fetch; for older Node, use node-fetch
+const fetchImpl = global.fetch || (await import("node-fetch")).default;
+
+const slackWebhook = process.env.SLACK_VELOCITY_WEBHOOK; // set this to enable
+const envName = process.env.SENTRY_ENV || process.env.NODE_ENV || "dev";
+
+const alerter = makeAlerter({
+  metrics,
+  fetchImpl,
+  webhookUrl: slackWebhook,
+  env: envName,
+});
+
+alerter.start(); // no-op if webhook not set
+
+
+Add secret (only when you want alerts live)
+
+SLACK_VELOCITY_WEBHOOK=<your Slack Incoming Webhook URL>
+
+Success check:
+
+Set SLACK_VELOCITY_WEBHOOK (to a test Slack channel).
+
+Restart backend. Generate a critical alarm:
+
+Error rule: trigger ≥5% errors with ≥5 samples, or
+
+Regression rule: last3 p95 ≥50% & ≥30ms above prev3.
+
+Within ~30s, Slack receives a message with:
+
+Title (High error rate or p95 regression)
+
+Route, severity, env, evidence numbers
+
+Trigger again within 5 minutes for the same route+kind → no duplicate (dedup works). After 5 minutes, it may alert again if still critical.
+
+Next: wait for user.
