@@ -119,6 +119,12 @@ export const perfApi = {
   courtFlow: () => api.get('/api/perf/court-flow').then(r => r.data),
 };
 
+// Admin Configuration API
+export const adminApi = {
+  getUnackSla: () => api.get('/api/admin/sla/unack-handoff').then(r => r.data),
+  setUnackSla: (value_seconds) => api.put('/api/admin/sla/unack-handoff', { value_seconds }).then(r => r.data),
+};
+
 // Export the raw axios instance for direct use
 export { api };
 
