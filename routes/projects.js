@@ -40,12 +40,46 @@ const CreateTaskSchema = z.object({
 });
 
 // List projects - RBAC protected with project.view permission
+// Supports delta sync via ?updated_after=timestamp
 router.get('/', authenticate, requirePerm('project.view'), async (req, res) => {
   try {
-    const r = await pool.query(
-      'SELECT id, name, code, status, created_at FROM public.projects ORDER BY created_at DESC'
-    );
-    res.json(r.rows);
+    const limit = Math.min(Number(req.query.limit) || 50, 200);
+    const updatedAfter = req.query.updated_after;
+
+    let query, params;
+    if (updatedAfter) {
+      query = `
+        SELECT id, name, code, status, created_at, updated_at 
+        FROM public.projects 
+        WHERE updated_at > $1
+        ORDER BY updated_at DESC 
+        LIMIT $2
+      `;
+      params = [updatedAfter, limit];
+    } else {
+      query = `
+        SELECT id, name, code, status, created_at, updated_at 
+        FROM public.projects 
+        ORDER BY updated_at DESC 
+        LIMIT $1
+      `;
+      params = [limit];
+    }
+
+    const r = await pool.query(query, params);
+    
+    // Return with delta sync metadata
+    const nextUpdatedAfter = r.rows.length > 0 
+      ? r.rows[0].updated_at 
+      : (updatedAfter || new Date().toISOString());
+
+    res.json({
+      items: r.rows,
+      meta: {
+        count: r.rows.length,
+        next_updated_after: nextUpdatedAfter
+      }
+    });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
