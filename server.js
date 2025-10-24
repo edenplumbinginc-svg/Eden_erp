@@ -235,6 +235,7 @@ app.use('/api', require('./routes/taskChecklist'));
 app.use('/api', require('./routes/performance'));
 app.use('/api/admin/decisions', require('./routes/decisionsAdmin'));
 app.use('/api/admin/decisions', require('./routes/decisionsNotionSync'));
+app.use('/api', require('./routes/ballHistory'));
 
 // --- Subtask routes need to be at /api level ---
 app.patch('/api/subtasks/:id', async (req, res) => {
