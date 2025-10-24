@@ -1,0 +1,78 @@
+Step: Emit Sentry trace headers (sentry-trace, baggage) on every response to enable cross-layer tracing (backend ⇄ frontend) and future UI linkage.
+
+Why it matters: With this, any React client or other services can stitch their telemetry to the exact backend request. It’s the glue that makes your “velocity & layering” visible end-to-end.
+
+Inputs needed:
+
+Your Express server file (same one where you mounted logging/health)
+
+@sentry/node already initialized
+
+Command:
+
+Add this tiny middleware after Sentry init and your requestId middleware, but before routes:
+
+// Layer: Observability/Tracing — cross-service propagation
+const Sentry = require("@sentry/node");
+
+app.use((req, res, next) => {
+  // Capture/ensure a current span/transaction where available
+  const scope = Sentry.getCurrentHub().getScope();
+  const span = scope && scope.getSpan && scope.getSpan();
+
+  // Build outbound headers for the client (or any caller) to continue the trace
+  // These will be used by React or other services to link their events to this request.
+  if (span && typeof span.toTraceparent === "function") {
+    res.setHeader("sentry-trace", span.toTraceparent());
+  }
+  const baggage = Sentry.getBaggage
+    ? Sentry.getBaggage()
+    : (Sentry.dynamicSamplingContext && span
+        ? Sentry.dynamicSamplingContext(span)
+        : null);
+  if (baggage) {
+    // Accept either API; normalize to 'baggage' header value
+    const baggageValue = Array.isArray(baggage) ? baggage.join(",") : (baggage || "");
+    if (baggageValue) res.setHeader("baggage", baggageValue);
+  }
+
+  // Already have req_id? Surface it, too.
+  if (req.id) res.setHeader("X-Request-Id", req.id);
+
+  next();
+});
+
+
+(Optional, nice) Ensure every captured error gets the same req_id tag:
+
+app.use((req, res, next) => {
+  Sentry.configureScope(scope => {
+    if (req.id) scope.setTag("req_id", req.id);
+    if (res.locals?.user?.id) scope.setUser({ id: String(res.locals.user.id), email: res.locals.user.email || undefined });
+  });
+  next();
+});
+
+
+Success check:
+
+Call any API:
+
+curl -i http://localhost:3000/version
+
+
+Response headers should include:
+
+sentry-trace: <traceparent string>
+
+baggage: sentry-… (a CSV-style value)
+
+X-Request-Id: <uuid>
+
+Trigger /api/_sentry-test once; open the event in Sentry:
+
+Event tags should include req_id (from the scope).
+
+Future: Your React app can read sentry-trace + baggage to continue the same trace automatically when we wire the frontend SDK.
+
+Next: wait for user.

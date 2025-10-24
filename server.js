@@ -138,6 +138,48 @@ if (sentryEnabled && Sentry.Handlers) {
   }
 }
 
+// --- Layer: Observability/Tracing — Cross-service propagation ---
+app.use((req, res, next) => {
+  // Capture current span/transaction for trace propagation
+  const scope = Sentry.getCurrentHub().getScope();
+  const span = scope && scope.getSpan && scope.getSpan();
+
+  // Build outbound headers for client to continue the trace
+  if (span && typeof span.toTraceparent === "function") {
+    res.setHeader("sentry-trace", span.toTraceparent());
+  }
+  
+  const baggage = Sentry.getBaggage
+    ? Sentry.getBaggage()
+    : (Sentry.dynamicSamplingContext && span
+        ? Sentry.dynamicSamplingContext(span)
+        : null);
+  
+  if (baggage) {
+    const baggageValue = Array.isArray(baggage) ? baggage.join(",") : (baggage || "");
+    if (baggageValue) res.setHeader("baggage", baggageValue);
+  }
+
+  // Already have req_id? Surface it, too (redundant with requestIdMiddleware but ensures it's set)
+  if (req.id) res.setHeader("X-Request-Id", req.id);
+
+  next();
+});
+
+// --- Layer: Observability/Tracing — Sentry scope enrichment ---
+app.use((req, res, next) => {
+  Sentry.configureScope(scope => {
+    if (req.id) scope.setTag("req_id", req.id);
+    if (res.locals?.user?.id) {
+      scope.setUser({ 
+        id: String(res.locals.user.id), 
+        email: res.locals.user.email || undefined 
+      });
+    }
+  });
+  next();
+});
+
 // Apply metrics collection middleware
 app.use(metricsMiddleware);
 
