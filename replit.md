@@ -21,6 +21,8 @@ Core modules include `coordination` (projects, tasks, comments, attachments) and
 
 **Performance Events**: Micro-telemetry system that automatically logs completion metrics when checklist items are marked as done. Tracks actor, task, duration, and department for "who finishes fast" analytics. Provides foundation for badges, points, and leaderboards. Includes 3 analytical views (v_perf_fastest_week, v_perf_dept_month, v_perf_recent) for performance insights.
 
+**Performance API**: Read-only REST endpoints exposing performance metrics for UI consumption. Three endpoints protected by authentication: `/api/perf/fastest-week` (top 20 performers this week), `/api/perf/dept-month` (department rankings last 30 days), `/api/perf/me/recent` (user's 30 most recent completions). Queries pre-computed database views for optimal performance. Ready for leaderboard UI implementation.
+
 ### System Design Choices
 The project adopts a monolithic architecture with a scalable PostgreSQL database. It emphasizes observability through monitoring, logging, and health checks, and is designed for security with enforced authentication and multi-layered database validation. An `autosync.sh` script automates Git commits and pushes.
 
