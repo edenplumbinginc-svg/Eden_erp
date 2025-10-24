@@ -1,0 +1,102 @@
+Step: Phase 9I — End-to-end Court Flow smoke test (events → panel → metrics → SLA policy → banner → nudge).
+
+Why it matters: Proves the full loop works in production: logging, visualization, KPIs, config, escalation, and manual intervention.
+
+Inputs needed:
+
+App base URL + admin JWT
+
+One task ID you can hand off
+
+Ability to temporarily set SLA to 60s (we’ll restore after)
+
+Command:
+
+Set SLA to 60s (temporary)
+
+curl -s -X PUT https://APP_URL/api/admin/sla/unack-handoff \
+  -H "Authorization: Bearer ADMIN_JWT" -H "Content-Type: application/json" \
+  -d '{"value_seconds":60}'
+
+
+Create a handoff (do NOT acknowledge)
+
+In UI: open a task → “Handoff” to another department.
+
+Or API (replace IDs/roles):
+
+# example pseudo: adjust to your existing handoff endpoint if available
+# curl -X POST https://APP_URL/api/tasks/TASK_ID/handoff -d '{"to_role":"Operations"}' ...
+
+
+Verify event logged
+
+curl -s https://APP_URL/api/tasks/TASK_ID/ball-history \
+  -H "Authorization: Bearer ADMIN_JWT" | jq '.events[0] | {from_role,to_role,acknowledged,created_at}'
+
+
+Expect: acknowledged:false.
+
+Wait ~70s → verify SLA breach banner on the task page
+
+UI: open /tasks/TASK_ID.
+Expect red SLA banner showing age > SLA and Nudge (admin).
+
+Run SLA policy (still DRY_RUN)
+
+Admin UI → /admin/decisions → escalate.unack_48h → Run Now.
+
+Check Execution History: entries show effect=notify, dry_run=true, success=false (simulated).
+
+Flip policy LIVE → run again
+
+Toggle DRY_RUN → OFF (confirm).
+
+Run Now again.
+
+Execution History: success=true. Recipient should receive a notification.
+
+Nudge manually from the task
+
+curl -s -X POST https://APP_URL/api/tasks/TASK_ID/ball-nudge \
+  -H "Authorization: Bearer ADMIN_JWT"
+
+
+Expect { ok:true, nudged:true }. (Manual, not logged as decision.)
+
+Acknowledge the handoff
+
+UI: Acknowledge in Responsibility Chain panel, or:
+
+curl -s -X PATCH https://APP_URL/api/tasks/TASK_ID/ball-history/EVENT_ID/ack \
+  -H "Authorization: Bearer ADMIN_JWT"
+
+
+Confirm KPI metrics update
+
+curl -s https://APP_URL/api/perf/court-flow \
+  -H "Authorization: Bearer ADMIN_JWT" | jq '.items'
+
+
+Expect: department counts reflect 1 pass; unacked decreases after ack; avg hold grows with time.
+
+Restore SLA to 48h
+
+curl -s -X PUT https://APP_URL/api/admin/sla/unack-handoff \
+  -H "Authorization: Bearer ADMIN_JWT" -H "Content-Type: application/json" \
+  -d '{"value_seconds":172800}'
+
+
+Success check:
+
+Ball event logged (acknowledged:false → later true after step 8).
+
+Task page shows yellow→red SLA banner as time passes; Nudge works (200).
+
+Decisions panel shows one DRY_RUN and one LIVE success for escalate.unack_48h.
+
+Court Flow dashboard reflects the handoff in 30-day KPIs (passes_in, acks/unacked, hold times).
+
+SLA restored to 48h.
+
+Next: wait for user.
