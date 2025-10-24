@@ -50,6 +50,8 @@ assertSingleDatabaseUrl();
 
 const express = require('express');
 const rateLimit = require('express-rate-limit');
+const { v4: uuidv4 } = require('uuid');
+const pinoHttp = require('pino-http');
 const { bootstrapDatabase, refreshPoolMetadata } = require('./services/database');
 const { logActivity } = require('./middleware/audit');
 const { metricsMiddleware } = require('./lib/metrics');
@@ -57,6 +59,62 @@ const logger = require('./lib/logger');
 
 const app = express();
 app.use(express.json());
+
+// Request ID middleware (before all other middleware)
+function requestIdMiddleware(req, res, next) {
+  // Preserve upstream ID if present, else create one
+  const hdr = req.headers['x-request-id'];
+  const id = (typeof hdr === 'string' && hdr.trim()) ? hdr.trim() : uuidv4();
+  req.id = id;
+  res.locals.req_id = id;
+  res.setHeader('X-Request-Id', id);
+  next();
+}
+
+// Pino HTTP middleware (structured logs)
+const httpLogger = pinoHttp({
+  logger,
+  customProps: (req, res) => ({
+    req_id: req.id,
+    user_id: res.locals?.user?.id || null,
+    user_email: res.locals?.user?.email || null,
+    role: res.locals?.user?.role || null,
+  }),
+  serializers: {
+    req(req) {
+      return {
+        id: req.id,
+        method: req.method,
+        url: req.url,
+        remoteAddress: req.socket?.remoteAddress,
+        remotePort: req.socket?.remotePort,
+        headers: {
+          'user-agent': req.headers['user-agent'],
+          'x-forwarded-for': req.headers['x-forwarded-for'],
+        },
+      };
+    },
+    res(res) {
+      return { statusCode: res.statusCode };
+    }
+  }
+});
+
+// Request timing hook
+function requestTimingMiddleware(req, res, next) {
+  const start = process.hrtime.bigint();
+  res.on('finish', () => {
+    const end = process.hrtime.bigint();
+    const duration_ms = Number(end - start) / 1e6;
+    req.log.info({ req_id: req.id, duration_ms, statusCode: res.statusCode }, 'req_complete');
+  });
+  next();
+}
+
+// Apply correlation and logging middleware early
+app.use(requestIdMiddleware);
+app.use(httpLogger);
+app.use(requestTimingMiddleware);
 
 const authRateLimiter = rateLimit({
   windowMs: 60000,

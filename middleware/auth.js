@@ -102,8 +102,9 @@ async function requireAuth(req, res, next) {
   }
 
   req.user = user;
+  res.locals.user = user;
   
-  // Set Sentry user context for better error tracking
+  // Set Sentry user context and tags for better error tracking
   if (user.id || user.email) {
     try {
       const Sentry = require('@sentry/node');
@@ -112,6 +113,10 @@ async function requireAuth(req, res, next) {
         email: user.email,
         role: user.role
       });
+      // Tag Sentry events with req_id for correlation
+      if (req.id) {
+        Sentry.setTag('req_id', req.id);
+      }
     } catch (err) {
       // Sentry not initialized, skip user tagging
     }
