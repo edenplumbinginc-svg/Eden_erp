@@ -1,0 +1,93 @@
+[Mode: Execution]
+
+**Layer/Stage:** Backend Layer → Data Sync Loop | Spin-Up → Modify
+
+**Step:** Implement incremental sync for Tasks using `updated_after` (ISO timestamp) so the UI fetches only changes, not full lists.
+
+**Why it matters:** This shaves network + CPU on every navigation and background refresh. You’ll move less data and render faster while staying perfectly up to date.
+
+**Inputs needed:**
+
+* Express API (`/api/tasks`)
+* `tasks` table with an `updated_at` column (UTC)
+
+**Command (backend delta endpoint + index):**
+
+1. **Add an index for fast range scans**
+
+```sql
+-- apps/api/sql/migrations/20251023_tasks_updated_at_idx.sql
+create index if not exists tasks_updated_at_idx on tasks (updated_at desc);
+```
+
+2. **Extend the tasks route to accept `updated_after`**
+
+```ts
+// apps/api/src/routes/tasks.ts
+import { Router } from "express";
+import { requireAuth, requirePerm } from "../middleware/auth";
+import { db } from "../db";
+import { tasks } from "../db/schema/tasks";
+import { desc, gt } from "drizzle-orm";
+
+const router = Router();
+
+// READ (delta-aware)
+router.get("/tasks", requireAuth, requirePerm("tasks:read"), async (req, res) => {
+  const limit = Math.min(Number(req.query.limit ?? 50), 200);
+  const updatedAfter = req.query.updated_after as string | undefined;
+
+  const where = updatedAfter
+    ? gt(tasks.updatedAt, new Date(updatedAfter))
+    : undefined;
+
+  // minimal projection for list views
+  const rows = await db.query.tasks.findMany({
+    where,
+    orderBy: desc(tasks.updatedAt),
+    limit,
+    columns: { id: true, title: true, status: true, updatedAt: true, projectId: true },
+  });
+
+  res.json({
+    items: rows,
+    meta: {
+      count: rows.length,
+      // high-water mark for the next delta request
+      next_updated_after: rows[0]?.updatedAt ?? updatedAfter ?? null,
+    },
+  });
+});
+
+export default router;
+```
+
+3. **(Optional) Add the same pattern to Projects**
+
+```sql
+create index if not exists projects_updated_at_idx on projects (updated_at desc);
+```
+
+```ts
+// apps/api/src/routes/projects.ts -> GET /projects?updated_after=...
+```
+
+**Success check (backend):**
+
+```bash
+# 1) Full load
+curl -s "http://localhost:3000/api/tasks?limit=20" -H "Authorization: Bearer <JWT>" | jq .
+# Note the meta.next_updated_after value (e.g., "2025-10-23T17:12:44.210Z")
+
+# 2) Delta load (no changes yet → expect 0 items)
+curl -s "http://localhost:3000/api/tasks?updated_after=2025-10-23T17:12:44.210Z" -H "Authorization: Bearer <JWT>" | jq .
+
+# 3) After creating/updating a task → delta returns only the changed rows
+```
+
+**Layer/Stage Update:**
+
+* Backend Layer: Modify ✅ → Test
+* Integration Layer: Standby (client will hook into this next)
+
+**Next:** wait for user.

@@ -17,7 +17,7 @@ function parseQuery(qs = {}) {
   const allowed = new Set([
     'status', 'priority', 'assignee', 'project', 'department', 'bic', 
     'due_from', 'due_to', 'overdue', 'idle', 'q', 
-    'page', 'limit', 'sort'
+    'page', 'limit', 'sort', 'updated_after', 'order'
   ]);
 
   for (const k of Object.keys(qs)) {
@@ -35,7 +35,8 @@ function parseQuery(qs = {}) {
   );
 
   let sortCol = 'updated_at';
-  let sortDir = 'desc';
+  let sortDir = qs.order === 'asc' ? 'asc' : 'desc';
+  
   if (qs.sort) {
     const [col, dir] = String(qs.sort).split(':');
     if (!ALLOWED_SORT.has(col)) {
@@ -77,6 +78,7 @@ function parseQuery(qs = {}) {
     overdue: qs.overdue === 'true' || qs.overdue === '1',
     idle: qs.idle === 'true' || qs.idle === '1',
     q: qs.q || null,
+    updated_after: qs.updated_after || null,
     page,
     limit,
     sortCol,
@@ -88,7 +90,7 @@ function parseQuery(qs = {}) {
 async function fetchTasks(filters) {
   const {
     status, priority, assignee, project, department, bic,
-    due_from, due_to, overdue, idle, q,
+    due_from, due_to, overdue, idle, q, updated_after,
     page, limit, sortCol, sortDir
   } = filters;
 
@@ -97,6 +99,11 @@ async function fetchTasks(filters) {
   let i = 1;
 
   where.push('t.deleted_at IS NULL');
+
+  if (updated_after) {
+    where.push(`t.updated_at > $${i++}::timestamptz`);
+    vals.push(updated_after);
+  }
 
   if (status && status.length > 0) {
     where.push(`t.status = ANY($${i++})`);
@@ -195,12 +202,22 @@ async function fetchTasks(filters) {
       client.query(sql, vals),
       client.query(countSql, vals.slice(0, vals.length - 2))
     ]);
+    
+    const items = rowsRes.rows;
+    const nextUpdatedAfter = items.length > 0 
+      ? items[0].updated_at 
+      : updated_after || null;
+    
     return {
-      items: rowsRes.rows,
+      items,
       total: countRes.rows[0].total,
       page,
       limit,
-      totalPages: Math.ceil(countRes.rows[0].total / limit)
+      totalPages: Math.ceil(countRes.rows[0].total / limit),
+      meta: {
+        count: items.length,
+        next_updated_after: nextUpdatedAfter
+      }
     };
   } finally {
     client.release();
