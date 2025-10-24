@@ -26,6 +26,7 @@ import IntakeQueue from './pages/IntakeQueue';
 import TeamOverview from './pages/TeamOverview';
 import ArchiveView from './pages/ArchiveView';
 import AdminRbacPage from './pages/AdminRbacPage';
+import DecisionsPage from './pages/admin/DecisionsPage';
 import PerformanceLeaderboardPage from './pages/PerformanceLeaderboardPage';
 
 const queryClient = new QueryClient();
@@ -239,6 +240,14 @@ function AppContent() {
             element={
               <RequireAuth>
                 <AdminRbacPage />
+              </RequireAuth>
+            } 
+          />
+          <Route 
+            path="/admin/decisions" 
+            element={
+              <RequireAuth requiredPermission="admin:manage">
+                <DecisionsPage />
               </RequireAuth>
             } 
           />
