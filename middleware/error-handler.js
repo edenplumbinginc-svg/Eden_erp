@@ -12,15 +12,25 @@ function errorHandler(err, req, res, next) {
   // Record error in metrics
   metrics.recordError(err.name || 'Error', err.message, err.stack);
   
-  // Log error with context
-  logger.error('Unhandled error', {
+  // Log error with full correlation context
+  const logContext = {
     error: err.message,
     stack: err.stack,
     path: req.path,
     method: req.method,
     statusCode: err.statusCode || 500,
-    type: err.name
-  });
+    type: err.name,
+    req_id: req.id
+  };
+  
+  // Add user context if available (from auth middleware)
+  if (res.locals.user) {
+    logContext.user_id = res.locals.user.id;
+    logContext.user_email = res.locals.user.email;
+    logContext.role = res.locals.user.role;
+  }
+  
+  logger.error(logContext, 'Unhandled error');
   
   // Don't leak error details in production
   const isDevelopment = process.env.NODE_ENV !== 'production';
