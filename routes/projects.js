@@ -40,27 +40,41 @@ const CreateTaskSchema = z.object({
 });
 
 // List projects - RBAC protected with project.view permission
-// Supports delta sync via ?updated_after=timestamp
+// Supports delta sync via ?cursor_ts=timestamp&cursor_id=uuid (composite cursor)
 router.get('/', authenticate, requirePerm('project.view'), async (req, res) => {
   try {
     const limit = Math.min(Number(req.query.limit) || 50, 200);
-    const updatedAfter = req.query.updated_after;
+    const cursorTs = req.query.cursor_ts || req.query.updated_after; // Support both params for backward compat
+    const cursorId = req.query.cursor_id;
 
     let query, params;
-    if (updatedAfter) {
+    if (cursorTs && cursorId) {
+      // Composite cursor: fetch rows after (cursor_ts, cursor_id)
+      // For DESC ordering: (updated_at < $1) OR (updated_at = $1 AND id < $2)
       query = `
         SELECT id, name, code, status, created_at, updated_at 
         FROM public.projects 
-        WHERE updated_at > $1
-        ORDER BY updated_at DESC 
+        WHERE (updated_at < $1::timestamptz) OR (updated_at = $1::timestamptz AND id < $2::uuid)
+        ORDER BY updated_at DESC, id DESC
+        LIMIT $3
+      `;
+      params = [cursorTs, cursorId, limit];
+    } else if (cursorTs) {
+      // Fallback for old clients: use timestamp only with > to page forward
+      query = `
+        SELECT id, name, code, status, created_at, updated_at 
+        FROM public.projects 
+        WHERE updated_at > $1::timestamptz
+        ORDER BY updated_at DESC, id DESC
         LIMIT $2
       `;
-      params = [updatedAfter, limit];
+      params = [cursorTs, limit];
     } else {
+      // Initial load
       query = `
         SELECT id, name, code, status, created_at, updated_at 
         FROM public.projects 
-        ORDER BY updated_at DESC 
+        ORDER BY updated_at DESC, id DESC
         LIMIT $1
       `;
       params = [limit];
@@ -68,16 +82,19 @@ router.get('/', authenticate, requirePerm('project.view'), async (req, res) => {
 
     const r = await pool.query(query, params);
     
-    // Return with delta sync metadata
-    const nextUpdatedAfter = r.rows.length > 0 
-      ? r.rows[0].updated_at 
-      : (updatedAfter || new Date().toISOString());
+    // Return with delta sync metadata - composite cursor from last row
+    const lastRow = r.rows[r.rows.length - 1];
+    const nextCursor = lastRow
+      ? { ts: lastRow.updated_at, id: lastRow.id }
+      : (cursorTs ? { ts: cursorTs, id: cursorId } : null);
 
     res.json({
       items: r.rows,
       meta: {
         count: r.rows.length,
-        next_updated_after: nextUpdatedAfter
+        next_cursor: nextCursor,
+        // Legacy field for backward compatibility
+        next_updated_after: nextCursor?.ts
       }
     });
   } catch (e) {

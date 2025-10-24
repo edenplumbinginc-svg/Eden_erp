@@ -49,21 +49,41 @@ export function useDeltaSync(fetchPathBase, opts = {}) {
     const itemsList = data.items || data || [];
     setItems(itemsList);
     
-    if (data?.meta?.next_updated_after) {
+    // Store composite cursor or fallback to timestamp-only
+    if (data?.meta?.next_cursor) {
+      localStorage.setItem(key, JSON.stringify(data.meta.next_cursor));
+    } else if (data?.meta?.next_updated_after) {
       localStorage.setItem(key, data.meta.next_updated_after);
     }
     setLoading(false);
   }
 
   async function refreshDelta() {
-    const since = localStorage.getItem(key);
-    const url = since 
-      ? `${fetchPathBase}?updated_after=${encodeURIComponent(since)}` 
-      : `${fetchPathBase}?limit=${opts.initialLimit || 20}`;
+    const cursorData = localStorage.getItem(key);
+    let url;
+    
+    if (cursorData) {
+      try {
+        // Try parsing as composite cursor {ts, id}
+        const cursor = JSON.parse(cursorData);
+        if (cursor.ts && cursor.id) {
+          url = `${fetchPathBase}?cursor_ts=${encodeURIComponent(cursor.ts)}&cursor_id=${encodeURIComponent(cursor.id)}`;
+        } else {
+          // Fallback: old format or invalid
+          url = `${fetchPathBase}?updated_after=${encodeURIComponent(cursorData)}`;
+        }
+      } catch {
+        // Not JSON, treat as old timestamp-only cursor
+        url = `${fetchPathBase}?updated_after=${encodeURIComponent(cursorData)}`;
+      }
+    } else {
+      // No cursor, do full load
+      url = `${fetchPathBase}?limit=${opts.initialLimit || 20}`;
+    }
     
     const data = await authedGet(url);
     
-    if (since) {
+    if (cursorData) {
       // Delta update
       if ((data.meta?.count || 0) > 0) {
         setItems(prev => mergeDelta(prev, data.items));
@@ -73,7 +93,10 @@ export function useDeltaSync(fetchPathBase, opts = {}) {
       setItems(data.items || data || []);
     }
     
-    if (data?.meta?.next_updated_after) {
+    // Store composite cursor or fallback to timestamp-only
+    if (data?.meta?.next_cursor) {
+      localStorage.setItem(key, JSON.stringify(data.meta.next_cursor));
+    } else if (data?.meta?.next_updated_after) {
       localStorage.setItem(key, data.meta.next_updated_after);
     }
   }

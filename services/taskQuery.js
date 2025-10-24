@@ -17,7 +17,7 @@ function parseQuery(qs = {}) {
   const allowed = new Set([
     'status', 'priority', 'assignee', 'project', 'department', 'bic', 
     'due_from', 'due_to', 'overdue', 'idle', 'q', 
-    'page', 'limit', 'sort', 'updated_after', 'order'
+    'page', 'limit', 'sort', 'updated_after', 'cursor_ts', 'cursor_id', 'order'
   ]);
 
   for (const k of Object.keys(qs)) {
@@ -79,6 +79,8 @@ function parseQuery(qs = {}) {
     idle: qs.idle === 'true' || qs.idle === '1',
     q: qs.q || null,
     updated_after: qs.updated_after || null,
+    cursor_ts: qs.cursor_ts || null,
+    cursor_id: qs.cursor_id || null,
     page,
     limit,
     sortCol,
@@ -91,6 +93,7 @@ async function fetchTasks(filters) {
   const {
     status, priority, assignee, project, department, bic,
     due_from, due_to, overdue, idle, q, updated_after,
+    cursor_ts, cursor_id,
     page, limit, sortCol, sortDir
   } = filters;
 
@@ -100,7 +103,16 @@ async function fetchTasks(filters) {
 
   where.push('t.deleted_at IS NULL');
 
-  if (updated_after) {
+  // Composite cursor support (preferred over updated_after)
+  if (cursor_ts && cursor_id) {
+    // For DESC ordering: (updated_at < $ts) OR (updated_at = $ts AND id < $id)
+    where.push(`((t.updated_at < $${i}::timestamptz) OR (t.updated_at = $${i}::timestamptz AND t.id < $${i+1}::uuid))`);
+    vals.push(cursor_ts);
+    i++;
+    vals.push(cursor_id);
+    i++;
+  } else if (updated_after && !cursor_id) {
+    // Legacy timestamp-only cursor: use > to avoid duplicates
     where.push(`t.updated_at > $${i++}::timestamptz`);
     vals.push(updated_after);
   }
@@ -168,7 +180,7 @@ async function fetchTasks(filters) {
 
   const offset = (page - 1) * limit;
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
-  const orderSql = `ORDER BY t.${sortCol} ${sortDir}, t.id ASC`;
+  const orderSql = `ORDER BY t.${sortCol} ${sortDir}, t.id DESC`;
 
   const sql = `
     SELECT 
@@ -204,9 +216,17 @@ async function fetchTasks(filters) {
     ]);
     
     const items = rowsRes.rows;
+    
+    // Return composite cursor from last row (most recent in DESC order)
+    const lastRow = items[items.length - 1];
+    const nextCursor = lastRow
+      ? { ts: lastRow.updated_at, id: lastRow.id }
+      : (cursor_ts ? { ts: cursor_ts, id: cursor_id } : null);
+    
+    // Legacy field for backward compatibility
     const nextUpdatedAfter = items.length > 0 
       ? items[0].updated_at 
-      : updated_after || null;
+      : updated_after || cursor_ts || null;
     
     return {
       items,
@@ -216,6 +236,7 @@ async function fetchTasks(filters) {
       totalPages: Math.ceil(countRes.rows[0].total / limit),
       meta: {
         count: items.length,
+        next_cursor: nextCursor,
         next_updated_after: nextUpdatedAfter
       }
     };
