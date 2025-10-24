@@ -370,6 +370,55 @@ async function runDecisionCycle() {
       }
     }
 
+    // 4) Unacknowledged handoff SLA escalation
+    const unackPolicy = policies.find(p => p.slug === 'escalate.unack_48h');
+    if (unackPolicy) {
+      // Read SLA threshold from config (fallback to 48h)
+      const slaResult = await pool.query(`
+        SELECT value_seconds FROM sla_thresholds WHERE key = 'unacknowledged_handoff_sla'
+      `);
+      const slaSeconds = Number(slaResult.rows[0]?.value_seconds || 48 * 3600);
+
+      // Find unacknowledged events older than SLA
+      const eventsResult = await pool.query(`
+        SELECT e.id as event_id, e.task_id, e.to_role, e.created_at, t.title, t.project_id
+        FROM ball_in_court_events e
+        JOIN tasks t ON t.id = e.task_id
+        WHERE e.acknowledged = false
+          AND e.created_at <= now() - make_interval(secs => $1)
+        ORDER BY e.created_at ASC
+        LIMIT 100
+      `, [slaSeconds]);
+
+      for (const ev of eventsResult.rows) {
+        const payload = {
+          kind: 'handoff_unack_sla',
+          eventId: ev.event_id,
+          toRole: ev.to_role,
+          title: ev.title,
+          slaHours: Math.round(slaSeconds / 3600),
+          createdAt: ev.created_at
+        };
+
+        const result = await executeAction(
+          unackPolicy,
+          'notify',
+          { type: 'task', id: ev.task_id },
+          payload,
+          async () => {
+            const message = `Unacknowledged handoff (${ev.to_role}) exceeded SLA (${Math.round(slaSeconds / 3600)}h): ${ev.title}`;
+            await notifyRole(ev.to_role || 'ops', message, 'task', ev.task_id);
+          }
+        );
+
+        if (result.executed) {
+          totalExecutions++;
+        } else if (result.reason === 'already_done') {
+          totalSkipped++;
+        }
+      }
+    }
+
     const elapsed = Date.now() - startTime;
     console.log(`[DECISIONS] Cycle complete: ${totalExecutions} executions, ${totalSkipped} skipped (already done), ${elapsed}ms`);
 
