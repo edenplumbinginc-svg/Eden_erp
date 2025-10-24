@@ -23,3 +23,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: true
   }
 });
+
+// Expose to window for browser console testing
+if (typeof window !== 'undefined') {
+  window.supabase = supabase;
+}
