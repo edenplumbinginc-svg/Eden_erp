@@ -61,9 +61,8 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const { v4: uuidv4 } = require('uuid');
 const pinoHttp = require('pino-http');
-const { bootstrapDatabase, refreshPoolMetadata } = require('./services/database');
+const { bootstrapDatabase, refreshPoolMetadata, pool } = require('./services/database');
 const { logActivity } = require('./middleware/audit');
-const { metricsMiddleware } = require('./lib/metrics');
 const logger = require('./lib/logger');
 
 const app = express();
@@ -219,9 +218,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Apply metrics collection middleware
-app.use(metricsMiddleware);
-
 // Enable CORS for frontend development
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
@@ -235,7 +231,8 @@ app.use((req, res, next) => {
 app.use(logActivity);
 
 // Bootstrap database on startup (verify connection and extensions)
-bootstrapDatabase()
+// Store promise for startup gate to await
+const bootstrapPromise = bootstrapDatabase()
   .then((result) => {
     if (result.connected && !result.degraded) {
       logger.info('Database bootstrap successful', { tableCount: result.tableCount });
@@ -250,14 +247,16 @@ bootstrapDatabase()
       Sentry.captureMessage('SENTRY_INIT_OK');
       logger.info('Sentry monitoring active');
     }
+    
+    return result;
   })
   .catch(err => {
     logger.critical('Unexpected error during bootstrap', { error: err.message });
+    return { connected: false, error: err.message, degraded: true };
   });
 
 // ⚙️ --- DEBUG ONLY (disabled in production) ---
 const { Pool } = require('pg');
-const { pool } = require('./services/database');
 
 // Only enable debug endpoint in development
 if (process.env.NODE_ENV !== 'production') {
@@ -643,6 +642,12 @@ app.listen(port, () => {
 // --- Active Layer: Resilience/Auto-Restart Guard — Startup gate ---
 (async () => {
   try {
+    // CRITICAL: Wait for database bootstrap to complete before health check
+    // This prevents race condition where health check runs before pool is ready
+    console.log('[STARTUP_GATE] Waiting for database bootstrap to complete...');
+    await bootstrapPromise;
+    console.log('[STARTUP_GATE] Database bootstrap complete, running health check...');
+    
     const h = await getHealth();
     const ok = h?.checks?.db?.ok === true;
     if (!ok) {
