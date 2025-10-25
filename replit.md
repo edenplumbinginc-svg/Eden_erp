@@ -46,6 +46,8 @@ Core modules include `coordination` (projects, tasks, comments, attachments) and
 
 **Showcase Page** (`/showcase`): Auto-generated visual testing page listing all 24 routes from UI contract with Material Design styling. Auto-generates via pre-build hooks (`scripts/generate-showcase.js`) before dev/build/preview. Provides single-click navigation to any route for QA and demos. Auth-protected route with responsive grid layout.
 
+**Why Eden Page** (`/about/eden`): Workflow & differentiation documentation page for stakeholders and clients. Content-driven architecture using JSON configuration (`apps/coordination_ui/src/about/eden-content.json`) for easy versioning and updates. Features three core pillars (Noise-free Alerts, Incident Correlation, Guard-Driven Releases), end-to-end workflow visualization (Field → Incident → Guard), and competitive comparison table. Fully responsive with Material Design styling using design token utilities. Linked prominently from Showcase page for discoverability.
+
 ### System Design Choices
 The project adopts a monolithic architecture with a scalable PostgreSQL database. It emphasizes observability through monitoring, logging, and health checks, and is designed for security with enforced authentication and multi-layered database validation. An `autosync.sh` script automates Git commits and pushes.
 
