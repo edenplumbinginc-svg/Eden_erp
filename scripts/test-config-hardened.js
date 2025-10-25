@@ -11,11 +11,10 @@ function testConfig(envOverrides, expectFailure = false) {
   const testEnv = { ...process.env, ...envOverrides };
   
   const result = spawnSync('node', ['-e', `
-    require('dotenv').config();
     Object.assign(process.env, ${JSON.stringify(envOverrides)});
     const { cfg, cfgSnapshot } = require('./lib/config');
     const c = cfg();
-    console.log(JSON.stringify({ config: cfgSnapshot(), values: c }));
+    process.stdout.write(JSON.stringify({ config: cfgSnapshot(), values: c }));
   `], {
     env: testEnv,
     encoding: 'utf8',
@@ -24,7 +23,7 @@ function testConfig(envOverrides, expectFailure = false) {
   
   return {
     exitCode: result.status,
-    stdout: result.stdout,
+    stdout: result.stdout.trim(),
     stderr: result.stderr,
     success: result.status === 0
   };
