@@ -49,11 +49,13 @@ export default function Velocity() {
   const [alarms, setAlarms] = useState(null);  // from /ops/alarms
   const [relImpact, setRelImpact] = useState(null);  // from /ops/release-impact
   const [slo, setSlo] = useState(null);        // from /ops/slo
+  const [guard, setGuard] = useState(null);    // from /ops/release-guard
   const [err, setErr] = useState(null);
   const [sortBy, setSortBy] = useState("rps");
   const [desc, setDesc] = useState(true);
   const [since, setSince] = useState(null);
   const [showAlerts, setShowAlerts] = useState(false);
+  const [showGuard, setShowGuard] = useState(false);
 
   async function fetchMetrics() {
     try {
@@ -111,6 +113,21 @@ export default function Velocity() {
   useEffect(() => {
     fetchSlo();
     const id = setInterval(fetchSlo, 10_000);
+    return () => clearInterval(id);
+  }, []);
+
+  async function fetchGuard() {
+    try {
+      // Conservative defaults: ignore warnings & regressions, require 5+ samples, hard error at 20%
+      const url = "/ops/release-guard?allow_warn=true&check_regress=false&min_samples=5&hard_error_pct=20";
+      const r = await fetch(url, { cache: "no-store" });
+      const j = await r.json().catch(() => null);
+      if (j) setGuard(j);
+    } catch { /* soft-fail */ }
+  }
+  useEffect(() => {
+    fetchGuard();
+    const id = setInterval(fetchGuard, 30_000);
     return () => clearInterval(id);
   }, []);
 
@@ -190,6 +207,30 @@ export default function Velocity() {
           Env: {snap?.env ?? "—"} • Generated: {snap?.generated_at ?? "—"} • Last fetch: {since ?? "—"}
         </div>
       </div>
+
+      {/* Release Guard banner */}
+      {guard && (
+        <div className={`flex items-center justify-between rounded-lg border px-3 py-2
+            ${guard.pass
+              ? "bg-green-50 text-green-700 border-green-200"
+              : "bg-red-50 text-red-700 border-red-200"}`}>
+          <div className="text-sm">
+            <b>{guard.pass ? "Release Guard: PASS" : "Release Guard: FAIL"}</b>
+            <span className="opacity-70"> • release </span>
+            <code className="font-mono">{guard.release || "—"}</code>
+            <span className="opacity-70"> • samples≥{guard.guard?.min_samples ?? 5} • hard_error≥{guard.guard?.hard_error_pct ?? 20}%</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              className="px-3 py-1.5 rounded-lg border hover:bg-white/60"
+              onClick={() => setShowGuard(true)}
+              title="Show release guard details"
+            >
+              Details
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* SLO targets display */}
       {slo?.defaults && (
@@ -404,14 +445,16 @@ export default function Velocity() {
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border
                         ${a.severity === "critical" ? "bg-red-100 text-red-700 border-red-200"
                                                    : "bg-amber-100 text-amber-800 border-amber-200"}`}>
-                        {a.kind === "error_rate" ? "errors" : "p95↑"} {a.severity}
+                        {a.kind === "error_rate" ? "errors" : a.kind === "p95_regress" ? "p95↑" : "SLO"} {a.severity}
                       </span>
                     </div>
                     <div className="text-xs mt-2 opacity-80">
                       {a.kind === "error_rate" ? (
                         <>err% (1m): <b>{a.evidence.err_rate_1m}%</b> • samples: <b>{a.evidence.samples_1m}</b></>
-                      ) : (
+                      ) : a.kind === "p95_regress" ? (
                         <>p95 prev3: <b>{a.evidence.p95_prev3_ms}ms</b> → last3: <b>{a.evidence.p95_last3_ms}ms</b> &nbsp;(+{a.evidence.regress_abs_ms}ms, {a.evidence.regress_pct}%)</>
+                      ) : (
+                        <>targets p95≤{a.evidence.targets.p95_ms}ms err≤{a.evidence.targets.err_pct}% • actual p95={a.evidence.actual.p95_ms ?? "—"}ms, err={a.evidence.actual.err_pct ?? "—"}%</>
                       )}
                     </div>
                     <div className="flex gap-2 mt-3">
@@ -438,9 +481,75 @@ export default function Velocity() {
         </div>
       )}
 
+      {/* Release Guard Drawer */}
+      {showGuard && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setShowGuard(false)} />
+          <div className="absolute right-0 top-0 h-full w-full max-w-lg bg-white shadow-2xl p-6 overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Release Guard</h2>
+              <button className="px-2 py-1 rounded-md border hover:bg-gray-50" onClick={() => setShowGuard(false)}>Close</button>
+            </div>
+            {!guard ? (
+              <p className="text-sm opacity-70">No data.</p>
+            ) : (
+              <div className="space-y-3 text-sm">
+                <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg border
+                  ${guard.pass ? "bg-green-50 text-green-700 border-green-200"
+                               : "bg-red-50 text-red-700 border-red-200"}`}>
+                  {guard.pass ? "PASS" : "FAIL"}
+                </div>
+                <div className="opacity-70">
+                  Env: <b>{guard.env || "—"}</b> • Release: <code className="font-mono">{guard.release || "—"}</code>
+                </div>
+                <div className="opacity-70">
+                  Policy: allow_warn={String(guard.guard?.allow_warn)}, check_regress={String(guard.guard?.check_regress)},
+                  min_samples={guard.guard?.min_samples}, hard_error_pct={guard.guard?.hard_error_pct}
+                </div>
+                <div>
+                  <b>Violations ({guard.violations?.length || 0})</b>
+                  {(!guard.violations || guard.violations.length === 0) ? (
+                    <p className="opacity-70">No violations detected.</p>
+                  ) : (
+                    <ul className="mt-2 space-y-2">
+                      {guard.violations.map((v, i) => (
+                        <li key={i} className="border rounded-lg p-3">
+                          <div className="flex items-center justify-between">
+                            <code className="font-mono">{v.route}</code>
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200">
+                              {v.reason}
+                            </span>
+                          </div>
+                          <pre className="mt-2 text-xs bg-gray-50 border border-gray-200 rounded p-2 overflow-x-auto">
+{JSON.stringify(v.evidence || {}, null, 2)}
+                          </pre>
+                          <button
+                            className="mt-2 px-2 py-1 rounded-md border text-xs hover:bg-gray-50"
+                            onClick={async () => {
+                              try {
+                                const res = await fetch(`/ops/sentry-link?route=${encodeURIComponent(v.route)}`, { cache: "no-store" });
+                                const j = await res.json();
+                                if (j?.url) return window.open(j.url, "_blank", "noopener,noreferrer");
+                                if (j?.missing) alert("Configure SENTRY_ORG_SLUG and SENTRY_PROJECT_SLUG to enable Sentry deep links.");
+                              } catch {}
+                            }}>
+                            Sentry →
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <p className="text-xs opacity-70">
         Data sources: <code>/ops/metrics</code> (1m snapshot) & <code>/ops/metrics/trends</code> (5m, 10s buckets).
         Alerts: <code>/ops/alarms</code> (error surges & p95 regressions).
+        Release Guard: <code>/ops/release-guard</code> (deploy safety validation).
       </p>
     </div>
   );
