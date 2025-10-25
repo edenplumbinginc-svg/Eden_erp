@@ -172,7 +172,7 @@ function requestTimingMiddleware(req, res, next) {
   res.on('finish', () => {
     const end = process.hrtime.bigint();
     const duration_ms = Number(end - start) / 1e6;
-    const ok = res.statusCode < 400;
+    const ok = res.statusCode < 500;
     
     // Feed metrics aggregator
     metrics.tap(req, res, duration_ms, ok);
