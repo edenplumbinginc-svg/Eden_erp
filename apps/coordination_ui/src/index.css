@@ -1155,3 +1155,37 @@ html {
     grid-template-columns: 1fr;
   }
 }
+
+/* Modern utility classes */
+.muted { 
+  color: var(--text-muted); 
+}
+
+.grid-auto {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--space-4);
+}
+
+.card--flat { 
+  box-shadow: none; 
+}
+
+.elevate-2 { 
+  box-shadow: var(--shadow-2) !important; 
+}
+
+.radius-xl { 
+  border-radius: var(--radius-xl) !important; 
+}
+
+.stack-2 > * + * { margin-top: var(--space-2); }
+.stack-3 > * + * { margin-top: var(--space-3); }
+.stack-4 > * + * { margin-top: var(--space-4); }
+
+/* Chrome (sticky top bar pattern) */
+.chrome {
+  backdrop-filter: saturate(1.2) blur(8px);
+  background: var(--chrome);
+  border-bottom: 1px solid var(--border);
+}
