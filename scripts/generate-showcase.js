@@ -2,8 +2,19 @@ const fs = require('fs');
 const path = require('path');
 const yaml = require('js-yaml');
 
-const specPath = path.join(process.cwd(), 'docs/ui-contract.yaml');
-const outDir = path.join(process.cwd(), 'apps/coordination_ui/src/showcase');
+// Find root directory (where package.json with name "eden_erp" exists)
+let rootDir = process.cwd();
+while (!fs.existsSync(path.join(rootDir, 'docs/ui-contract.yaml'))) {
+  const parent = path.dirname(rootDir);
+  if (parent === rootDir) {
+    // Reached filesystem root without finding it
+    throw new Error('Could not find docs/ui-contract.yaml in parent directories');
+  }
+  rootDir = parent;
+}
+
+const specPath = path.join(rootDir, 'docs/ui-contract.yaml');
+const outDir = path.join(rootDir, 'apps/coordination_ui/src/showcase');
 const outFile = path.join(outDir, 'routes.json');
 
 const doc = yaml.load(fs.readFileSync(specPath, 'utf8'));
