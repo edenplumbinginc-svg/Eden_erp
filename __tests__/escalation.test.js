@@ -42,7 +42,16 @@ describe('Incident Escalation', () => {
   });
 
   test('should escalate unacknowledged critical incident after SLA breach', async () => {
+    const debugQuery = await pool.query(
+      `SELECT id, incident_key, severity, escalation_level, acknowledged_at, next_due_at, 
+              now() as current_time, now() >= next_due_at as should_escalate
+       FROM incidents WHERE id = $1`,
+      [testIncidentId]
+    );
+    console.log('[TEST] Before escalation:', debugQuery.rows[0]);
+    
     const escalatedCount = await runEscalationTick();
+    console.log('[TEST] Escalated count:', escalatedCount);
     
     expect(escalatedCount).toBeGreaterThan(0);
 
