@@ -3,6 +3,12 @@
 ## Overview
 Eden ERP is a monolithic ERP shell for Eden Plumbing Inc., designed to streamline business operations, starting with coordination and procurement. It provides a robust backend with a defined database schema and a basic REST API, serving as a scalable platform for future application modules to efficiently manage projects, tasks, and resources. The business vision is to provide a comprehensive, scalable platform that integrates various operational aspects, improving efficiency and coordination.
 
+## Recent Changes
+
+**October 25, 2025 - Dependency Refresh**: Safe patch/minor upgrades applied across 11 packages. Key updates: Vite 5.0→5.4.20, React 18.2→18.3.1, Axios 1.6→1.12.2, Sentry 10.20→10.22, Drizzle 0.44.6→0.44.7. All builds passing, zero production vulnerabilities. See `coverage/dependency-refresh-report.md` for full details.
+
+**Shared UI State Components**: Created reusable PageStates component library (Loading, Empty, ErrorBlock, Unauthorized, NotFound) with Material Design styling and data-state attributes for automated testing. Refactored IncidentsPage, IncidentDetail, and Velocity pages to use shared components while preserving all action buttons and user interactions.
+
 ## User Preferences
 I prefer iterative development, with a focus on delivering functional increments. Please ask before making major architectural changes or introducing new dependencies. I appreciate clear and concise explanations for complex topics. Ensure the codebase remains clean, well-documented, and adheres to established patterns.
 
