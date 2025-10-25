@@ -1,0 +1,267 @@
+pected routes: 24
+   ✅ All routes from UI contract validated
+  ✓  28 [chromium] › tests/smoke-nav.spec.cjs:204:3 › Contract Routes - Summary › all routes tested (3ms)
+  1) [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /login 
+    Error: HTTP errors on /login (excluding auth)
+    expect(received).toEqual(expected) // deep equality
+    - Expected  -  1
+    + Received  + 27
+    - Array []
+    + Array [
+    +   Object {
+    +     "status": 500,
+    +     "statusText": "Internal Server Error",
+    +     "url": "http://localhost:4173/api/notifications/recent",
+    +   },
+    +   Object {
+    +     "status": 500,
+    +     "statusText": "Internal Server Error",
+    +     "url": "http://localhost:4173/api/projects",
+    +   },
+    +   Object {
+    +     "status": 500,
+    +     "statusText": "Internal Server Error",
+    +     "url": "http://localhost:4173/api/users",
+    +   },
+    +   Object {
+    +     "status": 500,
+    +     "statusText": "Internal Server Error",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "status": 500,
+    +     "statusText": "Internal Server Error",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    + ]
+      144 |         // 401/403 are expected when redirected to login, so filter them out
+      145 |         const httpErrorsFiltered = httpErrors.filter(e => e.status !== 401 && e.status !== 403);
+    > 146 |         expect(httpErrorsFiltered, `HTTP errors on ${urlPath} (excluding auth)`).toEqual([]);
+          |                                                                                  ^
+      147 |         console.log(`  ✓ ${urlPath} → redirected to auth (${finalUrl})`);
+      148 |         return; 
+      149 |       }
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:146:82
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--2252a-on-Smoke-Test-renders-login-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/smoke-nav-Contract-Routes--2252a-on-Smoke-Test-renders-login-chromium/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--2252a-on-Smoke-Test-renders-login-chromium/trace.zip
+    Usage:
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--2252a-on-Smoke-Test-renders-login-chromium/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+    Error: HTTP errors on /login (excluding auth)
+    expect(received).toEqual(expected) // deep equality
+    - Expected  -  1
+    + Received  + 27
+    - Array []
+    + Array [
+    +   Object {
+    +     "status": 500,
+    +     "statusText": "Internal Server Error",
+    +     "url": "http://localhost:4173/api/notifications/recent",
+    +   },
+    +   Object {
+    +     "status": 500,
+    +     "statusText": "Internal Server Error",
+    +     "url": "http://localhost:4173/api/projects",
+    +   },
+    +   Object {
+    +     "status": 500,
+    +     "statusText": "Internal Server Error",
+    +     "url": "http://localhost:4173/api/users",
+    +   },
+    +   Object {
+    +     "status": 500,
+    +     "statusText": "Internal Server Error",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "status": 500,
+    +     "statusText": "Internal Server Error",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    + ]
+      144 |         // 401/403 are expected when redirected to login, so filter them out
+      145 |         const httpErrorsFiltered = httpErrors.filter(e => e.status !== 401 && e.status !== 403);
+    > 146 |         expect(httpErrorsFiltered, `HTTP errors on ${urlPath} (excluding auth)`).toEqual([]);
+          |                                                                                  ^
+      147 |         console.log(`  ✓ ${urlPath} → redirected to auth (${finalUrl})`);
+      148 |         return; 
+      149 |       }
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:146:82
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--2252a-on-Smoke-Test-renders-login-chromium-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/smoke-nav-Contract-Routes--2252a-on-Smoke-Test-renders-login-chromium-retry1/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--2252a-on-Smoke-Test-renders-login-chromium-retry1/trace.zip
+    Usage:
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--2252a-on-Smoke-Test-renders-login-chromium-retry1/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+  2) [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /signup 
+    Error: HTTP errors on /signup (excluding auth)
+    expect(received).toEqual(expected) // deep equality
+    - Expected  -  1
+    + Received  + 27
+    - Array []
+    + Array [
+    +   Object {
+    +     "status": 500,
+    +     "statusText": "Internal Server Error",
+    +     "url": "http://localhost:4173/api/notifications/recent",
+    +   },
+    +   Object {
+    +     "status": 500,
+    +     "statusText": "Internal Server Error",
+    +     "url": "http://localhost:4173/api/projects",
+    +   },
+    +   Object {
+    +     "status": 500,
+    +     "statusText": "Internal Server Error",
+    +     "url": "http://localhost:4173/api/users",
+    +   },
+    +   Object {
+    +     "status": 500,
+    +     "statusText": "Internal Server Error",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "status": 500,
+    +     "statusText": "Internal Server Error",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    + ]
+      144 |         // 401/403 are expected when redirected to login, so filter them out
+      145 |         const httpErrorsFiltered = httpErrors.filter(e => e.status !== 401 && e.status !== 403);
+    > 146 |         expect(httpErrorsFiltered, `HTTP errors on ${urlPath} (excluding auth)`).toEqual([]);
+          |                                                                                  ^
+      147 |         console.log(`  ✓ ${urlPath} → redirected to auth (${finalUrl})`);
+      148 |         return; 
+      149 |       }
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:146:82
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--64787-n-Smoke-Test-renders-signup-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/smoke-nav-Contract-Routes--64787-n-Smoke-Test-renders-signup-chromium/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--64787-n-Smoke-Test-renders-signup-chromium/trace.zip
+    Usage:
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--64787-n-Smoke-Test-renders-signup-chromium/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+    Error: HTTP errors on /signup (excluding auth)
+    expect(received).toEqual(expected) // deep equality
+    - Expected  -  1
+    + Received  + 52
+    - Array []
+    + Array [
+    +   Object {
+    +     "status": 500,
+    +     "statusText": "Internal Server Error",
+    +     "url": "http://localhost:4173/api/notifications/recent",
+    +   },
+    +   Object {
+    +     "status": 500,
+    +     "statusText": "Internal Server Error",
+    +     "url": "http://localhost:4173/api/projects",
+    +   },
+    +   Object {
+    +     "status": 500,
+    +     "statusText": "Internal Server Error",
+    +     "url": "http://localhost:4173/api/users",
+    +   },
+    +   Object {
+    +     "status": 500,
+    +     "statusText": "Internal Server Error",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "status": 500,
+    +     "statusText": "Internal Server Error",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "status": 500,
+    +     "statusText": "Internal Server Error",
+    +     "url": "http://localhost:4173/api/tasks?limit=20&sort=updated_at&order=desc",
+    +   },
+    +   Object {
+    +     "status": 500,
+    +     "statusText": "Internal Server Error",
+    +     "url": "http://localhost:4173/api/projects",
+    +   },
+    +   Object {
+    +     "status": 500,
+    +     "statusText": "Internal Server Error",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "status": 500,
+    +     "statusText": "Internal Server Error",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "status": 500,
+    +     "statusText": "Internal Server Error",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    + ]
+      144 |         // 401/403 are expected when redirected to login, so filter them out
+      145 |         const httpErrorsFiltered = httpErrors.filter(e => e.status !== 401 && e.status !== 403);
+    > 146 |         expect(httpErrorsFiltered, `HTTP errors on ${urlPath} (excluding auth)`).toEqual([]);
+          |                                                                                  ^
+      147 |         console.log(`  ✓ ${urlPath} → redirected to auth (${finalUrl})`);
+      148 |         return; 
+      149 |       }
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:146:82
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--64787-n-Smoke-Test-renders-signup-chromium-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/smoke-nav-Contract-Routes--64787-n-Smoke-Test-renders-signup-chromium-retry1/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--64787-n-Smoke-Test-renders-signup-chromium-retry1/trace.zip
+    Usage:
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--64787-n-Smoke-Test-renders-signup-chromium-retry1/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+  2 failed
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /login 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /signup 
+  24 passed (22.9s)
+Error: Process completed with exit code 1.
+0s
+Run if [ -d "__tests__.ci_hold" ]; then mv __tests__.ci_hold __tests__; fi
+  
+1s
+Run actions/upload-artifact@v4
+  
+With the provided path, there will be 26 files uploaded
+Artifact name is valid!
+Root directory input is valid!
+Beginning upload of artifact content to blob storage
+Uploaded bytes 1506599
+Finished uploading artifact content to blob storage!
+SHA256 digest of uploaded artifact zip is 9368ead61b3ec2b2821c7af6334a1092a984c7c8fee4a70e66e07390b360cbda
+Finalizing artifact upload
+Artifact playwright-report.zip successfully finalized. Artifact ID 4372403242
+Artifact playwright-report has been successfully uploaded! Final size is 1506599 bytes. Artifact ID is 4372403242
+Artifact download URL: https://github.com/edenplumbinginc-svg/Eden_erp/actions/runs/18809910390/artifacts/4372403242
+0s
+Run actions/upload-artifact@v4
+No files were found with the provided path: coverage/ui-gaps.*. No artifacts will be uploaded.
+0s
+1s
+Post job cleanup.
+/usr/bin/git version
+git version 2.51.0
+Temporarily overriding HOME='/home/runner/work/_temp/d369d82e-e0ab-4683-a6b3-8a3be682d169' before making global git config changes
+Adding repository directory to the temporary git global config as a safe directory
+/usr/bin/git config --global --add safe.directory /home/runner/work/Eden_erp/Eden_erp
+/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+http.https://github.com/.extraheader
+/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
