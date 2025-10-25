@@ -29,7 +29,10 @@
     "dev:web": "npm --prefix apps/coordination_ui run dev",
     "smoke:api": "node scripts/smoke-api.js",
     "test": "jest --runInBand",
-    "check:ui": "node scripts/check-ui-coverage.js"
+    "check:ui": "node scripts/check-ui-coverage.js",
+    "test:smoke": "playwright test --project=chromium",
+    "test:smoke:headed": "PW_SKIP_WEBSERVER=1 BASE_URL=http://localhost:5000 playwright test --project=chromium --headed",
+    "test:smoke:ui": "playwright test --project=chromium --ui"
   },
   "description": "Monolithic shell.",
   "main": "server.js",
