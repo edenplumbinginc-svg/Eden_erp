@@ -1,0 +1,7 @@
+﻿2025-10-25T22:20:04.8037705Z ##[group]Run if [ -d "__tests__" ]; then mv __tests__ __tests__.ci_hold; fi
+2025-10-25T22:20:04.8038519Z [36;1mif [ -d "__tests__" ]; then mv __tests__ __tests__.ci_hold; fi[0m
+2025-10-25T22:20:04.8038979Z [36;1mif [ -d "__tests__._skip" ]; then mv "__tests__._skip" __tests__.ci_hold_skip; fi[0m
+2025-10-25T22:20:04.8070898Z shell: /usr/bin/bash -e {0}
+2025-10-25T22:20:04.8071137Z env:
+2025-10-25T22:20:04.8071322Z   PREVIEW_PID: 5847
+2025-10-25T22:20:04.8071516Z ##[endgroup]

@@ -1,0 +1,23 @@
+﻿2025-10-25T22:22:02.1837337Z ##[group]Run actions/upload-artifact@v4
+2025-10-25T22:22:02.1837434Z with:
+2025-10-25T22:22:02.1837551Z   name: playwright-report
+2025-10-25T22:22:02.1837655Z   path: coverage/playwright-report
+2025-10-25T22:22:02.1837745Z   if-no-files-found: ignore
+2025-10-25T22:22:02.1837828Z   compression-level: 6
+2025-10-25T22:22:02.1837915Z   overwrite: false
+2025-10-25T22:22:02.1838005Z   include-hidden-files: false
+2025-10-25T22:22:02.1838300Z env:
+2025-10-25T22:22:02.1838394Z   PREVIEW_PID: 5847
+2025-10-25T22:22:02.1838473Z ##[endgroup]
+2025-10-25T22:22:02.4671710Z With the provided path, there will be 128 files uploaded
+2025-10-25T22:22:02.4673306Z Artifact name is valid!
+2025-10-25T22:22:02.4674297Z Root directory input is valid!
+2025-10-25T22:22:02.7631776Z Beginning upload of artifact content to blob storage
+2025-10-25T22:22:04.1580634Z Uploaded bytes 8388608
+2025-10-25T22:22:04.3876071Z Uploaded bytes 12102492
+2025-10-25T22:22:04.4626409Z Finished uploading artifact content to blob storage!
+2025-10-25T22:22:04.4630940Z SHA256 digest of uploaded artifact zip is a5da1b711fb299a001dc5fb273e07e45b469fb4c0a6806535541f7a1249711a4
+2025-10-25T22:22:04.4633413Z Finalizing artifact upload
+2025-10-25T22:22:04.6218616Z Artifact playwright-report.zip successfully finalized. Artifact ID 4372219580
+2025-10-25T22:22:04.6219992Z Artifact playwright-report has been successfully uploaded! Final size is 12102492 bytes. Artifact ID is 4372219580
+2025-10-25T22:22:04.6228577Z Artifact download URL: https://github.com/edenplumbinginc-svg/Eden_erp/actions/runs/18809004637/artifacts/4372219580
