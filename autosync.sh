@@ -2,6 +2,10 @@
 # Simple Git auto-sync for Replit -> GitHub
 # Runs in background, pushing every 5 minutes if there are local changes
 
+# Disable Git interactive prompts globally
+export GIT_TERMINAL_PROMPT=0
+export GIT_ASKPASS=true
+
 echo "[AUTOSYNC] Starting Git auto-sync service..."
 echo "[AUTOSYNC] Will check for changes every 5 minutes"
 
@@ -11,24 +15,22 @@ git config --global user.name "Eden ERP Auto-Sync"
 
 # Fetch GitHub token from Replit integration
 echo "[AUTOSYNC] 🔑 Fetching GitHub token from Replit integration..."
-GITHUB_TOKEN=$(node get-github-token.js 2>/dev/null)
+GITHUB_TOKEN=$(node ~/workspace/get-github-token.js 2>/dev/null)
 
 # Configure Git to use token authentication
 if [[ -n "$GITHUB_TOKEN" ]]; then
   # Set up Git credential helper
   git config --global credential.helper 'store --file ~/.git-credentials'
   
-  # Write credentials file
+  # Write credentials file with proper format
   echo "https://oauth2:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
   chmod 600 ~/.git-credentials
-  
-  # Configure Git to not prompt for credentials
-  export GIT_TERMINAL_PROMPT=0
   
   echo "[AUTOSYNC] ✓ GitHub token configured from Replit integration"
 else
   echo "[AUTOSYNC] ⚠️ GitHub token not available — pushes may fail"
   echo "[AUTOSYNC] ⚠️ Make sure GitHub integration is connected"
+  echo "[AUTOSYNC] ⚠️ Auto-sync will continue but pushes will fail"
 fi
 
 while true; do
