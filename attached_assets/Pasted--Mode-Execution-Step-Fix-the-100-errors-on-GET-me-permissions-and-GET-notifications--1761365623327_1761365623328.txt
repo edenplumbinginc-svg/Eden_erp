@@ -1,0 +1,118 @@
+[Mode: Execution]
+
+**Step:** Fix the 100% errors on `GET /me/permissions` and `GET /notifications/recent` by hardening auth + null-safety. *(Backend layer → Auth/RBAC + Handlers)*
+
+**Why it matters:** Release Guard is blocking because these endpoints 5xx instead of clean 401/403 or 200. We’ll make them deterministic and safe.
+
+**Inputs needed:** Your backend repo, ability to restart the server, an ops_admin JWT.
+
+**Command (copy–paste):**
+
+1. **Reproduce to confirm** (one with/without JWT)
+
+```bash
+HOST="https://<STAGING_HOST>"
+
+# Without token (should be 401, not 5xx)
+curl -s -o /tmp/perm_noauth.json -w "HTTP:%{http_code}\n" "$HOST/me/permissions"; cat /tmp/perm_noauth.json; echo
+curl -s -o /tmp/notif_noauth.json -w "HTTP:%{http_code}\n" "$HOST/notifications/recent"; cat /tmp/notif_noauth.json; echo
+
+# With token (should be 200 with empty/real data, not 5xx)
+curl -s -H "Authorization: Bearer <USER_JWT>" "$HOST/me/permissions" | jq
+curl -s -H "Authorization: Bearer <USER_JWT>" "$HOST/notifications/recent" | jq
+```
+
+2. **Patch auth middleware** so missing/invalid JWT returns **401 JSON** (never throws):
+
+```ts
+// middleware/auth.ts
+export function requireAuth(req, res, next) {
+  try {
+    const hdr = req.headers.authorization || "";
+    const token = hdr.startsWith("Bearer ") ? hdr.slice(7) : null;
+    if (!token) return res.status(401).json({ error: "unauthorized", reason: "missing_token" });
+
+    const payload = verifyJwt(token); // your existing fn
+    if (!payload?.sub) return res.status(401).json({ error: "unauthorized", reason: "invalid_token" });
+
+    (req as any).auth = { userId: payload.sub, email: payload.email };
+    return next();
+  } catch (e) {
+    return res.status(401).json({ error: "unauthorized", reason: "jwt_error" });
+  }
+}
+```
+
+3. **Harden `/me/permissions`** to handle users with no RBAC rows (return empty array, not 5xx):
+
+```ts
+// routes/me.ts (or wherever)
+app.get("/me/permissions", requireAuth, async (req, res) => {
+  const userId = (req as any).auth?.userId;
+  if (!userId) return res.status(401).json({ error: "unauthorized" });
+
+  try {
+    const rows = await db.execute(/* sql */`
+      SELECT p.permission
+      FROM user_roles ur
+      JOIN role_permissions rp ON rp.role_id = ur.role_id
+      JOIN permissions p ON p.id = rp.permission_id
+      WHERE ur.user_id = $1
+    `, [userId]);
+
+    return res.json({ permissions: rows?.rows?.map(r => r.permission) ?? [] });
+  } catch (e) {
+    console.error("me/permissions failed", e);
+    return res.status(500).json({ error: "internal_error" });
+  }
+});
+```
+
+4. **Harden `/notifications/recent`** (null-safe, limit, and return `[]` on no data):
+
+```ts
+// routes/notifications.ts
+app.get("/notifications/recent", requireAuth, async (req, res) => {
+  const userId = (req as any).auth?.userId;
+  if (!userId) return res.status(401).json({ error: "unauthorized" });
+
+  const limit = Math.min(parseInt(String(req.query.limit ?? "20"), 10) || 20, 100);
+
+  try {
+    const { rows } = await db.execute(/* sql */`
+      SELECT id, kind, message, created_at
+      FROM notifications
+      WHERE user_id = $1
+      ORDER BY created_at DESC
+      LIMIT $2
+    `, [userId, limit]);
+
+    return res.json({ items: rows ?? [] });
+  } catch (e) {
+    console.error("notifications/recent failed", e);
+    return res.status(500).json({ error: "internal_error" });
+  }
+});
+```
+
+5. **Restart** the backend and **re-run checks**:
+
+```bash
+# After restart:
+curl -s -o /tmp/perm_noauth.json -w "HTTP:%{http_code}\n" "$HOST/me/permissions"; cat /tmp/perm_noauth.json; echo
+curl -s -o /tmp/notif_noauth.json -w "HTTP:%{http_code}\n" "$HOST/notifications/recent"; cat /tmp/notif_noauth.json; echo
+
+curl -s -H "Authorization: Bearer <USER_JWT>" "$HOST/me/permissions" | jq
+curl -s -H "Authorization: Bearer <USER_JWT>" "$HOST/notifications/recent" | jq
+```
+
+**Success check:**
+
+* Without JWT: both endpoints return **401** JSON (no 5xx).
+* With JWT: `/me/permissions` returns `{ permissions: [...] }` (possibly empty).
+  `/notifications/recent` returns `{ items: [...] }` (possibly empty).
+* Re-run Release Guard: should no longer count these as “critical 5xx”, so gate passes if no other blockers.
+
+**Next:** wait for user
+
+*(When this is green, we can move to your note: “Update user profile editing to include new optional fields.” I’ll give a one-step schema + UI patch for that.)*
