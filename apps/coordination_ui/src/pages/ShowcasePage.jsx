@@ -39,6 +39,16 @@ export default function ShowcasePage() {
         Click any route to visually test it. Param routes are inflated to demo values.
       </p>
       <div className="grid-auto">
+        <Link 
+          to="/about/eden" 
+          className="card radius-xl" 
+          style={{ textDecoration: 'none', color: 'inherit' }}
+        >
+          <div className="muted" style={{ fontSize: '0.8rem', marginBottom: '6px' }}>
+            Docs
+          </div>
+          <div style={{ fontWeight: 600 }}>Why Eden & Workflow</div>
+        </Link>
         {routes.map(({ route, label }) => (
           <Link 
             key={route} 
