@@ -104,4 +104,30 @@ describe("Velocity Alarms evaluator", () => {
     const alarms = evaluateAlarmsForRoute("GET /api/borderline", oneMinute, series, sloCfg);
     expect(alarms.find(x => x.kind === "slo_violation")).toBeFalsy();
   });
+
+  test("tags alarms with owner info when route has owner", () => {
+    const { evaluateAlarmsForRoute } = makeMetrics();
+    const oneMinute = { err_rate: 25, count: 20, p50_ms: 50, p95_ms: 100, rps: 0.3 };
+    const series = mkSeries([100, 100, 100, 100, 100, 100]);
+    const sloCfg = { defaults: { p95_ms: 300, err_pct: 1 }, routes: {} };
+    const owners = {
+      "GET /api/owned": { owner: "@team-alpha", slack_webhook: "https://hooks.slack.com/test" }
+    };
+    const alarms = evaluateAlarmsForRoute("GET /api/owned", oneMinute, series, sloCfg, owners);
+    const a = alarms.find(x => x.kind === "error_rate");
+    expect(a).toBeTruthy();
+    expect(a.owner).toEqual({ owner: "@team-alpha", slack_webhook: "https://hooks.slack.com/test" });
+  });
+
+  test("sets owner to null when route has no owner", () => {
+    const { evaluateAlarmsForRoute } = makeMetrics();
+    const oneMinute = { err_rate: 25, count: 20, p50_ms: 50, p95_ms: 100, rps: 0.3 };
+    const series = mkSeries([100, 100, 100, 100, 100, 100]);
+    const sloCfg = { defaults: { p95_ms: 300, err_pct: 1 }, routes: {} };
+    const owners = { "GET /api/other": { owner: "@team-beta" } };
+    const alarms = evaluateAlarmsForRoute("GET /api/unowned", oneMinute, series, sloCfg, owners);
+    const a = alarms.find(x => x.kind === "error_rate");
+    expect(a).toBeTruthy();
+    expect(a.owner).toBeNull();
+  });
 });

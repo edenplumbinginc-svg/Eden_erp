@@ -1,0 +1,196 @@
+Step: Add Route Owners & Targeted Alerts so each alarm includes an owner and (optionally) posts to a route-specific Slack webhook. (Layer: Velocity → Ops Workflow)
+
+Why it matters: Reduces mean-time-to-action. Alerts land with a name attached (ownership), and hot routes can page the right channel automatically.
+
+Inputs needed:
+
+server.js
+
+lib/metrics.js
+
+lib/alerts.js
+
+Decide initial owners (you can tweak later)
+
+Command:
+
+Create lib/owners.js (load from env JSON; safe default)
+
+// lib/owners.js — Velocity/Ops Ownership
+// Env example:
+// ROUTE_OWNERS='{
+//   "GET /notifications/recent": {"owner":"@ops-oncall","slack_webhook":"https://hooks.slack.com/services/..."},
+//   "GET /reports/tasks/overdue": {"owner":"@reports-squad"}
+// }'
+
+function loadOwners() {
+  try {
+    return JSON.parse(process.env.ROUTE_OWNERS || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function ownerFor(route, owners) {
+  return owners[route] || null;
+}
+
+module.exports = { loadOwners, ownerFor };
+
+
+Tag alarms with owner info in lib/metrics.js
+
+--- a/lib/metrics.js
++++ b/lib/metrics.js
+@@
+-const { loadSloMap, evaluateSloForSnapshot } = require("./slo");
++const { loadSloMap, evaluateSloForSnapshot } = require("./slo");
++const { loadOwners, ownerFor } = require("./owners");
+@@
+-  function alarms() {
++  function alarms() {
+     const nowIso = new Date().toISOString();
+     const snap = snapshot();
+     const tr = trends();
+     const sloCfg = loadSloMap();
++    const owners = loadOwners();
+     const items = [];
+@@
+-      if (one.err_rate >= 5 && one.count >= 5) {
++      if (one.err_rate >= 5 && one.count >= 5) {
+         items.push({
+           route,
+           kind: "error_rate",
+           severity: one.err_rate >= 20 ? "critical" : "warning",
+           since: nowIso,
+           evidence: { err_rate_1m: one.err_rate, samples_1m: one.count },
++          owner: ownerFor(route, owners),
+           hint: "Investigate recent errors; click Sentry link for this route.",
+         });
+       }
+@@
+-      if (aLast!=null && aPrev!=null && regress_abs >= 30 && regress_pct >= 20) {
++      if (aLast!=null && aPrev!=null && regress_abs >= 30 && regress_pct >= 20) {
+         items.push({
+           route,
+           kind: "p95_regress",
+           severity: regress_pct >= 50 ? "critical" : "warning",
+           since: nowIso,
+           evidence: {
+             p95_prev3_ms: Math.round(aPrev),
+             p95_last3_ms: Math.round(aLast),
+             regress_abs_ms: Math.round(regress_abs),
+             regress_pct
+           },
++          owner: ownerFor(route, owners),
+           hint: "Latency increased; check recent deploys, DB, or upstreams.",
+         });
+       }
+@@
+-      if (sloEval.state === "critical") {
++      if (sloEval.state === "critical") {
+         items.push({
+           route,
+           kind: "slo_violation",
+           severity: "critical",
+           since: nowIso,
+           evidence: {
+             targets: sloEval.targets,
+             actual:  sloEval.actual,
+             dims:    sloEval.dims
+           },
++          owner: ownerFor(route, owners),
+           hint: "Route exceeds SLO targets; prioritize remediation or rollback.",
+         });
+       }
+
+
+Teach the alerter to (a) show owner in Slack and (b) override webhook per route when provided.
+
+--- a/lib/alerts.js
++++ b/lib/alerts.js
+@@
+-function makeAlerter({ metrics, fetchImpl, webhookUrl, env = "dev" }) {
++function makeAlerter({ metrics, fetchImpl, webhookUrl, env = "dev" }) {
+   const sent = new Map(); // key -> lastSentTs
+@@
+-  async function postSlack(blocks) {
+-    if (!webhookUrl) return;
++  async function postSlack(blocks, urlOverride) {
++    const target = urlOverride || webhookUrl;
++    if (!target) return;
+     const body = { blocks };
+-    const res = await fetchImpl(webhookUrl, {
++    const res = await fetchImpl(target, {
+       method: "POST",
+       headers: { "Content-Type": "application/json" },
+       body: JSON.stringify(body),
+     });
+@@
+-  function alarmToBlocks(a) {
++  function alarmToBlocks(a) {
+     const color = a.severity === "critical" ? "#B91C1C" : "#D97706"; // red / amber
+     const title = a.kind === "error_rate" ? "High error rate" : a.kind === "p95_regress" ? "p95 regression" : "SLO violation";
+     const details = a.kind === "error_rate"
+       ? `err% (1m): *${a.evidence.err_rate_1m}%* — samples(1m): *${a.evidence.samples_1m}*`
+       : a.kind === "p95_regress"
+         ? `p95: *${a.evidence.p95_prev3_ms}ms → ${a.evidence.p95_last3_ms}ms* (+${a.evidence.regress_abs_ms}ms, ${a.evidence.regress_pct}%)`
+         : `targets p95≤${a.evidence.targets.p95_ms}ms err≤${a.evidence.targets.err_pct}% • actual p95=${a.evidence.actual.p95_ms ?? "—"}ms, err=${a.evidence.actual.err_pct ?? "—"}%`;
+     const sentryUrl = sentryUrlForRoute(a.route);
++    const ownerTxt = a.owner?.owner ? ` • Owner: *${a.owner.owner}*` : "";
+ 
+     return [
+-      { type: "section", text: { type: "mrkdwn", text: `*${title}* — \`${a.route}\` (${a.severity.toUpperCase()})` } },
++      { type: "section", text: { type: "mrkdwn", text: `*${title}* — \`${a.route}\` (${a.severity.toUpperCase()})${ownerTxt}` } },
+       { type: "context", elements: [{ type: "mrkdwn", text: `Env: *${env}* • ${a.since}` }] },
+       { type: "section", text: { type: "mrkdwn", text: details } },
+       ...(sentryUrl ? [{
+         type: "actions",
+         elements: [
+           { type: "button", text: { type: "plain_text", text: "View in Sentry →" }, url: sentryUrl, style: "danger" }
+         ]
+       }] : []),
+       { type: "divider" },
+     ];
+   }
+@@
+-    const blocks = fresh.flatMap(alarmToBlocks);
+-    await postSlack(blocks);
++    // If routes specify their own webhooks, send per-route; otherwise batch to global.
++    const withOverrides = fresh.filter(a => a.owner?.slack_webhook);
++    const without = fresh.filter(a => !a.owner?.slack_webhook);
++
++    for (const a of withOverrides) {
++      await postSlack(alarmToBlocks(a), a.owner.slack_webhook).catch(()=>{});
++    }
++    if (without.length) {
++      const blocks = without.flatMap(alarmToBlocks);
++      await postSlack(blocks).catch(()=>{});
++    }
+   }
+
+
+(Optional now, or later) Surface owners in the Velocity UI:
+
+In the Alerts drawer, render Owner: @handle if present on each alarm.
+
+Set initial owners via env (can be minimal to start):
+
+# Example: route owner and dedicated channel for notifications
+export ROUTE_OWNERS='{
+  "GET /notifications/recent": {"owner":"@auth-team","slack_webhook":"https://hooks.slack.com/services/XXX/YYY/ZZZ"},
+  "GET /reports/tasks/overdue": {"owner":"@reports-squad"}
+}'
+
+
+Success check:
+
+Restart backend.
+
+Hit /ops/alarms and confirm each item has "owner": {...} when configured.
+
+Trigger a critical alarm on a route with a specific slack_webhook; Slack should receive a standalone message to that channel mentioning the owner in the header line.
+
+Critical alarms for routes without override continue to batch to the global webhook exactly as before.
+
+Next: wait for user.

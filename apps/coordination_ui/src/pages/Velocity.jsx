@@ -448,6 +448,11 @@ export default function Velocity() {
                         {a.kind === "error_rate" ? "errors" : a.kind === "p95_regress" ? "p95↑" : "SLO"} {a.severity}
                       </span>
                     </div>
+                    {a.owner?.owner && (
+                      <div className="text-xs mt-2 opacity-70">
+                        Owner: <b>{a.owner.owner}</b>
+                      </div>
+                    )}
                     <div className="text-xs mt-2 opacity-80">
                       {a.kind === "error_rate" ? (
                         <>err% (1m): <b>{a.evidence.err_rate_1m}%</b> • samples: <b>{a.evidence.samples_1m}</b></>
