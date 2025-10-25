@@ -22,44 +22,54 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install dependencies
+      # Root dependencies (checker, playwright, etc.)
+      - name: Install dependencies (root)
         run: npm ci
 
-      # Ensure contract-driven showcase (and other generators) run before builds/tests
-      - name: Build (all)
-        run: |
-          npm run build -w apps/coordination_ui || npm run build
+      # App-specific dependencies
+      - name: Install UI dependencies
+        run: npm --prefix apps/coordination_ui ci
 
+      # Build the UI app (vite build)
+      - name: Build UI
+        run: npm --prefix apps/coordination_ui run build
+
+      # Contract-driven UI coverage (node scripts/check-ui-coverage.js)
       - name: UI coverage
         run: npm run check:ui
 
+      # Install Playwright browsers (Chromium) with required system deps
       - name: Install Playwright
         run: npx playwright install --with-deps
 
+      # Start preview server for the built UI (vite preview on 4173)
       - name: Start preview server
         working-directory: apps/coordination_ui
         run: |
           npm run preview &
           echo "PREVIEW_PID=$!" >> $GITHUB_ENV
-          # Wait for server to be ready
+          # Wait for server to be ready (60s timeout)
           timeout 60 bash -c 'until curl -s http://localhost:4173 > /dev/null; do sleep 1; done'
 
+      # Contract-driven navigation smoke test (Playwright)
       - name: Smoke navigation (contract-driven)
         env:
-          # Optional secrets for auth-aware run; omit if not set
           PW_EMAIL: ${{ secrets.PW_EMAIL }}
           PW_PASSWORD: ${{ secrets.PW_PASSWORD }}
           PW_SKIP_WEBSERVER: 1
           BASE_URL: http://localhost:4173
         run: npm run test:smoke
 
+      # Artifacts: Playwright HTML report (if generated)
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
           path: coverage/playwright-report
+          if-no-files-found: ignore
 
+      # Artifacts: UI gaps report (if checker output exists)
       - name: Upload UI gaps (if any)
         if: always()
         uses: actions/upload-artifact@v4
