@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiService } from '../services/api';
+import { Loading, Empty, ErrorBlock, Unauthorized } from '../components/ui/PageStates';
 
 export default function IncidentsPage() {
   const [incidents, setIncidents] = useState([]);
@@ -98,61 +99,36 @@ export default function IncidentsPage() {
 
   if (status === 'loading') {
     return (
-      <div className="page-container" data-state="loading">
-        <div className="skeleton-loader" style={{
-          minHeight: '80px',
-          borderRadius: '8px',
-          background: 'linear-gradient(90deg, #f0f0f0, #e0e0e0, #f0f0f0)',
-          backgroundSize: '200% 100%',
-          animation: 'shimmer 1.5s infinite'
-        }}>
-          Loading incidents...
-        </div>
+      <div className="page-container">
+        <Loading label="Loading incidents…" />
       </div>
     );
   }
 
   if (status === 'unauthorized') {
     return (
-      <div className="page-container" data-state="unauthorized">
-        <div className="material-card" style={{ padding: '32px', textAlign: 'center' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔒</div>
-          <h2 style={{ margin: '0 0 8px 0', color: '#202124' }}>Access Denied</h2>
-          <p style={{ color: '#5f6368', margin: 0 }}>
-            You don't have permission to view incidents. Contact your administrator.
-          </p>
-        </div>
+      <div className="page-container">
+        <Unauthorized title="Access Denied" />
       </div>
     );
   }
 
   if (status === 'error') {
     return (
-      <div className="page-container" data-state="error">
-        <div className="material-card" style={{ padding: '32px', textAlign: 'center' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
-          <h2 style={{ margin: '0 0 8px 0', color: '#202124' }}>Failed to Load Incidents</h2>
-          <p style={{ color: '#5f6368', margin: '0 0 16px 0' }}>
-            Unable to retrieve incident data. Please try again.
-          </p>
+      <div className="page-container">
+        <ErrorBlock title="Failed to Load Incidents" detail="Unable to retrieve incident data. Please try again.">
           <button className="btn-primary" onClick={loadIncidents}>
             Retry
           </button>
-        </div>
+        </ErrorBlock>
       </div>
     );
   }
 
   if (status === 'empty') {
     return (
-      <div className="page-container" data-state="empty">
-        <div className="material-card" style={{ padding: '32px', textAlign: 'center' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>✅</div>
-          <h2 style={{ margin: '0 0 8px 0', color: '#202124' }}>No Incidents</h2>
-          <p style={{ color: '#5f6368', margin: 0 }}>
-            All systems are operational. No incidents detected.
-          </p>
-        </div>
+      <div className="page-container">
+        <Empty title="No Incidents" hint="All systems are operational. No incidents detected." />
       </div>
     );
   }

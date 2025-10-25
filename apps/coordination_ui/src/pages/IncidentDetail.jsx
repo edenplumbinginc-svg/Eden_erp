@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Loading, ErrorBlock, Unauthorized, NotFound } from '../components/ui/PageStates';
 
 export default function IncidentDetail() {
   const { id } = useParams();
@@ -80,63 +81,40 @@ export default function IncidentDetail() {
 
   if (status === 'loading') {
     return (
-      <div className="page-container" data-state="loading">
-        <div className="skeleton-loader" style={{
-          minHeight: '200px',
-          borderRadius: '8px',
-          background: 'linear-gradient(90deg, #f0f0f0, #e0e0e0, #f0f0f0)',
-          backgroundSize: '200% 100%',
-          animation: 'shimmer 1.5s infinite'
-        }}>
-          Loading incident...
-        </div>
+      <div className="page-container">
+        <Loading label="Loading incident…" />
       </div>
     );
   }
 
   if (status === 'unauthorized') {
     return (
-      <div className="page-container" data-state="unauthorized">
-        <div className="material-card" style={{ padding: '32px', textAlign: 'center' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔒</div>
-          <h2 style={{ margin: '0 0 8px 0', color: '#202124' }}>Access Denied</h2>
-          <p style={{ color: '#5f6368', margin: '0 0 16px 0' }}>
-            You don't have permission to view this incident.
-          </p>
+      <div className="page-container">
+        <Unauthorized title="Access Denied">
           <button className="btn-primary" onClick={() => navigate('/incidents')}>
             Back to Incidents
           </button>
-        </div>
+        </Unauthorized>
       </div>
     );
   }
 
   if (status === 'not_found') {
     return (
-      <div className="page-container" data-state="not_found">
-        <div className="material-card" style={{ padding: '32px', textAlign: 'center' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔍</div>
-          <h2 style={{ margin: '0 0 8px 0', color: '#202124' }}>Incident Not Found</h2>
-          <p style={{ color: '#5f6368', margin: '0 0 16px 0' }}>
-            The incident you're looking for doesn't exist or has been deleted.
-          </p>
+      <div className="page-container">
+        <NotFound title="Incident Not Found">
           <button className="btn-primary" onClick={() => navigate('/incidents')}>
             Back to Incidents
           </button>
-        </div>
+        </NotFound>
       </div>
     );
   }
 
   if (status === 'error') {
     return (
-      <div className="page-container" data-state="error">
-        <div className="material-card" style={{ padding: '32px', textAlign: 'center' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
-          <h2 style={{ margin: '0 0 8px 0', color: '#202124' }}>Failed to Load Incident</h2>
-          <p style={{ color: '#5f6368', margin: '0 0 16px 0' }}>
-            Unable to retrieve incident data. Please try again.
-          </p>
+      <div className="page-container">
+        <ErrorBlock title="Failed to Load Incident" detail="Unable to retrieve incident data. Please try again.">
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
             <button className="btn-primary" onClick={loadIncident}>
               Retry
@@ -145,7 +123,7 @@ export default function IncidentDetail() {
               Back to List
             </button>
           </div>
-        </div>
+        </ErrorBlock>
       </div>
     );
   }

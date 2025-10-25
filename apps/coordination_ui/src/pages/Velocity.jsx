@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Loading, ErrorBlock } from '../components/ui/PageStates';
 
 function fmt(n) {
   if (n === null || n === undefined) return "—";
@@ -196,6 +197,22 @@ export default function Velocity() {
       >
         {label} {sortBy === key ? (desc ? "▾" : "▴") : ""}
       </th>
+    );
+  }
+
+  if (!snap && !err) {
+    return (
+      <div className="p-6">
+        <Loading label="Loading velocity…" />
+      </div>
+    );
+  }
+
+  if (err) {
+    return (
+      <div className="p-6">
+        <ErrorBlock title="Could not load velocity metrics" detail={err} />
+      </div>
     );
   }
 
