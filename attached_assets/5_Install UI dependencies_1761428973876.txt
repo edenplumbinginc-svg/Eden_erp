@@ -1,0 +1,6 @@
+﻿2025-10-25T21:43:20.7327576Z ##[group]Run npm --prefix apps/coordination_ui install --no-audit --no-fund
+2025-10-25T21:43:20.7328463Z [36;1mnpm --prefix apps/coordination_ui install --no-audit --no-fund[0m
+2025-10-25T21:43:20.7372665Z shell: /usr/bin/bash -e {0}
+2025-10-25T21:43:20.7373065Z ##[endgroup]
+2025-10-25T21:43:28.9656703Z 
+2025-10-25T21:43:28.9657606Z added 109 packages in 8s
