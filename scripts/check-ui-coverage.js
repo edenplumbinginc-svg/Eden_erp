@@ -125,7 +125,7 @@ function pagePaths(route) {
     candidates.push(`admin/${pascalCase}.tsx`);
   }
   
-  // Handle dynamic routes: /task/[id] -> TaskDetail.jsx
+  // Handle dynamic routes: /task/[id] -> TaskDetail.jsx or /incidents/[id] -> IncidentDetail.jsx
   if (fileName.startsWith("[")) {
     const baseName = parts[parts.length - 2];
     if (baseName) {
@@ -135,6 +135,17 @@ function pagePaths(route) {
         .join("");
       candidates.push(`${pascalCase}Detail.jsx`);
       candidates.push(`${pascalCase}Detail.tsx`);
+      
+      // Handle singular form (incidents -> Incident, tasks -> Task)
+      const singularForm = baseName.endsWith('s') ? baseName.slice(0, -1) : baseName;
+      const singularPascal = singularForm
+        .split("-")
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join("");
+      if (singularPascal !== pascalCase) {
+        candidates.push(`${singularPascal}Detail.jsx`);
+        candidates.push(`${singularPascal}Detail.tsx`);
+      }
     }
   }
   
