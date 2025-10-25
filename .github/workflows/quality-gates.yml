@@ -36,11 +36,20 @@ jobs:
       - name: Install Playwright
         run: npx playwright install --with-deps
 
+      - name: Start preview server
+        working-directory: apps/coordination_ui
+        run: |
+          npm run preview &
+          echo "PREVIEW_PID=$!" >> $GITHUB_ENV
+          # Wait for server to be ready
+          timeout 60 bash -c 'until curl -s http://localhost:4173 > /dev/null; do sleep 1; done'
+
       - name: Smoke navigation (contract-driven)
         env:
           # Optional secrets for auth-aware run; omit if not set
           PW_EMAIL: ${{ secrets.PW_EMAIL }}
           PW_PASSWORD: ${{ secrets.PW_PASSWORD }}
+          PW_SKIP_WEBSERVER: 1
           BASE_URL: http://localhost:4173
         run: npm run test:smoke
 
