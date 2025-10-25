@@ -1,6 +1,10 @@
 // server.js - Lean main entry point
 require('dotenv').config();
 
+// Validate config early (fail fast on misconfiguration)
+const { cfg, cfgSnapshot } = require('./lib/config');
+cfg();
+
 // Sentry initialization (must be first)
 const Sentry = require('@sentry/node');
 const { nodeProfilingIntegration } = require('@sentry/profiling-node');
@@ -579,6 +583,12 @@ app.get('/version', (_req, res) => {
     build_time: process.env.BUILD_TIME || null,
     uptime_s: Math.floor(process.uptime()),
   });
+});
+
+// Config Health: return redacted config snapshot for health checks
+app.get('/ops/config/health', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ ok: true, config: cfgSnapshot() });
 });
 
 // Velocity Metrics: per-route KPIs with rolling windows
