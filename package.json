@@ -70,6 +70,7 @@
   "devDependencies": {
     "@playwright/test": "^1.56.1",
     "drizzle-kit": "^0.31.5",
-    "jest": "^29.7.0"
+    "jest": "^29.7.0",
+    "npm-check-updates": "^19.1.1"
   }
 }
