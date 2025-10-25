@@ -1,0 +1,191 @@
+/velocity
+🔍 Testing route: /velocity
+    ✓ Heading matched: "Could not load velocity metrics" contains "Velocity"
+  ✘  49 [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /velocity (retry #1) (749ms)
+📋 Loaded 24 routes from UI contract:
+/admin/court-flow
+/admin/decisions
+/admin/rbac
+/alltasks
+/archive
+/audit-log
+/dashboard
+/guest
+/incidents
+/incidents/123
+/intake
+/leaderboard
+/login
+/profile
+/project/123
+/projects-delta
+/reports
+/request-project
+/signup
+/task/123
+/tasks-delta
+/tasks/new
+/team
+/velocity
+📊 Smoke Test Summary:
+   Total routes tested: 24
+   Expected routes: 24
+   ✅ All routes from UI contract validated
+  ✓  50 [chromium] › tests/smoke-nav.spec.cjs:183:3 › Contract Routes - Summary › all routes tested (8ms)
+  1) [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /admin/court-flow 
+    Error: JS/React errors on /admin/court-flow
+    expect(received).toEqual(expected) // deep equality
+    - Expected  -  1
+    + Received  + 13
+    - Array []
+    + Array [
+    +   "TypeError: s.defaultQueryOptions is not a function
+    +     at $4 (http://localhost:4173/assets/index-CmUuD4bh.js:51:61012)
+    +     at he (http://localhost:4173/assets/index-CmUuD4bh.js:51:62064)
+    +     at oue (http://localhost:4173/assets/index-CmUuD4bh.js:185:16956)
+    +     at _0 (http://localhost:4173/assets/index-CmUuD4bh.js:38:16998)
+    +     at SA (http://localhost:4173/assets/index-CmUuD4bh.js:40:43963)
+    +     at xA (http://localhost:4173/assets/index-CmUuD4bh.js:40:39727)
+    +     at HB (http://localhost:4173/assets/index-CmUuD4bh.js:40:39655)
+    +     at Jf (http://localhost:4173/assets/index-CmUuD4bh.js:40:39508)
+    +     at qy (http://localhost:4173/assets/index-CmUuD4bh.js:40:35875)
+    +     at gA (http://localhost:4173/assets/index-CmUuD4bh.js:40:34826)",
+    + ]
+      165 |         !e.includes('Error response:')               // Axios error logs
+      166 |       );
+    > 167 |       expect(realConsoleErrors, `JS/React errors on ${urlPath}`).toEqual([]);
+          |                                                                  ^
+      168 |       
+      169 |       // Network failures (DNS, connection refused) are always bad
+      170 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:167:66
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--1600a-st-renders-admin-court-flow-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/smoke-nav-Contract-Routes--1600a-st-renders-admin-court-flow-chromium/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--1600a-st-renders-admin-court-flow-chromium/trace.zip
+    Usage:
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--1600a-st-renders-admin-court-flow-chromium/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+    Error: JS/React errors on /admin/court-flow
+    expect(received).toEqual(expected) // deep equality
+    - Expected  -  1
+    + Received  + 13
+    - Array []
+    + Array [
+    +   "TypeError: s.defaultQueryOptions is not a function
+    +     at $4 (http://localhost:4173/assets/index-CmUuD4bh.js:51:61012)
+    +     at he (http://localhost:4173/assets/index-CmUuD4bh.js:51:62064)
+    +     at oue (http://localhost:4173/assets/index-CmUuD4bh.js:185:16956)
+    +     at _0 (http://localhost:4173/assets/index-CmUuD4bh.js:38:16998)
+    +     at SA (http://localhost:4173/assets/index-CmUuD4bh.js:40:43963)
+    +     at xA (http://localhost:4173/assets/index-CmUuD4bh.js:40:39727)
+    +     at HB (http://localhost:4173/assets/index-CmUuD4bh.js:40:39655)
+    +     at Jf (http://localhost:4173/assets/index-CmUuD4bh.js:40:39508)
+    +     at qy (http://localhost:4173/assets/index-CmUuD4bh.js:40:35875)
+    +     at gA (http://localhost:4173/assets/index-CmUuD4bh.js:40:34826)",
+    + ]
+      165 |         !e.includes('Error response:')               // Axios error logs
+      166 |       );
+    > 167 |       expect(realConsoleErrors, `JS/React errors on ${urlPath}`).toEqual([]);
+          |                                                                  ^
+      168 |       
+      169 |       // Network failures (DNS, connection refused) are always bad
+      170 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:167:66
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--1600a-st-renders-admin-court-flow-chromium-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/smoke-nav-Contract-Routes--1600a-st-renders-admin-court-flow-chromium-retry1/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--1600a-st-renders-admin-court-flow-chromium-retry1/trace.zip
+    Usage:
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--1600a-st-renders-admin-court-flow-chromium-retry1/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+  2) [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /admin/decisions 
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/ops/slo",
+    +   },
+    + ]
+      169 |       // Network failures (DNS, connection refused) are always bad
+      170 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+    > 171 |       expect(hardFailures, `network failures on ${urlPath}`).toEqual([]);
+          |                                                              ^
+      172 |       
+      173 |       // HTTP 4xx client errors are bad, but 5xx server errors are OK in CI (backend may not run)
+      174 |       const clientErrors = httpErrors.filter(e => e.status >= 400 && e.status < 500);
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:171:62
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--4cb53-Smoke-Test-renders-velocity-chromium-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/smoke-nav-Contract-Routes--4cb53-Smoke-Test-renders-velocity-chromium-retry1/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--4cb53-Smoke-Test-renders-velocity-chromium-retry1/trace.zip
+    Usage:
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--4cb53-Smoke-Test-renders-velocity-chromium-retry1/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+  24 failed
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /admin/court-flow 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /admin/decisions 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /admin/rbac 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /alltasks 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /archive 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /audit-log 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /dashboard 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /guest 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /incidents 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /incidents/123 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /intake 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /leaderboard 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /login 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /profile 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /project/123 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /projects-delta 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /reports 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /request-project 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /signup 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /task/123 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /tasks-delta 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /tasks/new 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /team 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /velocity 
+  2 passed (2.0m)
+Error: Process completed with exit code 1.
+0s
+Run if [ -d "__tests__.ci_hold" ]; then mv __tests__.ci_hold __tests__; fi
+2s
+Run actions/upload-artifact@v4
+With the provided path, there will be 131 files uploaded
+Artifact name is valid!
+Root directory input is valid!
+Beginning upload of artifact content to blob storage
+Uploaded bytes 8388608
+Uploaded bytes 12207543
+Finished uploading artifact content to blob storage!
+SHA256 digest of uploaded artifact zip is db4da9b77ea8489ba388a28c0174df6809d73c335dc21a142572487f997aa2e3
+Finalizing artifact upload
+Artifact playwright-report.zip successfully finalized. Artifact ID 4372193902
+Artifact playwright-report has been successfully uploaded! Final size is 12207543 bytes. Artifact ID is 4372193902
+Artifact download URL: https://github.com/edenplumbinginc-svg/Eden_erp/actions/runs/18809004637/artifacts/4372193902
+0s
+Run actions/upload-artifact@v4
+No files were found with the provided path: coverage/ui-gaps.*. No artifacts will be uploaded.
+0s
+0s
+Post job cleanup.
+/usr/bin/git version
+git version 2.51.0
+Temporarily overriding HOME='/home/runner/work/_temp/dc755bb0-3079-4c99-919e-faaa7bda6de4' before making global git config changes
+Adding repository directory to the temporary git global config as a safe directory
+/usr/bin/git config --global --add safe.directory /home/runner/work/Eden_erp/Eden_erp
+/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+http.https://github.com/.extraheader
+/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+0s
