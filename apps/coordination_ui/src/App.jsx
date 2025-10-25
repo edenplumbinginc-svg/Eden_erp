@@ -31,6 +31,8 @@ import CourtFlowPage from './pages/admin/CourtFlowPage';
 import PerformanceLeaderboardPage from './pages/PerformanceLeaderboardPage';
 import Velocity from './pages/Velocity';
 import ProfilePage from './pages/ProfilePage';
+import IncidentsPage from './pages/IncidentsPage';
+import IncidentDetail from './pages/IncidentDetail';
 
 const queryClient = new QueryClient();
 
@@ -283,6 +285,22 @@ function AppContent() {
             element={
               <RequireAuth>
                 <ProfilePage />
+              </RequireAuth>
+            } 
+          />
+          <Route 
+            path="/incidents" 
+            element={
+              <RequireAuth requiredPermission="admin:manage">
+                <IncidentsPage />
+              </RequireAuth>
+            } 
+          />
+          <Route 
+            path="/incidents/:id" 
+            element={
+              <RequireAuth requiredPermission="admin:manage">
+                <IncidentDetail />
               </RequireAuth>
             } 
           />
