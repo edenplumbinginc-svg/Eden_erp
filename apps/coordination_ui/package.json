@@ -3,8 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node ../../scripts/generate-showcase.js",
     "dev": "vite --host 0.0.0.0 --port 5000",
+    "prebuild": "node ../../scripts/generate-showcase.js",
     "build": "vite build",
+    "prepreview": "node ../../scripts/generate-showcase.js",
     "preview": "vite preview"
   },
   "dependencies": {

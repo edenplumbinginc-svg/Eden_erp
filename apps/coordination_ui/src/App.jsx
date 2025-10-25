@@ -33,6 +33,7 @@ import Velocity from './pages/Velocity';
 import ProfilePage from './pages/ProfilePage';
 import IncidentsPage from './pages/IncidentsPage';
 import IncidentDetail from './pages/IncidentDetail';
+import ShowcasePage from './pages/ShowcasePage';
 
 const queryClient = new QueryClient();
 
@@ -301,6 +302,14 @@ function AppContent() {
             element={
               <RequireAuth requiredPermission="admin:manage">
                 <IncidentDetail />
+              </RequireAuth>
+            } 
+          />
+          <Route 
+            path="/showcase" 
+            element={
+              <RequireAuth>
+                <ShowcasePage />
               </RequireAuth>
             } 
           />
