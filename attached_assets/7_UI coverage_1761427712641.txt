@@ -1,0 +1,80 @@
+﻿2025-10-25T21:19:59.7589444Z ##[group]Run npm run check:ui
+2025-10-25T21:19:59.7589722Z [36;1mnpm run check:ui[0m
+2025-10-25T21:19:59.7609702Z shell: /usr/bin/bash -e {0}
+2025-10-25T21:19:59.7609957Z ##[endgroup]
+2025-10-25T21:19:59.8637457Z 
+2025-10-25T21:19:59.8640212Z > eden_erp@0.1.0 check:ui
+2025-10-25T21:19:59.8640819Z > node scripts/check-ui-coverage.js
+2025-10-25T21:19:59.8641116Z 
+2025-10-25T21:19:59.9067053Z 🔍 Checking UI coverage against contract...
+2025-10-25T21:19:59.9069016Z 
+2025-10-25T21:19:59.9070887Z 📦 Resource: incidents
+2025-10-25T21:19:59.9075311Z    ✅ /incidents → pages/IncidentsPage.jsx
+2025-10-25T21:19:59.9090158Z    ✅ /incidents/[id] → pages/IncidentDetail.jsx
+2025-10-25T21:19:59.9090555Z 
+2025-10-25T21:19:59.9090777Z 📦 Resource: velocity
+2025-10-25T21:19:59.9091418Z    ✅ /velocity → pages/Velocity.jsx
+2025-10-25T21:19:59.9091741Z 
+2025-10-25T21:19:59.9092007Z 📦 Resource: profile
+2025-10-25T21:19:59.9092525Z    ✅ /profile → pages/ProfilePage.jsx
+2025-10-25T21:19:59.9092835Z 
+2025-10-25T21:19:59.9093077Z 📦 Resource: dashboard
+2025-10-25T21:19:59.9093629Z    ✅ /dashboard → pages/DashboardPage.jsx
+2025-10-25T21:19:59.9093931Z 
+2025-10-25T21:19:59.9094165Z 📦 Resource: projects
+2025-10-25T21:19:59.9094759Z    ✅ /projects-delta → pages/SimpleProjectsPage.jsx
+2025-10-25T21:19:59.9095383Z    ✅ /project/[id] → pages/ProjectDetail.jsx
+2025-10-25T21:19:59.9095701Z 
+2025-10-25T21:19:59.9095903Z 📦 Resource: tasks
+2025-10-25T21:19:59.9100739Z    ✅ /alltasks → components/AllTasksView.jsx
+2025-10-25T21:19:59.9104693Z    ✅ /tasks-delta → pages/SimpleTasksPage.jsx
+2025-10-25T21:19:59.9105836Z    ✅ /tasks/new → pages/CreateTaskPage.jsx
+2025-10-25T21:19:59.9108906Z    ✅ /task/[id] → pages/TaskDetail.jsx
+2025-10-25T21:19:59.9109259Z 
+2025-10-25T21:19:59.9109541Z 📦 Resource: reports
+2025-10-25T21:19:59.9110024Z    ✅ /reports → pages/ReportsPage.tsx
+2025-10-25T21:19:59.9110310Z 
+2025-10-25T21:19:59.9110554Z 📦 Resource: leaderboard
+2025-10-25T21:19:59.9123134Z    ✅ /leaderboard → pages/PerformanceLeaderboardPage.jsx
+2025-10-25T21:19:59.9123647Z 
+2025-10-25T21:19:59.9123970Z 📦 Resource: admin_rbac
+2025-10-25T21:19:59.9124467Z    ✅ /admin/rbac → pages/AdminRbacPage.jsx
+2025-10-25T21:19:59.9124747Z 
+2025-10-25T21:19:59.9129750Z 📦 Resource: admin_decisions
+2025-10-25T21:19:59.9130518Z    ✅ /admin/decisions → pages/admin/DecisionsPage.jsx
+2025-10-25T21:19:59.9130848Z 
+2025-10-25T21:19:59.9131105Z 📦 Resource: admin_court_flow
+2025-10-25T21:19:59.9131983Z    ✅ /admin/court-flow → pages/admin/CourtFlowPage.jsx
+2025-10-25T21:19:59.9132345Z 
+2025-10-25T21:19:59.9132566Z 📦 Resource: auth
+2025-10-25T21:19:59.9133026Z    ✅ /login → pages/LoginPage.jsx
+2025-10-25T21:19:59.9133563Z    ✅ /signup → pages/SignupPage.jsx
+2025-10-25T21:19:59.9133794Z 
+2025-10-25T21:19:59.9133993Z 📦 Resource: guest
+2025-10-25T21:19:59.9134413Z    ✅ /guest → pages/GuestView.jsx
+2025-10-25T21:19:59.9134673Z 
+2025-10-25T21:19:59.9134869Z 📦 Resource: audit
+2025-10-25T21:19:59.9135338Z    ✅ /audit-log → pages/AuditLogViewer.jsx
+2025-10-25T21:19:59.9135629Z 
+2025-10-25T21:19:59.9135843Z 📦 Resource: team
+2025-10-25T21:19:59.9136235Z    ✅ /team → pages/TeamOverview.jsx
+2025-10-25T21:19:59.9136480Z 
+2025-10-25T21:19:59.9136658Z 📦 Resource: archive
+2025-10-25T21:19:59.9137113Z    ✅ /archive → pages/ArchiveView.jsx
+2025-10-25T21:19:59.9139750Z 
+2025-10-25T21:19:59.9140033Z 📦 Resource: intake
+2025-10-25T21:19:59.9140529Z    ✅ /intake → pages/IntakeQueue.jsx
+2025-10-25T21:19:59.9140773Z 
+2025-10-25T21:19:59.9141011Z 📦 Resource: request_project
+2025-10-25T21:19:59.9142330Z    ✅ /request-project → pages/ProjectRequestForm.jsx
+2025-10-25T21:19:59.9142984Z 
+2025-10-25T21:19:59.9143535Z ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2025-10-25T21:19:59.9144362Z 
+2025-10-25T21:19:59.9144596Z 📊 Coverage Summary:
+2025-10-25T21:19:59.9144829Z 
+2025-10-25T21:19:59.9145029Z    ✅ Found:   24 pages
+2025-10-25T21:19:59.9145440Z    ❌ Missing: 0 pages
+2025-10-25T21:19:59.9145649Z 
+2025-10-25T21:19:59.9145875Z ✅ UI coverage check PASSED
+2025-10-25T21:19:59.9146235Z    All required pages exist!
+2025-10-25T21:19:59.9146787Z 

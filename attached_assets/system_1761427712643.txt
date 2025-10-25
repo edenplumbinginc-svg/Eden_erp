@@ -1,0 +1,5 @@
+2025-10-25T21:19:25.0800000Z Requested labels: ubuntu-latest
+2025-10-25T21:19:25.0800000Z Job defined at: edenplumbinginc-svg/Eden_erp/.github/workflows/quality-gates.yml@refs/heads/main
+2025-10-25T21:19:25.0800000Z Waiting for a runner to pick up this job...
+2025-10-25T21:19:25.0810000Z Job is about to start running on the hosted runner: GitHub Actions 1000000062
+2025-10-25T21:19:25.0810000Z Job is waiting for a hosted runner to come online.

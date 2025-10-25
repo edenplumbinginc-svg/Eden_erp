@@ -1,0 +1,28 @@
+﻿2025-10-25T21:19:36.3381646Z ##[group]Run npm ci
+2025-10-25T21:19:36.3382082Z [36;1mnpm ci[0m
+2025-10-25T21:19:36.3413913Z shell: /usr/bin/bash -e {0}
+2025-10-25T21:19:36.3414247Z ##[endgroup]
+2025-10-25T21:19:39.5023822Z npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+2025-10-25T21:19:39.5934203Z npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+2025-10-25T21:19:40.8597108Z npm warn deprecated @esbuild-kit/esm-loader@2.6.5: Merged into tsx: https://tsx.is
+2025-10-25T21:19:40.9251070Z npm warn deprecated @esbuild-kit/core-utils@3.3.2: Merged into tsx: https://tsx.is
+2025-10-25T21:19:44.1139995Z 
+2025-10-25T21:19:44.1141222Z > eden_erp@0.1.0 postinstall
+2025-10-25T21:19:44.1142643Z > node -e "process.exit(0)"
+2025-10-25T21:19:44.1142916Z 
+2025-10-25T21:19:44.1366166Z 
+2025-10-25T21:19:44.1367032Z > eden_erp@0.1.0 prepare
+2025-10-25T21:19:44.1367637Z > node -e "process.exit(0)"
+2025-10-25T21:19:44.1367912Z 
+2025-10-25T21:19:44.1701211Z 
+2025-10-25T21:19:44.1704638Z added 544 packages, and audited 545 packages in 8s
+2025-10-25T21:19:44.1706836Z 
+2025-10-25T21:19:44.1708381Z 60 packages are looking for funding
+2025-10-25T21:19:44.1710156Z   run `npm fund` for details
+2025-10-25T21:19:44.1974483Z 
+2025-10-25T21:19:44.1977310Z 4 moderate severity vulnerabilities
+2025-10-25T21:19:44.1978328Z 
+2025-10-25T21:19:44.1978769Z To address all issues (including breaking changes), run:
+2025-10-25T21:19:44.1979361Z   npm audit fix --force
+2025-10-25T21:19:44.1979612Z 
+2025-10-25T21:19:44.1979852Z Run `npm audit` for details.
