@@ -1,0 +1,61 @@
+
+/request-project
+/signup
+/task/123
+/tasks-delta
+/tasks/new
+/team
+/velocity
+📊 Smoke Test Summary:
+   Total routes tested: 24
+   Expected routes: 24
+   ✅ All routes from UI contract validated
+  ✓  50 [chromium] › tests/smoke-nav.spec.cjs:183:3 › Contract Routes - Summary › all routes tested (9ms)
+    +     "url": "http://localhost:4173/api/tasks?limit=20&sort=updated_at&order=desc",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/projects",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/profile",
+    +   },
+    + ]
+      169 |       // Network failures (DNS, connection refused) are always bad
+      170 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+    > 171 |       expect(hardFailures, `network failures on ${urlPath}`).toEqual([]);
+          |                                                              ^
+0s
+2s
+With the provided path, there will be 128 files uploaded
+Artifact name is valid!
+Root directory input is valid!
+Beginning upload of artifact content to blob storage
+Uploaded bytes 8388608
+Uploaded bytes 12102492
+Finished uploading artifact content to blob storage!
+SHA256 digest of uploaded artifact zip is a5da1b711fb299a001dc5fb273e07e45b469fb4c0a6806535541f7a1249711a4
+Finalizing artifact upload
+Artifact playwright-report.zip successfully finalized. Artifact ID 4372219580
+Artifact playwright-report has been successfully uploaded! Final size is 12102492 bytes. Artifact ID is 4372219580
+Artifact download URL: https://github.com/edenplumbinginc-svg/Eden_erp/actions/runs/18809004637/artifacts/4372219580
+0s
+Run actions/upload-artifact@v4
+No files were found with the provided path: coverage/ui-gaps.*. No artifacts will be uploaded.
+0s
+1s
+Post job cleanup.
+/usr/bin/git version
+git version 2.51.0
+Temporarily overriding HOME='/home/runner/work/_temp/3b7d628b-0a02-40e9-9cff-6bee3d9e43f5' before making global git config changes
+Adding repository directory to the temporary git global config as a safe directory
+/usr/bin/git config --global --add safe.directory /home/runner/work/Eden_erp/Eden_erp
+/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+http.https://github.com/.extraheader
