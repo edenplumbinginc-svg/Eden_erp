@@ -26,7 +26,7 @@ jobs:
       - name: Install dependencies (root)
         run: npm ci
 
-      # App-specific dependencies (no workspaces)
+      # App-specific dependencies (repo is not using npm workspaces)
       - name: Install UI dependencies
         run: npm --prefix apps/coordination_ui install --no-audit --no-fund
 
@@ -38,7 +38,7 @@ jobs:
       - name: UI coverage
         run: npm run check:ui
 
-      # Install Playwright browsers
+      # Install Playwright browsers & system deps
       - name: Install Playwright
         run: npx playwright install --with-deps
 
@@ -51,14 +51,13 @@ jobs:
           # Wait for server to be ready (60s timeout)
           timeout 60 bash -c 'until curl -s http://localhost:4173 > /dev/null; do sleep 1; done'
 
-      # ⛔ Hide unit tests so nothing accidentally executes them in this pipeline
-      - name: Disable unit tests for gates
+      # --- QUARANTINE any Jest-style unit tests so only Playwright runs ---
+      - name: Quarantine unit tests (Jest) before smoke
         run: |
-          if [ -d "__tests__" ]; then
-            mv __tests__ __tests__._skip
-          fi
+          if [ -d "__tests__" ]; then mv __tests__ __tests__.ci_hold; fi
+          if [ -d "__tests__._skip" ]; then mv "__tests__._skip" __tests__.ci_hold_skip; fi
 
-      # Contract-driven navigation smoke test (Playwright)
+      # Contract-driven navigation smoke test (Playwright only)
       - name: Smoke navigation (contract-driven)
         env:
           PW_EMAIL: ${{ secrets.PW_EMAIL }}
@@ -66,6 +65,13 @@ jobs:
           PW_SKIP_WEBSERVER: 1
           BASE_URL: http://localhost:4173
         run: npm run test:smoke
+
+      # Restore quarantined unit tests regardless of outcome
+      - name: Restore unit test folders
+        if: always()
+        run: |
+          if [ -d "__tests__.ci_hold" ]; then mv __tests__.ci_hold __tests__; fi
+          if [ -d "__tests__.ci_hold_skip" ]; then mv __tests__.ci_hold_skip "__tests__._skip"; fi
 
       # Artifacts: Playwright HTML report (if generated)
       - name: Upload Playwright report
@@ -84,4 +90,3 @@ jobs:
           name: ui-gaps
           path: coverage/ui-gaps.*
           if-no-files-found: ignore
-
