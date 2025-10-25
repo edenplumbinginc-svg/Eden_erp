@@ -11,6 +11,11 @@ resources:
       - /incidents
       - /incidents/[id]
     required_states: [loading, empty, error, unauthorized, not_found]
+    expectations:
+      "/incidents":
+        heading: "Incidents"
+      "/incidents/[id]":
+        heading: "Incident"
     notes: "Incident management dashboard and detail views"
 
   - name: velocity
@@ -23,6 +28,9 @@ resources:
     required_pages:
       - /velocity
     required_states: [loading, error]
+    expectations:
+      "/velocity":
+        heading: "Velocity"
     notes: "Velocity metrics dashboard with live alerts and SLO badges"
 
   - name: profile
@@ -32,6 +40,9 @@ resources:
     required_pages:
       - /profile
     required_states: [loading, error, unauthorized]
+    expectations:
+      "/profile":
+        heading: "Profile"
     notes: "User profile management with optional fields"
 
   - name: dashboard

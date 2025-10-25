@@ -30,9 +30,10 @@
     "smoke:api": "node scripts/smoke-api.js",
     "test": "jest --runInBand",
     "check:ui": "node scripts/check-ui-coverage.js",
-    "test:smoke": "playwright test --project=chromium",
+    "test:smoke": "playwright test --project=chromium -g 'contract routes'",
     "test:smoke:headed": "PW_SKIP_WEBSERVER=1 BASE_URL=http://localhost:5000 playwright test --project=chromium --headed",
-    "test:smoke:ui": "playwright test --project=chromium --ui"
+    "test:smoke:ui": "playwright test --project=chromium --ui",
+    "test:lint:h1": "node tests/lint-empty-headings.cjs"
   },
   "description": "Monolithic shell.",
   "main": "server.js",

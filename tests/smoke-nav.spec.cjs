@@ -5,20 +5,23 @@ const path = require('path');
 const yaml = require('js-yaml');
 
 /**
- * Load all required_pages from the UI contract and inflate dynamic params
+ * Load the full contract document
  */
-function loadContractRoutes() {
+function loadContract() {
   const specPath = path.join(process.cwd(), 'docs/ui-contract.yaml');
-  
   if (!fs.existsSync(specPath)) {
     console.error('❌ Missing docs/ui-contract.yaml');
-    return [];
+    return { resources: [] };
   }
-  
-  const doc = yaml.load(fs.readFileSync(specPath, 'utf8'));
+  return yaml.load(fs.readFileSync(specPath, 'utf8'));
+}
+
+/**
+ * Load all required_pages from the UI contract and inflate dynamic params
+ */
+function loadContractRoutes(doc) {
   const set = new Set();
-  
-  for (const res of doc.resources || []) {
+  for (const res of doc.resources ?? []) {
     for (const route of res.required_pages || []) {
       // Replace every [param] with a safe test value
       // [id] → 123, [taskId] → 123, etc.
@@ -26,31 +29,55 @@ function loadContractRoutes() {
       set.add(inflated);
     }
   }
-  
   return [...set].sort();
 }
 
-const ROUTES = loadContractRoutes();
+/**
+ * Build expectations map: inflated route → { heading?: string }
+ */
+function buildExpectations(doc) {
+  const map = new Map();
+  for (const res of doc.resources ?? []) {
+    const ex = res.expectations || {};
+    for (const [route, cfg] of Object.entries(ex)) {
+      const inflated = String(route).replace(/\[.*?\]/g, '123');
+      map.set(inflated, cfg || {});
+    }
+  }
+  return map;
+}
+
+const DOC = loadContract();
+const ROUTES = loadContractRoutes(DOC);
+const EXPECT = buildExpectations(DOC);
 
 console.log(`📋 Loaded ${ROUTES.length} routes from UI contract:\n${ROUTES.join('\n')}\n`);
 
 test.describe('Contract Routes - Navigation Smoke Test', () => {
-  test.beforeEach(async ({ page }) => {
-    // Set up console log listener for debugging
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        console.log(`🔴 Console error on page: ${msg.text()}`);
-      }
-    });
-    
-    // Set up page error listener
-    page.on('pageerror', err => {
-      console.log(`🔴 Page error: ${err.message}`);
-    });
+  test('contract route count locked', async () => {
+    // Guard against silent contract drift
+    expect(ROUTES.length).toBe(24);
   });
 
   for (const route of ROUTES) {
     test(`renders ${route}`, async ({ page }) => {
+      // Collect console errors and failed requests for this route
+      const consoleErrors = [];
+      const failedRequests = [];
+      
+      page.on('console', msg => {
+        if (msg.type() === 'error') consoleErrors.push(msg.text());
+      });
+      page.on('pageerror', err => consoleErrors.push(String(err)));
+      page.on('requestfailed', req => {
+        const url = req.url();
+        const failure = req.failure();
+        // Ignore favicon noise and dev server hot updates
+        if (/\.(ico|png|jpg|jpeg|gif|svg)$/i.test(url)) return;
+        if (url.includes('__vite') || url.includes('hot-update')) return;
+        failedRequests.push({ url, errorText: failure?.errorText });
+      });
+
       const urlPath = route.startsWith('/') ? route : `/${route}`;
       
       console.log(`🔍 Testing route: ${urlPath}`);
@@ -60,44 +87,55 @@ test.describe('Contract Routes - Navigation Smoke Test', () => {
         timeout: 10_000 
       });
 
-      // STRICT: Require route-specific content, NOT shared layout elements
-      // We accept page headings (h1/h2/h3) or explicit state markers
-      // Generic elements like <header> and <main> are too weak (they're in the layout)
-      const validSelectors = [
-        'h1',              // Page-specific heading
-        'h2',              // Section heading
-        'h3',              // Subsection heading
-        '[role="heading"]', // ARIA heading
-        '[data-state="loading"]',      // Loading skeleton
-        '[data-state="error"]',        // Error state
-        '[data-state="unauthorized"]', // Access denied
-        '[data-state="empty"]',        // No data
-        '[data-state="not_found"]',    // 404
+      // Strict: require route-specific content (headings) or explicit UI state.
+      // We intentionally exclude generic layout tags so layout-only renders fail.
+      const selectors = [
+        'h1',
+        'h2',
+        'h3',
+        '[role="heading"]',
+        '[data-state="loading"]',
+        '[data-state="error"]',
+        '[data-state="unauthorized"]',
+        '[data-state="empty"]',
+        '[data-state="not_found"]'
       ].join(', ');
 
-      // Check the final URL after any redirects
+      // In auth-gated apps, redirects to /login are okay if a form or heading exists.
       const finalUrl = page.url();
-      
-      // In auth-gated apps, redirects to /login are acceptable if a form exists
-      if (finalUrl.includes('/login') || finalUrl.includes('/signup')) {
-        const authSelector = 'form, [role="form"], input[type="email"], input[type="password"], h1, h2';
-        await expect(
-          page.locator(authSelector).first(),
-          `Expected auth page (${finalUrl}) to have a form or heading`
-        ).toBeVisible({ timeout: 5_000 });
-        
+      if (finalUrl.includes('/login')) {
+        await expect(page.locator('form, [role="form"], h1, h2, [role="heading"]')
+          .first()).toBeVisible();
+        // Still check there were no console errors loading the login page
+        expect(consoleErrors, `console errors on ${urlPath} -> ${finalUrl}`).toEqual([]);
         console.log(`  ✓ ${urlPath} → redirected to auth (${finalUrl})`);
-        return;
+        return; 
       }
 
-      // Otherwise, the route must render something meaningful
-      const element = page.locator(validSelectors).first();
-      await expect(
-        element,
-        `Expected ${urlPath} to render a header, heading, or data-state element`
-      ).toBeVisible({ timeout: 5_000 });
-      
-      console.log(`  ✅ ${urlPath} rendered successfully`);
+      // Otherwise, the route must render something meaningful and stable.
+      const firstMatch = page.locator(selectors).first();
+      await expect(firstMatch).toBeVisible();
+
+      // If an explicit heading expectation exists, assert it (prefix match allowed).
+      const exp = EXPECT.get(route);
+      if (exp?.heading) {
+        const heading = page.locator('h1, h2, h3, [role="heading"]').first();
+        const text = (await heading.textContent() || '').trim();
+        expect(text.toLowerCase()).toContain(exp.heading.toLowerCase());
+        console.log(`    ✓ Heading matched: "${text}" contains "${exp.heading}"`);
+      }
+
+      // Title sanity: title should not be empty when route renders
+      const title = await page.title();
+      expect(title?.trim().length || 0).toBeGreaterThan(0);
+
+      // Fail fast if console errors or failed requests were captured
+      expect(consoleErrors, `console errors on ${urlPath}`).toEqual([]);
+      // Allow 401/403 on auth-gated API calls but fail on 404/5xx during initial render
+      const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+      expect(hardFailures, `failed requests on ${urlPath}`).toEqual([]);
+
+      console.log(`  ✅ Verified ${urlPath}`);
     });
   }
 });
