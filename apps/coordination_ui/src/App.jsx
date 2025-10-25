@@ -30,6 +30,7 @@ import DecisionsPage from './pages/admin/DecisionsPage';
 import CourtFlowPage from './pages/admin/CourtFlowPage';
 import PerformanceLeaderboardPage from './pages/PerformanceLeaderboardPage';
 import Velocity from './pages/Velocity';
+import ProfilePage from './pages/ProfilePage';
 
 const queryClient = new QueryClient();
 
@@ -274,6 +275,14 @@ function AppContent() {
             element={
               <RequireAuth>
                 <Velocity />
+              </RequireAuth>
+            } 
+          />
+          <Route 
+            path="/profile" 
+            element={
+              <RequireAuth>
+                <ProfilePage />
               </RequireAuth>
             } 
           />
