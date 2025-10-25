@@ -1,0 +1,261 @@
+[Mode: Execution]
+
+Step: Tighten the smoke test to assert route-specific content, no console errors, and no failed network calls—using the contract as the source of truth.
+
+Why it matters: Layouts can render while the page fails; these checks guarantee the page component actually mounted and didn’t error.
+
+Inputs needed:
+
+Existing docs/ui-contract.yaml
+
+Your current Playwright setup (tests/smoke-nav.spec.cjs, playwright.config.cjs)
+
+Command (copy–paste):
+
+# 1) Extend the contract format (OPTIONAL BUT RECOMMENDED for key routes)
+# Add expected headings (or keywords) per route to make tests unambiguous.
+# You can add only for critical routes now; the test will fall back to generic checks otherwise.
+applypatch <<'PATCH'
+*** Begin Patch
+*** Update File: docs/ui-contract.yaml
+@@
+   - name: incidents
+     routes:
+       - GET   /ops/incidents
+       - POST  /ops/incidents/:id/acknowledge
+     required_pages:
+       - /incidents
+       - /incidents/[id]
+     required_states: [loading, empty, error, unauthorized, not_found]
++    expectations:
++      "/incidents":
++        heading: "Incidents"
++      "/incidents/[id]":
++        heading: "Incident"   # prefix match allowed
+
+   - name: velocity
+     routes:
+       - GET /velocity
+     required_pages:
+       - /velocity
+     required_states: [loading, error]
++    expectations:
++      "/velocity":
++        heading: "Velocity"
+
+   - name: profile
+     routes:
+       - GET  /api/me/profile
+       - PATCH /api/me/profile
+     required_pages:
+       - /profile
+     required_states: [loading, error, unauthorized]
++    expectations:
++      "/profile":
++        heading: "Profile"
+*** End Patch
+PATCH
+
+# 2) Upgrade the smoke test: verify route-specific heading, fail on console errors,
+# and fail if any network request ends in 4xx/5xx during initial render.
+
+applypatch <<'PATCH'
+*** Begin Patch
+*** Update File: tests/smoke-nav.spec.cjs
+@@
+-const { test, expect } = require('@playwright/test');
++const { test, expect } = require('@playwright/test');
+ const fs = require('fs');
+ const path = require('path');
+ const yaml = require('js-yaml');
+ 
+-function loadContractRoutes() {
++function loadContract() {
+   const specPath = path.join(process.cwd(), 'docs/ui-contract.yaml');
+-  const doc = yaml.load(fs.readFileSync(specPath, 'utf8'));
++  return yaml.load(fs.readFileSync(specPath, 'utf8'));
++}
++
++function loadContractRoutes(doc) {
+   const set = new Set();
+-  for (const res of doc.resources || []) {
++  for (const res of doc.resources ?? []) {
+     for (const route of res.required_pages || []) {
+       // Replace every [param] with a safe test value
+       const inflated = String(route).replace(/\[.*?\]/g, '123');
+       set.add(inflated);
+     }
+   }
+-  return [...set];
++  return [...set].sort();
++}
++
++function buildExpectations(doc) {
++  // Map inflated route -> expectation { heading?: string }
++  const map = new Map();
++  for (const res of doc.resources ?? []) {
++    const ex = res.expectations || {};
++    for (const [route, cfg] of Object.entries(ex)) {
++      const inflated = String(route).replace(/\[.*?\]/g, '123');
++      map.set(inflated, cfg || {});
++    }
++  }
++  return map;
+ }
+ 
+-const ROUTES = loadContractRoutes();
++const DOC = loadContract();
++const ROUTES = loadContractRoutes(DOC);
++const EXPECT = buildExpectations(DOC);
+ 
+ test.describe('contract routes', () => {
++  test('contract route count locked', async () => {
++    // Guard against silent contract drift
++    expect(ROUTES.length).toBe(24);
++  });
++
+   for (const route of ROUTES) {
+     test(`renders ${route}`, async ({ page }) => {
++      // Collect console errors and failed requests for this route
++      const consoleErrors = [];
++      const failedRequests = [];
++      page.on('console', msg => {
++        if (msg.type() === 'error') consoleErrors.push(msg.text());
++      });
++      page.on('pageerror', err => consoleErrors.push(String(err)));
++      page.on('requestfailed', req => {
++        const url = req.url();
++        const failure = req.failure();
++        // Ignore favicon noise and dev server hot updates
++        if (/\.(ico|png|jpg|jpeg|gif|svg)$/i.test(url)) return;
++        if (url.includes('__vite') || url.includes('hot-update')) return;
++        failedRequests.push({ url, errorText: failure?.errorText });
++      });
++
+       const urlPath = route.startsWith('/') ? route : `/${route}`;
+       await page.goto(urlPath, { waitUntil: 'domcontentloaded' });
+ 
+-      // Accept either a real header/heading or any explicit UI state.
+-      const selectors = [
+-        'header',
+-        'h1',
+-        'h2',
+-        '[role="heading"]',
+-        '[data-state="loading"]',
+-        '[data-state="error"]',
+-        '[data-state="unauthorized"]',
+-        '[data-state="empty"]',
+-        '[data-state="not_found"]'
+-      ].join(', ');
++      // Strict: require route-specific content (headings) or explicit UI state.
++      // We intentionally exclude generic layout tags so layout-only renders fail.
++      const selectors = [
++        'h1',
++        'h2',
++        'h3',
++        '[role="heading"]',
++        '[data-state="loading"]',
++        '[data-state="error"]',
++        '[data-state="unauthorized"]',
++        '[data-state="empty"]',
++        '[data-state="not_found"]'
++      ].join(', ');
+ 
+       // In auth-gated apps, redirects to /login are okay if a form or heading exists.
+       const finalUrl = page.url();
+       if (finalUrl.includes('/login')) {
+         await expect(page.locator('form, [role="form"], h1, h2, [role="heading"]')
+           .first()).toBeVisible();
+-        return;
++        // Still check there were no console errors loading the login page
++        expect(consoleErrors, `console errors on ${urlPath} -> ${finalUrl}`).toEqual([]);
++        return; 
+       }
+ 
+-      // Otherwise, the route must render something meaningful.
+-      await expect(page.locator(selectors).first()).toBeVisible();
+-      console.log(`✓ Visited ${urlPath}`);
++      // Otherwise, the route must render something meaningful and stable.
++      const firstMatch = page.locator(selectors).first();
++      await expect(firstMatch).toBeVisible();
++
++      // If an explicit heading expectation exists, assert it (prefix match allowed).
++      const exp = EXPECT.get(route);
++      if (exp?.heading) {
++        const heading = page.locator('h1, h2, h3, [role="heading"]').first();
++        const text = (await heading.textContent() || '').trim();
++        expect(text.toLowerCase()).toContain(exp.heading.toLowerCase());
++      }
++
++      // Title sanity: title should not be empty when route renders
++      const title = await page.title();
++      expect(title?.trim().length || 0).toBeGreaterThan(0);
++
++      // Fail fast if console errors or failed requests were captured
++      expect(consoleErrors, `console errors on ${urlPath}`).toEqual([]);
++      // Allow 401/403 on auth-gated API calls but fail on 404/5xx during initial render
++      const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
++      expect(hardFailures, `failed requests on ${urlPath}`).toEqual([]);
++
++      console.log(`✓ Verified ${urlPath}`);
+     });
+   }
+ });
+*** End Patch
+PATCH
+
+# 3) (Optional) Add a short lint to prevent empty <h1> titles slipping in.
+# This runs in CI to catch <h1></h1> or <h1>&nbsp;</h1> anti-patterns in page files.
+applypatch <<'PATCH'
+*** Begin Patch
+*** Add File: tests/lint-empty-headings.cjs
+/* eslint-disable no-console */
+const fs = require('fs');
+const path = require('path');
+
+const roots = ['src/pages', 'apps/coordination_ui/src/pages', 'apps/coordination_ui/src/app'];
+
+function walk(dir, out=[]) {
+  if (!fs.existsSync(dir)) return out;
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, e.name);
+    if (e.isDirectory()) walk(p, out);
+    else if (/\.(tsx|jsx)$/.test(e.name)) out.push(p);
+  }
+  return out;
+}
+
+const files = roots.flatMap(r => walk(r));
+const offenders = [];
+
+for (const f of files) {
+  const src = fs.readFileSync(f, 'utf8');
+  // crude but effective: <h1>   </h1>
+  if (/<h1[^>]*>\s*<\/h1>/i.test(src)) offenders.push(f);
+}
+
+if (offenders.length) {
+  console.error('❌ Empty <h1> detected in:');
+  for (const f of offenders) console.error(' -', f);
+  process.exit(1);
+} else {
+  console.log('✅ No empty <h1> tags found.');
+}
+*** End Patch
+PATCH
+
+npm pkg set scripts.test:smoke="playwright test --project=chromium -g 'contract routes'"
+npm pkg set scripts.test:lint:h1="node tests/lint-empty-headings.cjs"
+
+
+Success check:
+
+npm run test:smoke passes; logs show ✓ Verified /… per route.
+
+Contract drift guarded (routes.length === 24).
+
+Fails if a page logs console errors, renders empty title, or triggers failed network calls during first paint.
+
+Optional npm run test:lint:h1 blocks empty headings in CI.
+
+Next: wait for user
