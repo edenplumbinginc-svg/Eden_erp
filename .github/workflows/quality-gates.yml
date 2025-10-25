@@ -28,7 +28,7 @@ jobs:
 
       # App-specific dependencies
       - name: Install UI dependencies
-        run: npm --prefix apps/coordination_ui ci
+        run: npm --prefix apps/coordination_ui install --no-audit --no-fund
 
       # Build the UI app (vite build)
       - name: Build UI
