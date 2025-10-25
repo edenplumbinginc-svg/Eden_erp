@@ -865,6 +865,35 @@ app.post('/ops/escalation/tick', async (_req, res) => {
   }
 });
 
+// Escalation: Recalculate next_due_at for all incidents (backfill/maintenance)
+app.post('/ops/escalation/recalc', async (req, res) => {
+  try {
+    const forceRecalc = req.query.force === 'true';
+    const result = await pool.query(`
+      UPDATE incidents
+      SET next_due_at = first_seen + (
+        CASE severity
+          WHEN 'critical' THEN 5
+          ELSE 15
+        END * (escalation_level + 1)
+      ) * INTERVAL '1 minute'
+      WHERE next_due_at IS NULL ${forceRecalc ? 'OR true' : ''}
+      RETURNING id
+    `);
+    
+    logger.info({ recalculated: result.rows.length, force: forceRecalc }, 'next_due_at_recalculated');
+    res.json({ 
+      success: true, 
+      recalculated: result.rows.length,
+      force: forceRecalc,
+      timestamp: new Date().toISOString() 
+    });
+  } catch (error) {
+    logger.error({ err: error }, 'recalculation_failed');
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // --- Sentry test route (development only) ---
 if (process.env.NODE_ENV !== 'production') {
   app.get('/api/_sentry-test', (req, res) => {
