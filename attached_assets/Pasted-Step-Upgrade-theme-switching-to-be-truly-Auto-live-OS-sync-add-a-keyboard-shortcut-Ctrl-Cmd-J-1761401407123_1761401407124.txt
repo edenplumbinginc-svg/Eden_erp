@@ -1,0 +1,153 @@
+Step: Upgrade theme switching to be truly “Auto” (live OS-sync), add a keyboard shortcut (Ctrl/Cmd+J), and make page transitions respect reduced motion end-to-end.
+
+Why it matters: “Auto” should track OS theme changes in real time; power users get instant toggling; motion accessibility becomes bulletproof.
+
+Inputs needed:
+
+Repo path: apps/coordination_ui
+
+Existing files: src/components/ThemeProvider.jsx, src/App.jsx
+
+Command (copy–paste):
+
+# 1) Make “Auto” truly live: listen to OS theme changes + broadcast updates
+applypatch <<'PATCH'
+*** Begin Patch
+*** Update File: apps/coordination_ui/src/components/ThemeProvider.jsx
+@@
+-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
++import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+ 
+ const ThemeCtx = createContext({ theme: 'auto', setTheme: () => {} });
+ 
+ function getInitialTheme() {
+   const saved = localStorage.getItem('eden.theme');
+   return saved || 'auto';
+ }
+ 
+ export function ThemeProvider({ children }) {
+   const [theme, setTheme] = useState(() => getInitialTheme());
++  const mediaRef = useRef(null);
+ 
+   useEffect(() => {
+     localStorage.setItem('eden.theme', theme);
+     const root = document.documentElement;
+     // Remove explicit theme first
+     root.removeAttribute('data-theme');
+     if (theme === 'dark') root.setAttribute('data-theme', 'dark');
+     // 'auto' respects prefers-color-scheme (handled by CSS tokens)
+   }, [theme]);
+ 
++  // Live-sync 'auto' with OS preference changes
++  useEffect(() => {
++    if (typeof window === 'undefined') return;
++    if (!window.matchMedia) return;
++    // Set up listener only when in 'auto' mode
++    if (theme !== 'auto') return;
++    mediaRef.current = window.matchMedia('(prefers-color-scheme: dark)');
++    const onChange = () => {
++      // Re-apply 'auto' to force CSS to pick new scheme immediately
++      document.documentElement.removeAttribute('data-theme');
++    };
++    mediaRef.current.addEventListener?.('change', onChange);
++    return () => mediaRef.current?.removeEventListener?.('change', onChange);
++  }, [theme]);
++
++  // Keyboard shortcut: Ctrl/Cmd + J cycles Light → Dark → Auto
++  useEffect(() => {
++    const handler = (e) => {
++      const isMod = e.ctrlKey || e.metaKey;
++      if (!isMod || (e.key?.toLowerCase() !== 'j')) return;
++      e.preventDefault();
++      setTheme((prev) => {
++        if (prev === 'light') return 'dark';
++        if (prev === 'dark') return 'auto';
++        return 'light';
++      });
++    };
++    window.addEventListener('keydown', handler);
++    return () => window.removeEventListener('keydown', handler);
++  }, []);
++
+   const value = useMemo(() => ({ theme, setTheme }), [theme]);
+   return <ThemeCtx.Provider value={value}>{children}</ThemeCtx.Provider>;
+ }
+ 
+ export function useTheme() { return useContext(ThemeCtx); }
+ 
+ export function ThemeToggle() {
+   const { theme, setTheme } = useTheme();
+   return (
+     <div style={{ display:'inline-flex', gap:8, alignItems:'center' }}>
+       <label className="muted" style={{ fontSize: '0.85rem' }}>Theme</label>
+       <select
+         value={theme}
+         onChange={(e) => setTheme(e.target.value)}
+         aria-label="Theme selection"
+       >
+         <option value="auto">Auto</option>
+         <option value="light">Light</option>
+         <option value="dark">Dark</option>
+       </select>
++      <span className="muted" style={{ fontSize:'0.75rem' }} title="Keyboard shortcut">
++        ⌘/Ctrl + J
++      </span>
+     </div>
+   );
+ }
+*** End Patch
+PATCH
+
+# 2) Make transitions fully respect reduced motion (disable animations globally when requested)
+applypatch <<'PATCH'
+*** Begin Patch
+*** Update File: apps/coordination_ui/src/App.jsx
+@@
+-import { AnimatePresence, motion } from 'framer-motion';
++import { AnimatePresence, motion } from 'framer-motion';
+@@
+ function RouteTransitions() {
+   const location = useLocation();
+-  const variants = {
+-    initial: { opacity: 0, y: 6 },
+-    enter:   { opacity: 1, y: 0, transition: { duration: 0.18, ease: [0.2,0.8,0.2,1] } },
+-    exit:    { opacity: 0, y: -6, transition: { duration: 0.15, ease: [0.2,0.8,0.2,1] } },
+-  };
++  // Respect OS "reduce motion"
++  const prefersReduced = typeof window !== 'undefined'
++    ? window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
++    : false;
++  const variants = prefersReduced
++    ? {
++        initial: { opacity: 1, y: 0 },
++        enter:   { opacity: 1, y: 0, transition: { duration: 0 } },
++        exit:    { opacity: 1, y: 0, transition: { duration: 0 } },
++      }
++    : {
++        initial: { opacity: 0, y: 6 },
++        enter:   { opacity: 1, y: 0, transition: { duration: 0.18, ease: [0.2,0.8,0.2,1] } },
++        exit:    { opacity: 0, y: -6, transition: { duration: 0.15, ease: [0.2,0.8,0.2,1] } },
++      };
+   return (
+     <AnimatePresence mode="wait">
+       <motion.main
+         key={location.pathname}
+         variants={variants}
+         initial="initial"
+         animate="enter"
+         exit="exit"
+         style={{ padding: '16px' }}
+       >
+*** End Patch
+PATCH
+
+
+Success check:
+
+Open the app and switch OS theme while Theme = Auto → the UI flips live without reload.
+
+Press Ctrl/Cmd + J repeatedly → cycles Light → Dark → Auto; persists across refresh.
+
+Set your OS to “Reduce motion” → page transitions snap in with no animation.
+
+Next: wait for user
