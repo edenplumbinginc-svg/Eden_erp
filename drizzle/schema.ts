@@ -141,8 +141,14 @@ export const users = pgTable("users", {
         updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
         role: text().default('User'),
         department: text(),
+        phone: text(),
+        title: text(),
+        timezone: text(),
+        locale: text(),
+        notificationPrefs: jsonb("notification_prefs").default(sql`'{}'::jsonb`),
 }, (table) => [
         unique("users_email_key").on(table.email),
+        index("idx_users_phone").using("btree", table.phone.asc().nullsLast()),
 ]);
 
 export const userPreferences = pgTable("user_preferences", {
