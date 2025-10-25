@@ -1,0 +1,1027 @@
+tal routes tested: 24
+   Expected routes: 24
+   ✅ All routes from UI contract validated
+  ✓  50 [chromium] › tests/smoke-nav.spec.cjs:183:3 › Contract Routes - Summary › all routes tested (9ms)
+  1) [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /admin/court-flow 
+    Error: JS/React errors on /admin/court-flow
+    expect(received).toEqual(expected) // deep equality
+    - Expected  -  1
+    + Received  + 13
+    - Array []
+    + Array [
+    +   "TypeError: s.defaultQueryOptions is not a function
+    +     at $4 (http://localhost:4173/assets/index-CmUuD4bh.js:51:61012)
+    +     at he (http://localhost:4173/assets/index-CmUuD4bh.js:51:62064)
+    +     at oue (http://localhost:4173/assets/index-CmUuD4bh.js:185:16956)
+    +     at _0 (http://localhost:4173/assets/index-CmUuD4bh.js:38:16998)
+    +     at SA (http://localhost:4173/assets/index-CmUuD4bh.js:40:43963)
+    +     at xA (http://localhost:4173/assets/index-CmUuD4bh.js:40:39727)
+    +     at HB (http://localhost:4173/assets/index-CmUuD4bh.js:40:39655)
+    +     at Jf (http://localhost:4173/assets/index-CmUuD4bh.js:40:39508)
+    +     at qy (http://localhost:4173/assets/index-CmUuD4bh.js:40:35875)
+    +     at gA (http://localhost:4173/assets/index-CmUuD4bh.js:40:34826)",
+    + ]
+      165 |         !e.includes('Error response:')               // Axios error logs
+      166 |       );
+    > 167 |       expect(realConsoleErrors, `JS/React errors on ${urlPath}`).toEqual([]);
+          |                                                                  ^
+      168 |       
+      169 |       // Network failures (DNS, connection refused) are always bad
+      170 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:167:66
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--1600a-st-renders-admin-court-flow-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/smoke-nav-Contract-Routes--1600a-st-renders-admin-court-flow-chromium/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--1600a-st-renders-admin-court-flow-chromium/trace.zip
+    Usage:
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--1600a-st-renders-admin-court-flow-chromium/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+    Error: JS/React errors on /admin/court-flow
+    expect(received).toEqual(expected) // deep equality
+    - Expected  -  1
+    + Received  + 13
+    - Array []
+    + Array [
+    +   "TypeError: s.defaultQueryOptions is not a function
+    +     at $4 (http://localhost:4173/assets/index-CmUuD4bh.js:51:61012)
+    +     at he (http://localhost:4173/assets/index-CmUuD4bh.js:51:62064)
+    +     at oue (http://localhost:4173/assets/index-CmUuD4bh.js:185:16956)
+    +     at _0 (http://localhost:4173/assets/index-CmUuD4bh.js:38:16998)
+    +     at SA (http://localhost:4173/assets/index-CmUuD4bh.js:40:43963)
+    +     at xA (http://localhost:4173/assets/index-CmUuD4bh.js:40:39727)
+    +     at HB (http://localhost:4173/assets/index-CmUuD4bh.js:40:39655)
+    +     at Jf (http://localhost:4173/assets/index-CmUuD4bh.js:40:39508)
+    +     at qy (http://localhost:4173/assets/index-CmUuD4bh.js:40:35875)
+    +     at gA (http://localhost:4173/assets/index-CmUuD4bh.js:40:34826)",
+    + ]
+      165 |         !e.includes('Error response:')               // Axios error logs
+      166 |       );
+    > 167 |       expect(realConsoleErrors, `JS/React errors on ${urlPath}`).toEqual([]);
+          |                                                                  ^
+      168 |       
+      169 |       // Network failures (DNS, connection refused) are always bad
+      170 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:167:66
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--1600a-st-renders-admin-court-flow-chromium-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/smoke-nav-Contract-Routes--1600a-st-renders-admin-court-flow-chromium-retry1/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--1600a-st-renders-admin-court-flow-chromium-retry1/trace.zip
+    Usage:
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--1600a-st-renders-admin-court-flow-chromium-retry1/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+  2) [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /admin/decisions 
+    Error: network failures on /admin/decisions
+    expect(received).toEqual(expected) // deep equality
+    - Expected  -  1
+    + Received  + 22
+    - Array []
+    + Array [
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/tasks?limit=20&sort=updated_at&order=desc",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/projects",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    + ]
+      169 |       // Network failures (DNS, connection refused) are always bad
+      170 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+    > 171 |       expect(hardFailures, `network failures on ${urlPath}`).toEqual([]);
+          |                                                              ^
+      172 |       
+      173 |       // HTTP 4xx client errors are bad, but 5xx server errors are OK in CI (backend may not run)
+      174 |       const clientErrors = httpErrors.filter(e => e.status >= 400 && e.status < 500);
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:171:62
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--f9bb1-est-renders-admin-decisions-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/smoke-nav-Contract-Routes--f9bb1-est-renders-admin-decisions-chromium/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--f9bb1-est-renders-admin-decisions-chromium/trace.zip
+    Usage:
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--f9bb1-est-renders-admin-decisions-chromium/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+    Error: network failures on /admin/decisions
+    expect(received).toEqual(expected) // deep equality
+    - Expected  -  1
+    + Received  + 18
+    - Array []
+    + Array [
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/tasks?limit=20&sort=updated_at&order=desc",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/projects",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    + ]
+      169 |       // Network failures (DNS, connection refused) are always bad
+      170 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+    > 171 |       expect(hardFailures, `network failures on ${urlPath}`).toEqual([]);
+          |                                                              ^
+      172 |       
+      173 |       // HTTP 4xx client errors are bad, but 5xx server errors are OK in CI (backend may not run)
+      174 |       const clientErrors = httpErrors.filter(e => e.status >= 400 && e.status < 500);
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:171:62
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--f9bb1-est-renders-admin-decisions-chromium-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/smoke-nav-Contract-Routes--f9bb1-est-renders-admin-decisions-chromium-retry1/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--f9bb1-est-renders-admin-decisions-chromium-retry1/trace.zip
+    Usage:
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--f9bb1-est-renders-admin-decisions-chromium-retry1/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+  3) [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /admin/rbac 
+    Error: JS/React errors on /admin/rbac
+    expect(received).toEqual(expected) // deep equality
+    - Expected  - 1
+    + Received  + 6
+    - Array []
+    + Array [
+    +   "Error: Failed to fetch roles
+    +     at iG (http://localhost:4173/assets/index-CmUuD4bh.js:108:88822)
+    +     at async Promise.all (index 0)
+    +     at async w (http://localhost:4173/assets/index-CmUuD4bh.js:108:89910)",
+    + ]
+      165 |         !e.includes('Error response:')               // Axios error logs
+      166 |       );
+    > 167 |       expect(realConsoleErrors, `JS/React errors on ${urlPath}`).toEqual([]);
+          |                                                                  ^
+      168 |       
+      169 |       // Network failures (DNS, connection refused) are always bad
+      170 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:167:66
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--6f79f-oke-Test-renders-admin-rbac-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/smoke-nav-Contract-Routes--6f79f-oke-Test-renders-admin-rbac-chromium/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--6f79f-oke-Test-renders-admin-rbac-chromium/trace.zip
+    Usage:
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--6f79f-oke-Test-renders-admin-rbac-chromium/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+    Error: network failures on /admin/rbac
+    expect(received).toEqual(expected) // deep equality
+    - Expected  -  1
+    + Received  + 22
+    - Array []
+    + Array [
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/tasks?limit=20&sort=updated_at&order=desc",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/projects",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    + ]
+      169 |       // Network failures (DNS, connection refused) are always bad
+      170 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+    > 171 |       expect(hardFailures, `network failures on ${urlPath}`).toEqual([]);
+          |                                                              ^
+      172 |       
+      173 |       // HTTP 4xx client errors are bad, but 5xx server errors are OK in CI (backend may not run)
+      174 |       const clientErrors = httpErrors.filter(e => e.status >= 400 && e.status < 500);
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:171:62
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--6f79f-oke-Test-renders-admin-rbac-chromium-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/smoke-nav-Contract-Routes--6f79f-oke-Test-renders-admin-rbac-chromium-retry1/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--6f79f-oke-Test-renders-admin-rbac-chromium-retry1/trace.zip
+    Usage:
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--6f79f-oke-Test-renders-admin-rbac-chromium-retry1/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+  4) [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /alltasks 
+    Error: network failures on /alltasks
+    expect(received).toEqual(expected) // deep equality
+    - Expected  -  1
+    + Received  + 22
+    - Array []
+    + Array [
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/tasks?limit=20&sort=updated_at&order=desc",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/projects",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    + ]
+      169 |       // Network failures (DNS, connection refused) are always bad
+      170 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+    > 171 |       expect(hardFailures, `network failures on ${urlPath}`).toEqual([]);
+          |                                                              ^
+      172 |       
+      173 |       // HTTP 4xx client errors are bad, but 5xx server errors are OK in CI (backend may not run)
+      174 |       const clientErrors = httpErrors.filter(e => e.status >= 400 && e.status < 500);
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:171:62
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--3c42e-Smoke-Test-renders-alltasks-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/smoke-nav-Contract-Routes--3c42e-Smoke-Test-renders-alltasks-chromium/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--3c42e-Smoke-Test-renders-alltasks-chromium/trace.zip
+    Usage:
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--3c42e-Smoke-Test-renders-alltasks-chromium/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+    Error: network failures on /alltasks
+    expect(received).toEqual(expected) // deep equality
+    - Expected  -  1
+    + Received  + 18
+    - Array []
+    + Array [
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/projects",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/tasks?limit=20&sort=updated_at&order=desc",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    + ]
+      169 |       // Network failures (DNS, connection refused) are always bad
+      170 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+    > 171 |       expect(hardFailures, `network failures on ${urlPath}`).toEqual([]);
+          |                                                              ^
+      172 |       
+      173 |       // HTTP 4xx client errors are bad, but 5xx server errors are OK in CI (backend may not run)
+      174 |       const clientErrors = httpErrors.filter(e => e.status >= 400 && e.status < 500);
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:171:62
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--3c42e-Smoke-Test-renders-alltasks-chromium-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/smoke-nav-Contract-Routes--3c42e-Smoke-Test-renders-alltasks-chromium-retry1/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--3c42e-Smoke-Test-renders-alltasks-chromium-retry1/trace.zip
+    Usage:
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--3c42e-Smoke-Test-renders-alltasks-chromium-retry1/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+  5) [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /archive 
+    Error: network failures on /archive
+    expect(received).toEqual(expected) // deep equality
+    - Expected  -  1
+    + Received  + 22
+    - Array []
+    + Array [
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/tasks?limit=20&sort=updated_at&order=desc",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/projects",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    + ]
+      169 |       // Network failures (DNS, connection refused) are always bad
+      170 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+    > 171 |       expect(hardFailures, `network failures on ${urlPath}`).toEqual([]);
+          |                                                              ^
+      172 |       
+      173 |       // HTTP 4xx client errors are bad, but 5xx server errors are OK in CI (backend may not run)
+      174 |       const clientErrors = httpErrors.filter(e => e.status >= 400 && e.status < 500);
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:171:62
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--0f4ce--Smoke-Test-renders-archive-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/smoke-nav-Contract-Routes--0f4ce--Smoke-Test-renders-archive-chromium/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--0f4ce--Smoke-Test-renders-archive-chromium/trace.zip
+    Usage:
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--0f4ce--Smoke-Test-renders-archive-chromium/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+    Error: network failures on /archive
+    expect(received).toEqual(expected) // deep equality
+    - Expected  -  1
+    + Received  + 18
+    - Array []
+    + Array [
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/tasks?limit=20&sort=updated_at&order=desc",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/projects",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    + ]
+      169 |       // Network failures (DNS, connection refused) are always bad
+      170 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+    > 171 |       expect(hardFailures, `network failures on ${urlPath}`).toEqual([]);
+          |                                                              ^
+      172 |       
+      173 |       // HTTP 4xx client errors are bad, but 5xx server errors are OK in CI (backend may not run)
+      174 |       const clientErrors = httpErrors.filter(e => e.status >= 400 && e.status < 500);
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:171:62
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--0f4ce--Smoke-Test-renders-archive-chromium-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/smoke-nav-Contract-Routes--0f4ce--Smoke-Test-renders-archive-chromium-retry1/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--0f4ce--Smoke-Test-renders-archive-chromium-retry1/trace.zip
+    Usage:
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--0f4ce--Smoke-Test-renders-archive-chromium-retry1/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+  6) [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /audit-log 
+    Error: JS/React errors on /audit-log
+    expect(received).toEqual(expected) // deep equality
+    - Expected  - 1
+    + Received  + 3
+    - Array []
+    + Array [
+    +   "Failed to fetch audit logs: ue",
+    + ]
+      165 |         !e.includes('Error response:')               // Axios error logs
+      166 |       );
+    > 167 |       expect(realConsoleErrors, `JS/React errors on ${urlPath}`).toEqual([]);
+          |                                                                  ^
+      168 |       
+      169 |       // Network failures (DNS, connection refused) are always bad
+      170 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:167:66
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--57a46-moke-Test-renders-audit-log-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/smoke-nav-Contract-Routes--57a46-moke-Test-renders-audit-log-chromium/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--57a46-moke-Test-renders-audit-log-chromium/trace.zip
+    Usage:
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--57a46-moke-Test-renders-audit-log-chromium/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+    Error: JS/React errors on /audit-log
+    expect(received).toEqual(expected) // deep equality
+    - Expected  - 1
+    + Received  + 3
+    - Array []
+    + Array [
+    +   "Failed to fetch audit logs: ue",
+    + ]
+      165 |         !e.includes('Error response:')               // Axios error logs
+      166 |       );
+    > 167 |       expect(realConsoleErrors, `JS/React errors on ${urlPath}`).toEqual([]);
+          |                                                                  ^
+      168 |       
+      169 |       // Network failures (DNS, connection refused) are always bad
+      170 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:167:66
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--57a46-moke-Test-renders-audit-log-chromium-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/smoke-nav-Contract-Routes--57a46-moke-Test-renders-audit-log-chromium-retry1/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--57a46-moke-Test-renders-audit-log-chromium-retry1/trace.zip
+    Usage:
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--57a46-moke-Test-renders-audit-log-chromium-retry1/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+  7) [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /dashboard 
+    Error: network failures on /dashboard
+    expect(received).toEqual(expected) // deep equality
+    - Expected  -  1
+    + Received  + 18
+    - Array []
+    + Array [
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/tasks?limit=20&sort=updated_at&order=desc",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/projects",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    + ]
+      169 |       // Network failures (DNS, connection refused) are always bad
+      170 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+    > 171 |       expect(hardFailures, `network failures on ${urlPath}`).toEqual([]);
+          |                                                              ^
+      172 |       
+      173 |       // HTTP 4xx client errors are bad, but 5xx server errors are OK in CI (backend may not run)
+      174 |       const clientErrors = httpErrors.filter(e => e.status >= 400 && e.status < 500);
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:171:62
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--de179-moke-Test-renders-dashboard-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/smoke-nav-Contract-Routes--de179-moke-Test-renders-dashboard-chromium/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--de179-moke-Test-renders-dashboard-chromium/trace.zip
+    Usage:
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--de179-moke-Test-renders-dashboard-chromium/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+    Error: network failures on /dashboard
+    expect(received).toEqual(expected) // deep equality
+    - Expected  -  1
+    + Received  + 18
+    - Array []
+    + Array [
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/tasks?limit=20&sort=updated_at&order=desc",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/projects",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    + ]
+      169 |       // Network failures (DNS, connection refused) are always bad
+      170 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+    > 171 |       expect(hardFailures, `network failures on ${urlPath}`).toEqual([]);
+          |                                                              ^
+      172 |       
+      173 |       // HTTP 4xx client errors are bad, but 5xx server errors are OK in CI (backend may not run)
+      174 |       const clientErrors = httpErrors.filter(e => e.status >= 400 && e.status < 500);
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:171:62
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--de179-moke-Test-renders-dashboard-chromium-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/smoke-nav-Contract-Routes--de179-moke-Test-renders-dashboard-chromium-retry1/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--de179-moke-Test-renders-dashboard-chromium-retry1/trace.zip
+    Usage:
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--de179-moke-Test-renders-dashboard-chromium-retry1/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+  8) [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /guest 
+    Error: expect(locator).toBeVisible() failed
+    Locator: locator('h1, h2, h3, [role="heading"], [data-state="loading"], [data-state="error"], [data-state="unauthorized"], [data-state="empty"], [data-state="not_found"]').first()
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for locator('h1, h2, h3, [role="heading"], [data-state="loading"], [data-state="error"], [data-state="unauthorized"], [data-state="empty"], [data-state="not_found"]').first()
+      137 |       // Otherwise, the route must render something meaningful and stable.
+      138 |       const firstMatch = page.locator(selectors).first();
+    > 139 |       await expect(firstMatch).toBeVisible();
+          |                                ^
+      140 |
+      141 |       // If an explicit heading expectation exists, assert it (prefix match allowed).
+      142 |       const exp = EXPECT.get(route);
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:139:32
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--24638-on-Smoke-Test-renders-guest-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/smoke-nav-Contract-Routes--24638-on-Smoke-Test-renders-guest-chromium/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--24638-on-Smoke-Test-renders-guest-chromium/trace.zip
+    Usage:
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--24638-on-Smoke-Test-renders-guest-chromium/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+    Error: expect(locator).toBeVisible() failed
+    Locator: locator('h1, h2, h3, [role="heading"], [data-state="loading"], [data-state="error"], [data-state="unauthorized"], [data-state="empty"], [data-state="not_found"]').first()
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for locator('h1, h2, h3, [role="heading"], [data-state="loading"], [data-state="error"], [data-state="unauthorized"], [data-state="empty"], [data-state="not_found"]').first()
+      137 |       // Otherwise, the route must render something meaningful and stable.
+      138 |       const firstMatch = page.locator(selectors).first();
+    > 139 |       await expect(firstMatch).toBeVisible();
+          |                                ^
+      140 |
+      141 |       // If an explicit heading expectation exists, assert it (prefix match allowed).
+      142 |       const exp = EXPECT.get(route);
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:139:32
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--24638-on-Smoke-Test-renders-guest-chromium-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/smoke-nav-Contract-Routes--24638-on-Smoke-Test-renders-guest-chromium-retry1/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--24638-on-Smoke-Test-renders-guest-chromium-retry1/trace.zip
+    Usage:
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--24638-on-Smoke-Test-renders-guest-chromium-retry1/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+  9) [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /incidents 
+    Error: network failures on /incidents
+    expect(received).toEqual(expected) // deep equality
+    - Expected  -  1
+    + Received  + 22
+    - Array []
+    + Array [
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/tasks?limit=20&sort=updated_at&order=desc",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/projects",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/ops/incidents",
+    +   },
+    + ]
+      169 |       // Network failures (DNS, connection refused) are always bad
+      170 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+    > 171 |       expect(hardFailures, `network failures on ${urlPath}`).toEqual([]);
+          |                                                              ^
+      172 |       
+      173 |       // HTTP 4xx client errors are bad, but 5xx server errors are OK in CI (backend may not run)
+      174 |       const clientErrors = httpErrors.filter(e => e.status >= 400 && e.status < 500);
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:171:62
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--86377-moke-Test-renders-incidents-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/smoke-nav-Contract-Routes--86377-moke-Test-renders-incidents-chromium/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--86377-moke-Test-renders-incidents-chromium/trace.zip
+    Usage:
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--86377-moke-Test-renders-incidents-chromium/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+    Error: network failures on /incidents
+    expect(received).toEqual(expected) // deep equality
+    - Expected  -  1
+    + Received  + 22
+    - Array []
+    + Array [
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/tasks?limit=20&sort=updated_at&order=desc",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/projects",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/ops/incidents",
+    +   },
+    + ]
+      169 |       // Network failures (DNS, connection refused) are always bad
+      170 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+    > 171 |       expect(hardFailures, `network failures on ${urlPath}`).toEqual([]);
+          |                                                              ^
+      172 |       
+      173 |       // HTTP 4xx client errors are bad, but 5xx server errors are OK in CI (backend may not run)
+      174 |       const clientErrors = httpErrors.filter(e => e.status >= 400 && e.status < 500);
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:171:62
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--86377-moke-Test-renders-incidents-chromium-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/smoke-nav-Contract-Routes--86377-moke-Test-renders-incidents-chromium-retry1/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--86377-moke-Test-renders-incidents-chromium-retry1/trace.zip
+    Usage:
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--86377-moke-Test-renders-incidents-chromium-retry1/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+  10) [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /incidents/123 
+    Error: network failures on /incidents/123
+    expect(received).toEqual(expected) // deep equality
+    - Expected  -  1
+    + Received  + 22
+    - Array []
+    + Array [
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/tasks?limit=20&sort=updated_at&order=desc",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/projects",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/ops/incidents/123",
+    +   },
+    + ]
+      169 |       // Network failures (DNS, connection refused) are always bad
+      170 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+    > 171 |       expect(hardFailures, `network failures on ${urlPath}`).toEqual([]);
+          |                                                              ^
+      172 |       
+      173 |       // HTTP 4xx client errors are bad, but 5xx server errors are OK in CI (backend may not run)
+      174 |       const clientErrors = httpErrors.filter(e => e.status >= 400 && e.status < 500);
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:171:62
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--f09c9--Test-renders-incidents-123-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/smoke-nav-Contract-Routes--f09c9--Test-renders-incidents-123-chromium/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--f09c9--Test-renders-incidents-123-chromium/trace.zip
+    Usage:
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--f09c9--Test-renders-incidents-123-chromium/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+    Error: network failures on /incidents/123
+    expect(received).toEqual(expected) // deep equality
+    - Expected  -  1
+    + Received  + 22
+    - Array []
+    + Array [
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/tasks?limit=20&sort=updated_at&order=desc",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/projects",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/ops/incidents/123",
+    +   },
+    + ]
+      169 |       // Network failures (DNS, connection refused) are always bad
+      170 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+    > 171 |       expect(hardFailures, `network failures on ${urlPath}`).toEqual([]);
+          |                                                              ^
+      172 |       
+      173 |       // HTTP 4xx client errors are bad, but 5xx server errors are OK in CI (backend may not run)
+      174 |       const clientErrors = httpErrors.filter(e => e.status >= 400 && e.status < 500);
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:171:62
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--f09c9--Test-renders-incidents-123-chromium-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/smoke-nav-Contract-Routes--f09c9--Test-renders-incidents-123-chromium-retry1/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--f09c9--Test-renders-incidents-123-chromium-retry1/trace.zip
+    Usage:
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--f09c9--Test-renders-incidents-123-chromium-retry1/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+  11) [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /intake 
+    Error: network failures on /intake
+    expect(received).toEqual(expected) // deep equality
+    - Expected  -  1
+    + Received  + 18
+    - Array []
+    + Array [
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/tasks?limit=20&sort=updated_at&order=desc",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/projects",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    + ]
+      169 |       // Network failures (DNS, connection refused) are always bad
+      170 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+    > 171 |       expect(hardFailures, `network failures on ${urlPath}`).toEqual([]);
+          |                                                              ^
+      172 |       
+      173 |       // HTTP 4xx client errors are bad, but 5xx server errors are OK in CI (backend may not run)
+      174 |       const clientErrors = httpErrors.filter(e => e.status >= 400 && e.status < 500);
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:171:62
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--04113-n-Smoke-Test-renders-intake-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/smoke-nav-Contract-Routes--04113-n-Smoke-Test-renders-intake-chromium/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--04113-n-Smoke-Test-renders-intake-chromium/trace.zip
+    Usage:
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--04113-n-Smoke-Test-renders-intake-chromium/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+    Error: network failures on /intake
+    expect(received).toEqual(expected) // deep equality
+    - Expected  -  1
+    + Received  + 18
+    - Array []
+    + Array [
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/tasks?limit=20&sort=updated_at&order=desc",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/projects",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    + ]
+      169 |       // Network failures (DNS, connection refused) are always bad
+      170 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+    > 171 |       expect(hardFailures, `network failures on ${urlPath}`).toEqual([]);
+          |                                                              ^
+      172 |       
+      173 |       // HTTP 4xx client errors are bad, but 5xx server errors are OK in CI (backend may not run)
+      174 |       const clientErrors = httpErrors.filter(e => e.status >= 400 && e.status < 500);
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:171:62
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--04113-n-Smoke-Test-renders-intake-chromium-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/smoke-nav-Contract-Routes--04113-n-Smoke-Test-renders-intake-chromium-retry1/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--04113-n-Smoke-Test-renders-intake-chromium-retry1/trace.zip
+    Usage:
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--04113-n-Smoke-Test-renders-intake-chromium-retry1/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+  12) [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /leaderboard 
+    Error: network failures on /leaderboard
+    expect(received).toEqual(expected) // deep equality
+    - Expected  -  1
+    + Received  + 18
+    - Array []
+    + Array [
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/tasks?limit=20&sort=updated_at&order=desc",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/projects",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    + ]
+      169 |       // Network failures (DNS, connection refused) are always bad
+      170 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+    > 171 |       expect(hardFailures, `network failures on ${urlPath}`).toEqual([]);
+          |                                                              ^
+      172 |       
+      173 |       // HTTP 4xx client errors are bad, but 5xx server errors are OK in CI (backend may not run)
+      174 |       const clientErrors = httpErrors.filter(e => e.status >= 400 && e.status < 500);
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:171:62
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--53e65-ke-Test-renders-leaderboard-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/smoke-nav-Contract-Routes--53e65-ke-Test-renders-leaderboard-chromium/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--53e65-ke-Test-renders-leaderboard-chromium/trace.zip
+    Usage:
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--53e65-ke-Test-renders-leaderboard-chromium/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+    Error: network failures on /leaderboard
+    expect(received).toEqual(expected) // deep equality
+    - Expected  -  1
+    + Received  + 18
+    - Array []
+    + Array [
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/tasks?limit=20&sort=updated_at&order=desc",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/projects",
+    +   },
+    +   Object {
+    +     "errorText": "net::ERR_ABORTED",
+    +     "url": "http://localhost:4173/api/me/permissions",
+    +   },
+    + ]
+      169 |       // Network failures (DNS, connection refused) are always bad
+      170 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+    > 171 |       expect(hardFailures, `network failures on ${urlPath}`).toEqual([]);
+          |                                                              ^
+      172 |       
+      173 |       // HTTP 4xx client errors are bad, but 5xx server errors are OK in CI (backend may not run)
+      174 |       const clientErrors = httpErrors.filter(e => e.status >= 400 && e.status < 500);
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:171:62
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--53e65-ke-Test-renders-leaderboard-chromium-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/smoke-nav-Contract-Routes--53e65-ke-Test-renders-leaderboard-chromium-retry1/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--53e65-ke-Test-renders-leaderboard-chromium-retry1/trace.zip
+    Usage:
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--53e65-ke-Test-renders-leaderboard-chromium-retry1/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+  13) [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /login 
+    Error: console errors on /login -> http://localhost:4173/login
+    expect(received).toEqual(expected) // deep equality
+    - Expected  -  1
+    + Received  + 16
+    - Array []
+    + Array [
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Error loading projects: ue",
+    +   "Error response: {data: , status: 500, statusText: Internal Server Error, headers: hr, config: Object}",
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Failed to load users: ue",
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Failed to load permissions: ue",
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Failed to load permissions: ue",
+    + ]
+      127 |           .first()).toBeVisible();
+      128 |         // Still check there were no console errors loading the login page
+    > 129 |         expect(consoleErrors, `console errors on ${urlPath} -> ${finalUrl}`).toEqual([]);
+          |                                                                              ^
+      130 |         // 401/403 are expected when redirected to login, so filter them out
+      131 |         const httpErrorsFiltered = httpErrors.filter(e => e.status !== 401 && e.status !== 403);
+      132 |         expect(httpErrorsFiltered, `HTTP errors on ${urlPath} (excluding auth)`).toEqual([]);
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:129:78
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--2252a-on-Smoke-Test-renders-login-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/smoke-nav-Contract-Routes--2252a-on-Smoke-Test-renders-login-chromium/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--2252a-on-Smoke-Test-renders-login-chromium/trace.zip
+    Usage:
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--2252a-on-Smoke-Test-renders-login-chromium/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+    Error: console errors on /login -> http://localhost:4173/login
+    expect(received).toEqual(expected) // deep equality
+    - Expected  -  1
+    + Received  + 18
+    - Array []
+    + Array [
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Error loading projects: ue",
+    +   "Error response: {data: , status: 500, statusText: Internal Server Error, headers: hr, config: Object}",
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Failed to load users: ue",
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Failed to load permissions: ue",
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Failed to load permissions: ue",
+0s
+2s
+Beginning upload of artifact content to blob storage
+Uploaded bytes 8388608
+Uploaded bytes 12028542
+Finished uploading artifact content to blob storage!
+SHA256 digest of uploaded artifact zip is 543cf8e96c34cef0e30ec1519406f708fca0a2446f7ca54d5deded7f48ade104
+Finalizing artifact upload
+Artifact playwright-report.zip successfully finalized. Artifact ID 4372173853
+Artifact playwright-report has been successfully uploaded! Final size is 12028542 bytes. Artifact ID is 4372173853
+Artifact download URL: https://github.com/edenplumbinginc-svg/Eden_erp/actions/runs/18809004637/artifacts/4372173853
+0s
+Run actions/upload-artifact@v4
+No files were found with the provided path: coverage/ui-gaps.*. No artifacts will be uploaded.
+0s
+0s
+Post job cleanup.
+/usr/bin/git version
+git version 2.51.0
+Temporarily overriding HOME='/home/runner/work/_temp/af74dd68-3087-40ec-afce-43e9d0b35b9a' before making global git config changes
+Adding repository directory to the temporary git global config as a safe directory
+/usr/bin/git config --global --add safe.directory /home/runner/work/Eden_erp/Eden_erp
+/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+http.https://github.com/.extraheader
+/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+0s
