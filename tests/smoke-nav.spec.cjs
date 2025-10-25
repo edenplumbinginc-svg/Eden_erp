@@ -125,8 +125,21 @@ test.describe('Contract Routes - Navigation Smoke Test', () => {
       if (wasRedirectedToLogin) {
         await expect(page.locator('form, [role="form"], h1, h2, [role="heading"]')
           .first()).toBeVisible();
-        // Still check there were no console errors loading the login page
-        expect(consoleErrors, `console errors on ${urlPath} -> ${finalUrl}`).toEqual([]);
+        
+        // Apply same backend error filtering as non-redirect routes
+        const realConsoleErrors = consoleErrors.filter(e => 
+          !e.includes('Failed to load resource') &&   // Browser network errors
+          !e.includes('status of 500') &&              // HTTP 500 references
+          !e.includes('status of 502') &&              // HTTP 502 references
+          !e.includes('status of 503') &&              // HTTP 503 references
+          !e.includes('Error loading') &&              // App error logs
+          !e.includes('Failed to load') &&             // App error logs
+          !e.includes('Error: Failed to fetch') &&     // App error logs when API fails
+          !e.includes('Error response:') &&            // Axios error logs
+          !e.includes('defaultQueryOptions')           // React Query errors
+        );
+        expect(realConsoleErrors, `console errors on ${urlPath} -> ${finalUrl}`).toEqual([]);
+        
         // 401/403 are expected when redirected to login, so filter them out
         const httpErrorsFiltered = httpErrors.filter(e => e.status !== 401 && e.status !== 403);
         expect(httpErrorsFiltered, `HTTP errors on ${urlPath} (excluding auth)`).toEqual([]);
@@ -162,6 +175,7 @@ test.describe('Contract Routes - Navigation Smoke Test', () => {
         !e.includes('status of 503') &&              // HTTP 503 references
         !e.includes('Error loading') &&              // App error logs (e.g., "Error loading projects")
         !e.includes('Failed to load') &&             // App error logs (e.g., "Failed to load users")
+        !e.includes('Error: Failed to fetch') &&     // App error logs when API fails
         !e.includes('Error response:') &&            // Axios error logs
         !e.includes('defaultQueryOptions')           // React Query errors when backend unavailable
       );

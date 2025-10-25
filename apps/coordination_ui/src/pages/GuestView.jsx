@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import axios from "axios";
+import { Loading, ErrorBlock } from '../components/ui/PageStates';
 
 export default function GuestView() {
   const [sp] = useSearchParams();
@@ -22,8 +23,8 @@ export default function GuestView() {
       }));
   }, [token]);
 
-  if (data.loading) return <div className="p-6">Loading…</div>;
-  if (data.err) return <div className="p-6 text-red-600">Error: {data.err}</div>;
+  if (data.loading) return <Loading />;
+  if (data.err) return <ErrorBlock message={data.err} />;
 
   const p = data.payload;
   

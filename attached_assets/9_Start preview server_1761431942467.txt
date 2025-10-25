@@ -1,0 +1,19 @@
+﻿2025-10-25T22:36:24.4183850Z ##[group]Run npm run preview &
+2025-10-25T22:36:24.4184459Z [36;1mnpm run preview &[0m
+2025-10-25T22:36:24.4184911Z [36;1mecho "PREVIEW_PID=$!" >> $GITHUB_ENV[0m
+2025-10-25T22:36:24.4185476Z [36;1m# Wait for server to be ready (60s timeout)[0m
+2025-10-25T22:36:24.4186321Z [36;1mtimeout 60 bash -c 'until curl -s http://localhost:4173 > /dev/null; do sleep 1; done'[0m
+2025-10-25T22:36:24.4225772Z shell: /usr/bin/bash -e {0}
+2025-10-25T22:36:24.4226035Z ##[endgroup]
+2025-10-25T22:36:24.5524690Z 
+2025-10-25T22:36:24.5529225Z > coordination-ui@0.1.0 prepreview
+2025-10-25T22:36:24.5533980Z > node ../../scripts/generate-showcase.js
+2025-10-25T22:36:24.5538063Z 
+2025-10-25T22:36:24.5992682Z ✅ Wrote /home/runner/work/Eden_erp/Eden_erp/apps/coordination_ui/src/showcase/routes.json with 24 routes.
+2025-10-25T22:36:24.6030632Z 
+2025-10-25T22:36:24.6033108Z > coordination-ui@0.1.0 preview
+2025-10-25T22:36:24.6035702Z > vite preview
+2025-10-25T22:36:24.6038062Z 
+2025-10-25T22:36:24.7961377Z [33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+2025-10-25T22:36:24.8144419Z   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m4173[22m/[39m
+2025-10-25T22:36:24.8145529Z   [32m➜[39m  [1mNetwork[22m: [36mhttp://10.1.0.153:[1m4173[22m/[39m
