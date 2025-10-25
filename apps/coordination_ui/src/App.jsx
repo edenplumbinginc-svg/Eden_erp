@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, NavLink, useNavigate, useParams } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, NavLink, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AnimatePresence, motion } from 'framer-motion';
 import { apiService } from './services/api';
 import { AuthProvider } from './hooks/AuthProvider';
 import { useWarmBoot } from './hooks/useWarmBoot';
@@ -34,6 +35,7 @@ import ProfilePage from './pages/ProfilePage';
 import IncidentsPage from './pages/IncidentsPage';
 import IncidentDetail from './pages/IncidentDetail';
 import ShowcasePage from './pages/ShowcasePage';
+import { ThemeProvider } from './components/ThemeProvider';
 
 const queryClient = new QueryClient();
 
@@ -43,6 +45,7 @@ function AppContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Warm-boot preloader: fetch lightweight lists after auth resolves
   useWarmBoot();
@@ -92,229 +95,247 @@ function AppContent() {
     navigate(`/tasks/${project.id}`, { state: { project } });
   };
 
+  const pageVariants = {
+    initial: { opacity: 0, y: 6 },
+    enter: { 
+      opacity: 1, 
+      y: 0, 
+      transition: { duration: 0.18, ease: [0.2, 0.8, 0.2, 1] } 
+    },
+    exit: { 
+      opacity: 0, 
+      y: -6, 
+      transition: { duration: 0.15, ease: [0.2, 0.8, 0.2, 1] } 
+    },
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <EdenHeader />
       
       <div className="container">
-        {/* DevAuthSwitcher hidden - using real Supabase authentication */}
-        {/* <DevAuthSwitcher onUserChange={() => {
-          loadProjects();
-          loadUsers();
-        }} /> */}
+        {error && <div className="error">{error}</div>}
 
-      {error && <div className="error">{error}</div>}
+        {loading && <div className="loading">Loading...</div>}
 
-      {loading && <div className="loading">Loading...</div>}
-
-      {!loading && (
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
-          <Route path="/guest" element={<GuestView />} />
-          
-          <Route
-            path="/"
-            element={
-              <RequireAuth>
-                <ProjectList
-                  projects={projects}
-                  onRefresh={loadProjects}
-                  onSelectProject={handleProjectSelect}
+        {!loading && (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname}
+              variants={pageVariants}
+              initial="initial"
+              animate="enter"
+              exit="exit"
+            >
+              <Routes location={location}>
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/signup" element={<SignupPage />} />
+                <Route path="/guest" element={<GuestView />} />
+                
+                <Route
+                  path="/"
+                  element={
+                    <RequireAuth>
+                      <ProjectList
+                        projects={projects}
+                        onRefresh={loadProjects}
+                        onSelectProject={handleProjectSelect}
+                      />
+                    </RequireAuth>
+                  }
                 />
-              </RequireAuth>
-            }
-          />
-          <Route 
-            path="/dashboard" 
-            element={
-              <RequireAuth>
-                <DashboardPage />
-              </RequireAuth>
-            } 
-          />
-          <Route
-            path="/tasks/:projectId"
-            element={
-              <RequireAuth>
-                <TasksRoute
-                  projects={projects}
-                  users={users}
-                  onBack={() => navigate('/')}
+                <Route 
+                  path="/dashboard" 
+                  element={
+                    <RequireAuth>
+                      <DashboardPage />
+                    </RequireAuth>
+                  } 
                 />
-              </RequireAuth>
-            }
-          />
-          <Route 
-            path="/alltasks" 
-            element={
-              <RequireAuth>
-                <AllTasksView />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/tasks-delta" 
-            element={
-              <RequireAuth>
-                <SimpleTasksPage />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/projects-delta" 
-            element={
-              <RequireAuth>
-                <SimpleProjectsPage />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/tasks/new" 
-            element={
-              <RequireAuth>
-                <CreateTaskPage />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/reports" 
-            element={
-              <RequireAuth>
-                <Reports />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/project/:projectId" 
-            element={
-              <RequireAuth>
-                <ProjectDetail />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/task/:taskId" 
-            element={
-              <RequireAuth>
-                <TaskDetail />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/request-project" 
-            element={
-              <RequireAuth>
-                <ProjectRequestForm />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/audit-log" 
-            element={
-              <RequireAuth>
-                <AuditLogViewer />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/intake" 
-            element={
-              <RequireAuth>
-                <IntakeQueue />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/team" 
-            element={
-              <RequireAuth>
-                <TeamOverview />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/archive" 
-            element={
-              <RequireAuth>
-                <ArchiveView />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/admin/rbac" 
-            element={
-              <RequireAuth>
-                <AdminRbacPage />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/admin/decisions" 
-            element={
-              <RequireAuth requiredPermission="admin:manage">
-                <DecisionsPage />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/admin/court-flow" 
-            element={
-              <RequireAuth requiredPermission="admin:manage">
-                <CourtFlowPage />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/leaderboard" 
-            element={
-              <RequireAuth>
-                <PerformanceLeaderboardPage />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/velocity" 
-            element={
-              <RequireAuth>
-                <Velocity />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/profile" 
-            element={
-              <RequireAuth>
-                <ProfilePage />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/incidents" 
-            element={
-              <RequireAuth requiredPermission="admin:manage">
-                <IncidentsPage />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/incidents/:id" 
-            element={
-              <RequireAuth requiredPermission="admin:manage">
-                <IncidentDetail />
-              </RequireAuth>
-            } 
-          />
-          <Route 
-            path="/showcase" 
-            element={
-              <RequireAuth>
-                <ShowcasePage />
-              </RequireAuth>
-            } 
-          />
-        </Routes>
-      )}
+                <Route
+                  path="/tasks/:projectId"
+                  element={
+                    <RequireAuth>
+                      <TasksRoute
+                        projects={projects}
+                        users={users}
+                        onBack={() => navigate('/')}
+                      />
+                    </RequireAuth>
+                  }
+                />
+                <Route 
+                  path="/alltasks" 
+                  element={
+                    <RequireAuth>
+                      <AllTasksView />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/tasks-delta" 
+                  element={
+                    <RequireAuth>
+                      <SimpleTasksPage />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/projects-delta" 
+                  element={
+                    <RequireAuth>
+                      <SimpleProjectsPage />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/tasks/new" 
+                  element={
+                    <RequireAuth>
+                      <CreateTaskPage />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/reports" 
+                  element={
+                    <RequireAuth>
+                      <Reports />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/project/:projectId" 
+                  element={
+                    <RequireAuth>
+                      <ProjectDetail />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/task/:taskId" 
+                  element={
+                    <RequireAuth>
+                      <TaskDetail />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/request-project" 
+                  element={
+                    <RequireAuth>
+                      <ProjectRequestForm />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/audit-log" 
+                  element={
+                    <RequireAuth>
+                      <AuditLogViewer />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/intake" 
+                  element={
+                    <RequireAuth>
+                      <IntakeQueue />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/team" 
+                  element={
+                    <RequireAuth>
+                      <TeamOverview />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/archive" 
+                  element={
+                    <RequireAuth>
+                      <ArchiveView />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/admin/rbac" 
+                  element={
+                    <RequireAuth>
+                      <AdminRbacPage />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/admin/decisions" 
+                  element={
+                    <RequireAuth requiredPermission="admin:manage">
+                      <DecisionsPage />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/admin/court-flow" 
+                  element={
+                    <RequireAuth requiredPermission="admin:manage">
+                      <CourtFlowPage />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/leaderboard" 
+                  element={
+                    <RequireAuth>
+                      <PerformanceLeaderboardPage />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/velocity" 
+                  element={
+                    <RequireAuth>
+                      <Velocity />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/profile" 
+                  element={
+                    <RequireAuth>
+                      <ProfilePage />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/incidents" 
+                  element={
+                    <RequireAuth requiredPermission="admin:manage">
+                      <IncidentsPage />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/incidents/:id" 
+                  element={
+                    <RequireAuth requiredPermission="admin:manage">
+                      <IncidentDetail />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/showcase" 
+                  element={
+                    <RequireAuth>
+                      <ShowcasePage />
+                    </RequireAuth>
+                  } 
+                />
+              </Routes>
+            </motion.div>
+          </AnimatePresence>
+        )}
       </div>
     </div>
   );
@@ -342,15 +363,17 @@ function TasksRoute({ projects, users, onBack }) {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <Router>
-        <AuthProvider>
-          <ToasterProvider>
-            <AppContent />
-          </ToasterProvider>
-        </AuthProvider>
-      </Router>
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <Router>
+          <AuthProvider>
+            <ToasterProvider>
+              <AppContent />
+            </ToasterProvider>
+          </AuthProvider>
+        </Router>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 

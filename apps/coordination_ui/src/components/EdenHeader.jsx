@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom";
 import NotificationsBell from "./NotificationsBell";
 import RoleBadge from "./RoleBadge";
 import { useHasPermission } from "../hooks/usePermissions";
+import { ThemeToggle } from "./ThemeProvider";
 
 export default function EdenHeader() {
   const isAdmin = useHasPermission('admin:manage');
@@ -127,6 +128,9 @@ export default function EdenHeader() {
             >
               Profile
             </NavLink>
+            <div style={{ paddingLeft: '12px', borderLeft: '1px solid var(--md-divider)' }}>
+              <ThemeToggle />
+            </div>
             <RoleBadge />
             <NotificationsBell />
           </nav>
