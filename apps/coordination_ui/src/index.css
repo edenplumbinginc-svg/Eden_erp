@@ -1154,6 +1154,39 @@ html {
   .grid-cols-3 {
     grid-template-columns: 1fr;
   }
+
+  /* Make header navigation scrollable on mobile */
+  header nav {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    flex-wrap: nowrap !important;
+  }
+
+  header nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  header nav a,
+  header nav button {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* Reduce header padding on mobile */
+  header > div {
+    padding: var(--space-2) var(--space-1) !important;
+  }
+
+  /* Stack header on very small screens */
+  @media (max-width: 480px) {
+    header .flex.items-center.justify-between {
+      flex-direction: column;
+      gap: var(--space-2);
+      align-items: flex-start;
+    }
+  }
 }
 
 /* Modern utility classes */

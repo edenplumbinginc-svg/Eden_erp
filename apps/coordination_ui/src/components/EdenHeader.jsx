@@ -32,7 +32,12 @@ export default function EdenHeader() {
             }}>COORDINATION · ALPHA</span>
           </div>
           
-          <nav className="flex items-center gap-6">
+          <nav className="flex items-center gap-6" style={{
+            overflowX: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none'
+          }}>
             <NavLink 
               to="/dashboard" 
               className={({ isActive }) => isActive ? 'text-body font-medium' : 'text-body text-link hover:underline'}
