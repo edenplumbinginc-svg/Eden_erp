@@ -435,7 +435,7 @@ export default function TaskDetail() {
 
   return (
     <div className="mx-auto max-w-6xl p-4 space-y-6">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="task-detail-header">
         <Breadcrumbs items={breadcrumbs} />
         <button 
           className="btn btn-secondary" 
@@ -448,7 +448,7 @@ export default function TaskDetail() {
 
       <TaskSlaBanner taskId={taskId} canNudge={canNudge} />
 
-      <div className="flex items-start justify-between">
+      <div className="task-detail-main">
         <div className="flex-1 space-y-4">
           <div className="flex items-center gap-2">
             {canEditTask ? (
@@ -508,7 +508,7 @@ export default function TaskDetail() {
             </>
           )}
         </div>
-        <div className="flex flex-col items-end gap-2">
+        <div className="task-detail-actions">
           <BallInCourt task={task} />
           <button
             className="btn btn-primary"
