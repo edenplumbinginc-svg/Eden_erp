@@ -62,7 +62,7 @@ function AuditLogViewer() {
 
         {loading ? (
           <div className="text-center" style={{ padding: 'var(--space-6)' }}>
-            <p className="text-muted">Loading audit logs...</p>
+            <h2 className="text-muted">Loading audit logs...</h2>
           </div>
         ) : logs.length === 0 ? (
           <div className="text-center" style={{ padding: 'var(--space-6)' }}>

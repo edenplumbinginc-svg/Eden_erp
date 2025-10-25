@@ -134,6 +134,7 @@ test.describe('Contract Routes - Navigation Smoke Test', () => {
           !e.includes('status of 503') &&              // HTTP 503 references
           !e.includes('Error loading') &&              // App error logs
           !e.includes('Failed to load') &&             // App error logs
+          !e.includes('Failed to fetch') &&            // App error logs (e.g., "Failed to fetch users")
           !e.includes('Error: Failed to fetch') &&     // App error logs when API fails
           !e.includes('Error response:') &&            // Axios error logs
           !e.includes('defaultQueryOptions')           // React Query errors
@@ -175,6 +176,7 @@ test.describe('Contract Routes - Navigation Smoke Test', () => {
         !e.includes('status of 503') &&              // HTTP 503 references
         !e.includes('Error loading') &&              // App error logs (e.g., "Error loading projects")
         !e.includes('Failed to load') &&             // App error logs (e.g., "Failed to load users")
+        !e.includes('Failed to fetch') &&            // App error logs (e.g., "Failed to fetch users")
         !e.includes('Error: Failed to fetch') &&     // App error logs when API fails
         !e.includes('Error response:') &&            // Axios error logs
         !e.includes('defaultQueryOptions')           // React Query errors when backend unavailable

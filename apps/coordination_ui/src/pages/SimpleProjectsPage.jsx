@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useDeltaSync } from '../hooks/useDeltaSync';
 import { useHasPermission } from '../hooks/usePermissions';
+import { Loading } from '../components/ui/PageStates';
 
 export default function SimpleProjectsPage() {
   const { items: projects, loading, forceRefresh } = useDeltaSync('/api/projects', {
@@ -13,14 +14,7 @@ export default function SimpleProjectsPage() {
   const canCreate = useHasPermission('project.create');
 
   if (loading && projects.length === 0) {
-    return (
-      <div className="loading-skeleton" style={{ padding: '24px' }}>
-        <div className="skeleton-text" style={{ width: '200px', height: '28px', marginBottom: '16px' }}></div>
-        <div className="skeleton-text" style={{ width: '100%', height: '60px', marginBottom: '8px' }}></div>
-        <div className="skeleton-text" style={{ width: '100%', height: '60px', marginBottom: '8px' }}></div>
-        <div className="skeleton-text" style={{ width: '100%', height: '60px' }}></div>
-      </div>
-    );
+    return <Loading />;
   }
 
   return (

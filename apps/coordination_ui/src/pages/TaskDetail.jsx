@@ -421,11 +421,11 @@ export default function TaskDetail() {
   const [handoffModalOpen, setHandoffModalOpen] = useState(false);
 
   if (!taskId) {
-    return <div className="mx-auto max-w-6xl p-4">No task ID provided</div>;
+    return <div className="mx-auto max-w-6xl p-4"><h2>No task ID provided</h2></div>;
   }
 
   if (isLoading) {
-    return <div className="mx-auto max-w-6xl p-4">Loading task...</div>;
+    return <div className="mx-auto max-w-6xl p-4"><h2>Loading task...</h2></div>;
   }
 
   const breadcrumbs = [

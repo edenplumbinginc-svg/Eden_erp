@@ -2,6 +2,7 @@ import React from 'react';
 import { useDeltaSync } from '../hooks/useDeltaSync';
 import { Link } from 'react-router-dom';
 import { useHasPermission } from '../hooks/usePermissions';
+import { Loading } from '../components/ui/PageStates';
 
 export default function SimpleTasksPage() {
   const { items, loading, forceRefresh } = useDeltaSync('/api/tasks', {
@@ -16,13 +17,7 @@ export default function SimpleTasksPage() {
   const warmTasks = (typeof window !== 'undefined' && window.__eden?.tasksWarm) || null;
 
   if (loading && items.length === 0 && !warmTasks) {
-    return (
-      <div className="container py-6">
-        <div className="card p-8 text-center">
-          <div className="text-body text-muted">Loading tasks…</div>
-        </div>
-      </div>
-    );
+    return <Loading />;
   }
 
   const displayTasks = items.length > 0 ? items : (warmTasks || []);
