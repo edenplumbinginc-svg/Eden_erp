@@ -72,6 +72,40 @@ Authenticates before running tests if `PW_EMAIL` and `PW_PASSWORD` are provided:
 
 ### Smoke Test Spec (`tests/smoke-nav.spec.cjs`)
 
+**Strict Selector Criteria:**
+
+The test requires **route-specific content**, NOT shared layout elements:
+
+```javascript
+// ✅ VALID: Route-specific content
+'h1'                              // Page heading
+'h2', 'h3'                        // Section headings
+'[role="heading"]'                // ARIA heading
+'[data-state="loading"]'          // Loading state
+'[data-state="error"]'            // Error state
+'[data-state="unauthorized"]'     // Access denied
+'[data-state="empty"]'            // No data
+'[data-state="not_found"]'        // 404
+
+// ❌ INVALID: Generic layout elements (removed)
+'header'   // Shared EdenHeader component
+'main'     // Shared layout wrapper
+'[data-testid]'  // Too permissive
+```
+
+**Why This Is Strict Enough:**
+
+1. **EdenHeader contains NO h1/h2/h3 tags** (only nav links and spans)
+2. **All page components use h1 for their title**
+3. **If a route component fails to render** (React error, missing import) → NO headings → TEST FAILS
+4. **State markers are route-specific** (loading skeletons, error states, etc.)
+
+**Regression Detection:**
+
+- Route shows only layout wrapper → FAIL (no headings)
+- Route has runtime error → FAIL (no headings)
+- Route renders properly → PASS (h1/h2/h3 present)
+
 The test suite:
 - ✅ Loads 24 routes from UI contract
 - ✅ Tests each route individually
@@ -80,17 +114,17 @@ The test suite:
 - ✅ Captures console errors and page errors
 - ✅ Generates detailed HTML reports
 
-## Valid UI Indicators
+## Valid UI Indicators (STRICT)
 
-Routes pass if they render ANY of these:
+Routes pass if they render ANY of these **route-specific** elements:
 
-**Structural Elements:**
-- `<header>` - Page header
-- `<h1>`, `<h2>`, `<h3>` - Headings
-- `<main>` - Main content area
+**Page Headings (Route-Specific):**
+- `<h1>` - Page title heading
+- `<h2>` - Section heading
+- `<h3>` - Subsection heading
 - `[role="heading"]` - ARIA heading
 
-**State Markers:**
+**State Markers (Route-Specific):**
 - `[data-state="loading"]` - Loading skeleton
 - `[data-state="error"]` - Error state
 - `[data-state="unauthorized"]` - Permission denied
@@ -99,6 +133,8 @@ Routes pass if they render ANY of these:
 
 **Auth Redirects:**
 - Redirects to `/login` or `/signup` with visible form
+
+**NOTE:** Generic layout elements (`<header>`, `<main>`) are NOT accepted because they're part of the shared shell and don't prove route-specific content rendered.
 
 ## Usage
 
