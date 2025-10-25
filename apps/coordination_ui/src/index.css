@@ -1,3 +1,6 @@
+/* -------- Modern Eden UI base -------- */
+@import "./styles/tokens.css";
+
 /* Material Design Base */
 :root {
   /* Material Design Color Palette */
@@ -54,13 +57,20 @@
   box-sizing: border-box;
 }
 
+html, body, #root {
+  height: 100%;
+}
+
 /* Typography Scale */
 body {
   font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 14px;
   line-height: 20px;
   color: var(--md-on-surface);
-  background-color: var(--md-background);
+  background:
+    radial-gradient(1200px 400px at 20% -10%, rgba(37,99,235,0.08), transparent 60%),
+    radial-gradient(1000px 500px at 100% 0%, rgba(16,185,129,0.06), transparent 55%),
+    var(--md-background);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
