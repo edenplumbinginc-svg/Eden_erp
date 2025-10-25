@@ -1,0 +1,89 @@
+
+> eden_erp@0.1.0 check:ui
+> node scripts/check-ui-coverage.js
+
+🔍 Checking UI coverage against contract...
+
+📦 Resource: incidents
+   ❌ /incidents → NOT FOUND
+      Tried: IncidentsPage.jsx, IncidentsPage.tsx, Incidents.jsx, Incidents.tsx, IncidentsView.jsx, IncidentsView.tsx, IncidentsViewer.jsx, IncidentsViewer.tsx, IncidentsQueue.jsx, IncidentsQueue.tsx, IncidentsForm.jsx, IncidentsForm.tsx, IncidentsOverview.jsx, IncidentsOverview.tsx, PerformanceIncidentsPage.jsx, PerformanceIncidentsPage.tsx, SimpleIncidentsPage.jsx, SimpleIncidentsPage.tsx, incidents.jsx, incidents.tsx
+   ❌ /incidents/[id] → NOT FOUND
+      Tried: IncidentsDetail.jsx, IncidentsDetail.tsx, incidents/[id].jsx, incidents/[id].tsx
+
+📦 Resource: velocity
+   ✅ /velocity → pages/Velocity.jsx
+
+📦 Resource: profile
+   ✅ /profile → pages/ProfilePage.jsx
+
+📦 Resource: dashboard
+   ✅ /dashboard → pages/DashboardPage.jsx
+
+📦 Resource: projects
+   ✅ /projects-delta → pages/SimpleProjectsPage.jsx
+   ✅ /project/[id] → pages/ProjectDetail.jsx
+
+📦 Resource: tasks
+   ✅ /alltasks → components/AllTasksView.jsx
+   ✅ /tasks-delta → pages/SimpleTasksPage.jsx
+   ✅ /tasks/new → pages/CreateTaskPage.jsx
+   ✅ /task/[id] → pages/TaskDetail.jsx
+
+📦 Resource: reports
+   ✅ /reports → pages/ReportsPage.tsx
+
+📦 Resource: leaderboard
+   ✅ /leaderboard → pages/PerformanceLeaderboardPage.jsx
+
+📦 Resource: admin_rbac
+   ✅ /admin/rbac → pages/AdminRbacPage.jsx
+
+📦 Resource: admin_decisions
+   ✅ /admin/decisions → pages/admin/DecisionsPage.jsx
+
+📦 Resource: admin_court_flow
+   ✅ /admin/court-flow → pages/admin/CourtFlowPage.jsx
+
+📦 Resource: auth
+   ✅ /login → pages/LoginPage.jsx
+   ✅ /signup → pages/SignupPage.jsx
+
+📦 Resource: guest
+   ✅ /guest → pages/GuestView.jsx
+
+📦 Resource: audit
+   ✅ /audit-log → pages/AuditLogViewer.jsx
+
+📦 Resource: team
+   ✅ /team → pages/TeamOverview.jsx
+
+📦 Resource: archive
+   ✅ /archive → pages/ArchiveView.jsx
+
+📦 Resource: intake
+   ✅ /intake → pages/IntakeQueue.jsx
+
+📦 Resource: request_project
+   ✅ /request-project → pages/ProjectRequestForm.jsx
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 Coverage Summary:
+
+   ✅ Found:   22 pages
+   ❌ Missing: 2 pages
+
+❌ UI coverage check FAILED
+
+Missing pages:
+
+  Resource: incidents
+  Route:    /incidents
+  Expected: IncidentsPage.jsx (or similar)
+
+  Resource: incidents
+  Route:    /incidents/[id]
+  Expected: IncidentsDetail.jsx (or similar)
+
+💡 Create these pages to pass the coverage check.
+

@@ -36,6 +36,8 @@ Core modules include `coordination` (projects, tasks, comments, attachments) and
 
 **User Profile Management**: Optional profile fields API (`/api/me/profile`) with GET and PATCH endpoints for managing user information. Supports phone, title, avatar URL, timezone, locale, and notification preferences. Zod validation ensures data integrity with constraints on field lengths and formats. Partial updates supported for efficient data changes. All fields nullable for backward compatibility.
 
+**UI Coverage Gate**: Automated quality gate system enforcing complete page coverage for all API resources. Contract-based validation (`docs/ui-contract.yaml`) defines required pages and states. Checker script (`scripts/check-ui-coverage.js`) scans pages and components directories, handling multiple naming patterns. Integrates with CI/CD via `npm run check:ui`. Current status: 22/24 pages complete (92% coverage). Prevents shipping half-built features by failing builds when required pages are missing.
+
 ### System Design Choices
 The project adopts a monolithic architecture with a scalable PostgreSQL database. It emphasizes observability through monitoring, logging, and health checks, and is designed for security with enforced authentication and multi-layered database validation. An `autosync.sh` script automates Git commits and pushes.
 

@@ -71,6 +71,37 @@ function pagePaths(route) {
     // Handle Simple prefix (SimpleProjectsPage, SimpleTasksPage)
     candidates.push(`Simple${pascalCase}Page.jsx`);
     candidates.push(`Simple${pascalCase}Page.tsx`);
+    
+    // Handle compound routes with -delta suffix
+    if (fileName.includes("-delta")) {
+      const baseName = fileName.replace("-delta", "");
+      const basePascal = baseName
+        .split("-")
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join("");
+      candidates.push(`Simple${basePascal}Page.jsx`);
+      candidates.push(`Simple${basePascal}Page.tsx`);
+    }
+    
+    // Handle compound words with reversed order (request-project -> ProjectRequestForm)
+    if (fileName.includes("-")) {
+      const words = fileName.split("-");
+      if (words.length === 2) {
+        const reversed = words.reverse()
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join("");
+        candidates.push(`${reversed}Form.jsx`);
+        candidates.push(`${reversed}Form.tsx`);
+        candidates.push(`${reversed}Page.jsx`);
+        candidates.push(`${reversed}Page.tsx`);
+      }
+    }
+    
+    // Handle "alltasks" -> "AllTasksView"
+    if (fileName === "alltasks") {
+      candidates.push("AllTasksView.jsx");
+      candidates.push("AllTasksView.tsx");
+    }
   }
   
   // Handle nested admin routes: /admin/rbac -> admin/RbacPage.jsx
