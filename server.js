@@ -748,6 +748,60 @@ app.get("/ops/slo", (_req, res) => {
   });
 });
 
+// Escalation Worker Health: monitor background escalation worker
+// Ops teams should configure alerts when tickLagMs > 2 * tickIntervalMs, indicating the worker is stuck
+app.get('/ops/escalation/health', (req, res) => {
+  const enabled = process.env.ESCALATION_WORKER_ENABLED === 'true';
+  const v1 = process.env.ESCALATION_V1 === 'true';
+  const canaryPct = parseInt(process.env.ESC_CANARY_PCT || '100', 10);
+  const tickIntervalMs = parseInt(process.env.ESC_TICK_MS || '60000', 10);
+  const maxEscLevel = parseInt(process.env.MAX_ESC_LEVEL || '7', 10);
+  const snoozeMin = parseInt(process.env.ESC_SNOOZE_MIN || '30', 10);
+  const dryRun = process.env.ESC_DRY_RUN === 'true';
+  const pauseCron = process.env.ESC_PAUSE_CRON || null;
+  
+  const lastTickAt = getLastTickTimestamp();
+  const now = Date.now();
+  
+  let tickLagMs = null;
+  let nextTickDue = null;
+  let healthStatus = 'ok';
+  
+  if (lastTickAt) {
+    const lastTickTime = new Date(lastTickAt).getTime();
+    tickLagMs = now - lastTickTime;
+    nextTickDue = new Date(lastTickTime + tickIntervalMs).toISOString();
+    
+    if (tickLagMs > tickIntervalMs * 4) {
+      healthStatus = 'critical';
+    } else if (tickLagMs > tickIntervalMs * 2) {
+      healthStatus = 'degraded';
+    } else {
+      healthStatus = 'ok';
+    }
+  } else {
+    healthStatus = enabled ? 'degraded' : 'ok';
+  }
+  
+  const statusCode = healthStatus === 'critical' ? 503 : 200;
+  
+  res.setHeader('Cache-Control', 'no-store');
+  res.status(statusCode).json({
+    enabled,
+    v1,
+    canaryPct,
+    tickIntervalMs,
+    tickLagMs,
+    maxEscLevel,
+    snoozeMin,
+    dryRun,
+    pauseCron,
+    lastTickAt,
+    nextTickDue,
+    healthStatus
+  });
+});
+
 // Velocity → Release Guard: automated deploy safety validation
 app.get("/ops/release-guard", async (req, res) => {
   // Query flags (all optional):
