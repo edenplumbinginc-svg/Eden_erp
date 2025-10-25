@@ -1,0 +1,61 @@
+[Mode: Execution]
+
+**Step:** Skip Slack entirely and run the **backend-only smoke test** (incidents → escalation tick → release guard). *(Backend/Ops layer)*
+
+**Why it matters:** Slack is optional. This proves your production-hardened backend works end-to-end with no external integrations.
+
+**Inputs needed:** Staging URL, terminal/console, `DATABASE_URL`, `OPS_HMAC_SECRET`.
+
+**Command (copy–paste):**
+
+```bash
+# --- set your host ---
+HOST="https://<STAGING_HOST>"   # replace with your staging URL
+
+# 1) Seed a blocking incident (critical L1 inside 10m lookback)
+INCIDENT_ID=$(psql "$DATABASE_URL" -At -c "
+WITH pick AS (SELECT id FROM incidents ORDER BY random() LIMIT 1)
+UPDATE incidents
+SET status='open',
+    severity='critical',
+    acknowledged_at=NULL,
+    escalation_level=1,
+    first_seen=now() - interval '6 minutes',
+    last_seen=now()
+WHERE id IN (SELECT id FROM pick)
+RETURNING id;")
+echo "INCIDENT_ID=$INCIDENT_ID"
+
+# 2) Force one escalation tick (DRY_RUN; no Slack needed)
+BODY='{}'
+SIG=$(printf '%s' "$BODY" | openssl dgst -sha256 -hmac "$OPS_HMAC_SECRET" -binary | xxd -p -c 256)
+curl -s -X POST "$HOST/ops/escalation/tick" \
+  -H "Content-Type: application/json" \
+  -H "X-Signature: $SIG" \
+  --data "$BODY" | jq
+
+# 3) Release Guard should FAIL (blocks promotion)
+curl -s -o /tmp/guard_fail.json -w "HTTP:%{http_code}\n" "$HOST/ops/release-guard"
+echo "---- guard_fail.json ----"; cat /tmp/guard_fail.json; echo
+
+# 4) Clear the blocker (ack via SQL; no ChatOps needed)
+psql "$DATABASE_URL" -c "
+UPDATE incidents
+SET status='acknowledged',
+    acknowledged_by='backend-smoke',
+    acknowledged_at=now()
+WHERE id='${INCIDENT_ID}';"
+
+# 5) Release Guard should PASS now
+curl -s -o /tmp/guard_ok.json -w "HTTP:%{http_code}\n" "$HOST/ops/release-guard"
+echo "---- guard_ok.json ----"; cat /tmp/guard_ok.json; echo
+```
+
+**Success check:**
+
+* Step 3 prints `HTTP:409` and the JSON shows `ok:false` with your seeded incident listed.
+* Step 5 prints `HTTP:200` and the JSON shows `ok:true` with `failingCount:0`.
+
+**Next:** wait for user
+
+*(Close that Slack tab; you don’t need an account to proceed. When you’re ready later, we can add a generic chat gateway or integrate Slack/Teams—but your backend is already capable without it.)*
