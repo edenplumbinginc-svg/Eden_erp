@@ -1,0 +1,132 @@
+[Mode: Execution]
+
+Step: Make the smoke test auth-aware so protected routes pass in CI (programmatic login when creds exist, graceful fallback when not).
+
+Why it matters: Your Playwright tests should verify real pages, not just redirect loops. With optional login, the suite works both with and without credentials.
+
+Inputs needed:
+
+Auth endpoint (defaults below; adjust later)
+
+CI secrets for test user (e.g., PW_EMAIL, PW_PASSWORD) — optional
+
+Command (copy–paste):
+
+# 1) Add a global auth setup that logs in if creds are provided
+cat > tests/global-setup.cjs <<'CJS'
+const { request } = require('@playwright/test');
+
+module.exports = async (config) => {
+  const email = process.env.PW_EMAIL;
+  const password = process.env.PW_PASSWORD;
+  const baseURL = process.env.BASE_URL || 'http://localhost:4173';
+
+  // If no creds, skip — tests will still pass by accepting /login as valid.
+  if (!email || !password) {
+    console.log('[auth] No PW_EMAIL/PW_PASSWORD set; running unauthenticated.');
+    return;
+  }
+
+  // Programmatic login (adjust endpoint & payload to match your server)
+  const req = await request.newContext({ baseURL });
+  const res = await req.post('/api/login', {
+    data: { email, password },
+    // If your API expects JSON:
+    headers: { 'Content-Type': 'application/json' }
+  });
+
+  if (!res.ok()) {
+    throw new Error(`[auth] Login failed with status ${res.status()}`);
+  }
+
+  // Hit a page to ensure cookies are set and save storage state
+  const page = await (await config.projects[0].use.browserName).newPage?.();
+  // Fallback: create a minimal, throw-away browser to capture auth cookies
+  // but Playwright config handles this better via storageState on a temp context.
+  // We'll instead write storageState via API context:
+  await req.storageState({ path: 'coverage/storageState.json' });
+  console.log('[auth] storageState.json written.');
+};
+CJS
+
+# 2) Update Playwright config to use globalSetup & storage state if present
+# (Appends safely; overwrite if you used earlier config)
+cat > playwright.config.cjs <<'CJS'
+const { defineConfig, devices } = require('@playwright/test');
+const fs = require('fs');
+
+const useStorage = fs.existsSync('coverage/storageState.json');
+
+module.exports = defineConfig({
+  testDir: 'tests',
+  timeout: 30_000,
+  retries: process.env.CI ? 1 : 0,
+  reporter: [
+    ['list'],
+    ['html', { outputFolder: 'coverage/playwright-report', open: 'never' }],
+  ],
+  globalSetup: require.resolve('./tests/global-setup.cjs'),
+  use: {
+    baseURL: process.env.BASE_URL || 'http://localhost:4173',
+    headless: true,
+    trace: 'retain-on-failure',
+    video: 'off',
+    storageState: useStorage ? 'coverage/storageState.json' : undefined,
+    launchOptions: { args: ['--no-sandbox', '--disable-setuid-sandbox'] },
+  },
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+  ],
+  webServer: process.env.PW_SKIP_WEBSERVER ? undefined : {
+    command: 'npm run preview',
+    url: 'http://localhost:4173',
+    reuseExistingServer: !process.env.CI,
+    timeout: 120_000,
+  },
+});
+CJS
+
+# 3) Keep your existing smoke spec (contract-driven); no changes required.
+# If you don't have the script yet:
+npm pkg set scripts.test:smoke="playwright test --project=chromium -g 'contract routes'"
+
+# 4) Local run (Replit won’t run browsers, but this is for CI)
+# npm run test:smoke
+
+
+CI wiring (GitHub Actions – add or update these steps):
+
+- name: Set base URL for preview
+  run: echo "BASE_URL=http://localhost:4173" >> $GITHUB_ENV
+
+# Optional: provide test user creds if you want authenticated runs
+# (Set these in repo/org secrets)
+- name: Export Playwright creds
+  if: env.PW_EMAIL != '' && env.PW_PASSWORD != ''
+  run: |
+    echo "PW_EMAIL=${{ secrets.PW_EMAIL }}" >> $GITHUB_ENV
+    echo "PW_PASSWORD=${{ secrets.PW_PASSWORD }}" >> $GITHUB_ENV
+
+- name: Install Playwright
+  run: npx playwright install --with-deps
+
+- name: Smoke navigation (contract-driven)
+  run: npm run test:smoke
+
+- name: Upload Playwright report
+  if: always()
+  uses: actions/upload-artifact@v4
+  with:
+    name: playwright-report
+    path: coverage/playwright-report
+
+
+Success check:
+
+With creds: tests run authenticated and assert real pages render (fewer redirects).
+
+Without creds: tests still pass, accepting /login as a valid UI state for protected routes.
+
+HTML report at coverage/playwright-report in CI artifacts.
+
+Next: wait for user
