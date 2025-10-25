@@ -1,17 +1,108 @@
-﻿2025-10-25T19:42:36.9514800Z ##[group]Run actions/setup-node@v4
-2025-10-25T19:42:36.9516015Z with:
-2025-10-25T19:42:36.9516859Z   node-version: 20
-2025-10-25T19:42:36.9517786Z   cache: npm
-2025-10-25T19:42:36.9518677Z   always-auth: false
-2025-10-25T19:42:36.9519646Z   check-latest: false
-2025-10-25T19:42:36.9521058Z   token: ***
-2025-10-25T19:42:36.9521935Z ##[endgroup]
-2025-10-25T19:42:37.1466611Z Found in cache @ /opt/hostedtoolcache/node/20.19.5/x64
-2025-10-25T19:42:37.1470616Z ##[group]Environment details
-2025-10-25T19:42:39.7341434Z node: v20.19.5
-2025-10-25T19:42:39.7341882Z npm: 10.8.2
-2025-10-25T19:42:39.7342183Z yarn: 1.22.22
-2025-10-25T19:42:39.7342974Z ##[endgroup]
-2025-10-25T19:42:39.7366624Z [command]/opt/hostedtoolcache/node/20.19.5/x64/bin/npm config get cache
-2025-10-25T19:42:41.3477996Z /home/runner/.npm
-2025-10-25T19:42:41.5065152Z npm cache is not found
+﻿2025-10-25T20:49:00.5223960Z ##[debug]Evaluating condition for step: 'Setup Node'
+2025-10-25T20:49:00.5228452Z ##[debug]Evaluating: success()
+2025-10-25T20:49:00.5229738Z ##[debug]Evaluating success:
+2025-10-25T20:49:00.5231266Z ##[debug]=> true
+2025-10-25T20:49:00.5232640Z ##[debug]Result: true
+2025-10-25T20:49:00.5234548Z ##[debug]Starting: Setup Node
+2025-10-25T20:49:00.5276101Z ##[debug]Register post job cleanup for action: actions/setup-node@v4
+2025-10-25T20:49:00.5305292Z ##[debug]Loading inputs
+2025-10-25T20:49:00.5332649Z ##[debug]Evaluating: (((github.server_url == 'https://github.com') && github.token) || '')
+2025-10-25T20:49:00.5334316Z ##[debug]Evaluating Or:
+2025-10-25T20:49:00.5336932Z ##[debug]..Evaluating And:
+2025-10-25T20:49:00.5339302Z ##[debug]....Evaluating Equal:
+2025-10-25T20:49:00.5340965Z ##[debug]......Evaluating Index:
+2025-10-25T20:49:00.5342174Z ##[debug]........Evaluating github:
+2025-10-25T20:49:00.5344037Z ##[debug]........=> Object
+2025-10-25T20:49:00.5345412Z ##[debug]........Evaluating String:
+2025-10-25T20:49:00.5346697Z ##[debug]........=> 'server_url'
+2025-10-25T20:49:00.5347634Z ##[debug]......=> 'https://github.com'
+2025-10-25T20:49:00.5348544Z ##[debug]......Evaluating String:
+2025-10-25T20:49:00.5349617Z ##[debug]......=> 'https://github.com'
+2025-10-25T20:49:00.5354259Z ##[debug]....=> true
+2025-10-25T20:49:00.5355398Z ##[debug]....Evaluating Index:
+2025-10-25T20:49:00.5356257Z ##[debug]......Evaluating github:
+2025-10-25T20:49:00.5357177Z ##[debug]......=> Object
+2025-10-25T20:49:00.5358002Z ##[debug]......Evaluating String:
+2025-10-25T20:49:00.5358835Z ##[debug]......=> 'token'
+2025-10-25T20:49:00.5359930Z ##[debug]....=> '***'
+2025-10-25T20:49:00.5360879Z ##[debug]..=> '***'
+2025-10-25T20:49:00.5362017Z ##[debug]=> '***'
+2025-10-25T20:49:00.5368017Z ##[debug]Expanded: ((('https://github.com' == 'https://github.com') && '***') || '')
+2025-10-25T20:49:00.5369335Z ##[debug]Result: '***'
+2025-10-25T20:49:00.5374230Z ##[debug]Loading env
+2025-10-25T20:49:00.5386505Z ##[group]Run actions/setup-node@v4
+2025-10-25T20:49:00.5387493Z with:
+2025-10-25T20:49:00.5388300Z   node-version: 20
+2025-10-25T20:49:00.5389140Z   cache: npm
+2025-10-25T20:49:00.5389976Z   always-auth: false
+2025-10-25T20:49:00.5390823Z   check-latest: false
+2025-10-25T20:49:00.5391831Z   token: ***
+2025-10-25T20:49:00.5392657Z ##[endgroup]
+2025-10-25T20:49:00.7195071Z ##[debug]isExplicit: 
+2025-10-25T20:49:00.7197485Z ##[debug]explicit? false
+2025-10-25T20:49:00.7211657Z ##[debug]isExplicit: 18.20.8
+2025-10-25T20:49:00.7217250Z ##[debug]explicit? true
+2025-10-25T20:49:00.7230667Z ##[debug]isExplicit: 20.19.5
+2025-10-25T20:49:00.7232975Z ##[debug]explicit? true
+2025-10-25T20:49:00.7241037Z ##[debug]isExplicit: 22.20.0
+2025-10-25T20:49:00.7245969Z ##[debug]explicit? true
+2025-10-25T20:49:00.7252232Z ##[debug]evaluating 3 versions
+2025-10-25T20:49:00.7295579Z ##[debug]matched: 20.19.5
+2025-10-25T20:49:00.7302894Z ##[debug]checking cache: /opt/hostedtoolcache/node/20.19.5/x64
+2025-10-25T20:49:00.7310315Z ##[debug]Found tool in cache node 20.19.5 x64
+2025-10-25T20:49:00.7317724Z Found in cache @ /opt/hostedtoolcache/node/20.19.5/x64
+2025-10-25T20:49:00.7330414Z ::group::Environment details
+2025-10-25T20:49:00.7331862Z ##[group]Environment details
+2025-10-25T20:49:01.1801175Z node: v20.19.5
+2025-10-25T20:49:01.1803013Z npm: 10.8.2
+2025-10-25T20:49:01.1804777Z yarn: 1.22.22
+2025-10-25T20:49:01.1806911Z ::endgroup::
+2025-10-25T20:49:01.1808023Z ##[endgroup]
+2025-10-25T20:49:01.1834236Z [command]/opt/hostedtoolcache/node/20.19.5/x64/bin/npm config get cache
+2025-10-25T20:49:01.3009458Z /home/runner/.npm
+2025-10-25T20:49:01.3075803Z ##[debug]npm's cache folder "/home/runner/.npm" configured for the root directory
+2025-10-25T20:49:01.3081267Z ##[debug]followSymbolicLinks 'true'
+2025-10-25T20:49:01.3110344Z ##[debug]followSymbolicLinks 'true'
+2025-10-25T20:49:01.3114211Z ##[debug]implicitDescendants 'true'
+2025-10-25T20:49:01.3117063Z ##[debug]matchDirectories 'true'
+2025-10-25T20:49:01.3119280Z ##[debug]omitBrokenSymbolicLinks 'true'
+2025-10-25T20:49:01.3122162Z ##[debug]excludeHiddenFiles 'false'
+2025-10-25T20:49:01.3126024Z ##[debug]Search path '/home/runner/work/Eden_erp/Eden_erp/package-lock.json'
+2025-10-25T20:49:01.3130546Z ##[debug]/home/runner/work/Eden_erp/Eden_erp/package-lock.json
+2025-10-25T20:49:01.3185251Z ##[debug]Found 1 files to hash.
+2025-10-25T20:49:01.3189589Z ##[debug]primary key is node-cache-Linux-x64-npm-49cb63e7587deb417dc5ae7166b674cd36187e669c59f0e8fa3010cccc2d772a
+2025-10-25T20:49:01.3194318Z ##[debug]Cache service version: v2
+2025-10-25T20:49:01.3198159Z ##[debug]Resolved Keys:
+2025-10-25T20:49:01.3201871Z ##[debug]["node-cache-Linux-x64-npm-49cb63e7587deb417dc5ae7166b674cd36187e669c59f0e8fa3010cccc2d772a"]
+2025-10-25T20:49:01.3206202Z ##[debug]Checking zstd --quiet --version
+2025-10-25T20:49:01.3260642Z ##[debug]1.5.7
+2025-10-25T20:49:01.3264832Z ##[debug]zstd version: 1.5.7
+2025-10-25T20:49:01.3276351Z ##[debug][Request] GetCacheEntryDownloadURL https://results-receiver.actions.githubusercontent.com/twirp/github.actions.results.api.v1.CacheService/GetCacheEntryDownloadURL
+2025-10-25T20:49:01.4679901Z ##[debug][Response] - 200
+2025-10-25T20:49:01.4684103Z ##[debug]Headers: {
+2025-10-25T20:49:01.4685496Z ##[debug]  "content-length": "56",
+2025-10-25T20:49:01.4687718Z ##[debug]  "content-type": "application/json",
+2025-10-25T20:49:01.4690239Z ##[debug]  "date": "Sat, 25 Oct 2025 20:49:01 GMT",
+2025-10-25T20:49:01.4692247Z ##[debug]  "x-github-backend": "Kubernetes",
+2025-10-25T20:49:01.4701919Z ##[debug]  "x-github-request-id": "8412:10ABCC:368127:518434:68FD37BD"
+2025-10-25T20:49:01.4704347Z ##[debug]}
+2025-10-25T20:49:01.4706372Z ##[debug]Body: {
+2025-10-25T20:49:01.4707640Z ##[debug]  "ok": false,
+2025-10-25T20:49:01.4709060Z ##[debug]  "signed_download_url": "",
+2025-10-25T20:49:01.4710700Z ##[debug]  "matched_key": ""
+2025-10-25T20:49:01.4712068Z ##[debug]}
+2025-10-25T20:49:01.4719144Z ##[debug]Cache not found for version 04d00cc68e25ee34fd8b04095d0a46a28244d98af53e6925e47ed311d487b1d6 of keys: node-cache-Linux-x64-npm-49cb63e7587deb417dc5ae7166b674cd36187e669c59f0e8fa3010cccc2d772a
+2025-10-25T20:49:01.4725954Z npm cache is not found
+2025-10-25T20:49:01.4736450Z ##[add-matcher]/home/runner/work/_actions/actions/setup-node/v4/.github/tsc.json
+2025-10-25T20:49:01.4763430Z ##[debug]Added matchers: 'tsc'. Problem matchers scan action output for known warning or error strings and report these inline.
+2025-10-25T20:49:01.4769169Z ##[add-matcher]/home/runner/work/_actions/actions/setup-node/v4/.github/eslint-stylish.json
+2025-10-25T20:49:01.4782106Z ##[debug]Added matchers: 'eslint-stylish'. Problem matchers scan action output for known warning or error strings and report these inline.
+2025-10-25T20:49:01.4789038Z ##[add-matcher]/home/runner/work/_actions/actions/setup-node/v4/.github/eslint-compact.json
+2025-10-25T20:49:01.4796861Z ##[debug]Added matchers: 'eslint-compact'. Problem matchers scan action output for known warning or error strings and report these inline.
+2025-10-25T20:49:01.4819868Z ##[debug]Node Action run completed with exit code 0
+2025-10-25T20:49:01.4826530Z ##[debug]Save intra-action state SETUP_NODE_CACHE_PACKAGE_MANAGER = npm
+2025-10-25T20:49:01.4828398Z ##[debug]Save intra-action state CACHE_PATHS = ["/home/runner/.npm"]
+2025-10-25T20:49:01.4831601Z ##[debug]Save intra-action state CACHE_KEY = node-cache-Linux-x64-npm-49cb63e7587deb417dc5ae7166b674cd36187e669c59f0e8fa3010cccc2d772a
+2025-10-25T20:49:01.4835434Z ##[debug]Set output node-version = v20.19.5
+2025-10-25T20:49:01.4836727Z ##[debug]Set output cache-hit = false
+2025-10-25T20:49:01.4838494Z ##[debug]Finishing: Setup Node

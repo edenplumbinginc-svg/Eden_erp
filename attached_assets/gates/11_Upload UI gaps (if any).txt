@@ -1,0 +1,32 @@
+﻿2025-10-25T20:52:18.3724874Z ##[debug]Evaluating condition for step: 'Upload UI gaps (if any)'
+2025-10-25T20:52:18.3726967Z ##[debug]Evaluating: always()
+2025-10-25T20:52:18.3727550Z ##[debug]Evaluating always:
+2025-10-25T20:52:18.3728086Z ##[debug]=> true
+2025-10-25T20:52:18.3728600Z ##[debug]Result: true
+2025-10-25T20:52:18.3729418Z ##[debug]Starting: Upload UI gaps (if any)
+2025-10-25T20:52:18.3762951Z ##[debug]Loading inputs
+2025-10-25T20:52:18.3767719Z ##[debug]Loading env
+2025-10-25T20:52:18.3774633Z ##[group]Run actions/upload-artifact@v4
+2025-10-25T20:52:18.3775061Z with:
+2025-10-25T20:52:18.3775353Z   name: ui-gaps
+2025-10-25T20:52:18.3775702Z   path: coverage/ui-gaps.*
+2025-10-25T20:52:18.3776095Z   if-no-files-found: ignore
+2025-10-25T20:52:18.3776477Z   compression-level: 6
+2025-10-25T20:52:18.3776833Z   overwrite: false
+2025-10-25T20:52:18.3777177Z   include-hidden-files: false
+2025-10-25T20:52:18.3777549Z env:
+2025-10-25T20:52:18.3777834Z   PREVIEW_PID: 5843
+2025-10-25T20:52:18.3778156Z ##[endgroup]
+2025-10-25T20:52:19.3729625Z ##[debug]followSymbolicLinks 'true'
+2025-10-25T20:52:19.3844261Z ##[debug]implicitDescendants 'true'
+2025-10-25T20:52:19.3845000Z ##[debug]omitBrokenSymbolicLinks 'true'
+2025-10-25T20:52:19.3845684Z ##[debug]excludeHiddenFiles 'true'
+2025-10-25T20:52:19.3846342Z ##[debug]followSymbolicLinks 'true'
+2025-10-25T20:52:19.3846981Z ##[debug]implicitDescendants 'true'
+2025-10-25T20:52:19.3847602Z ##[debug]matchDirectories 'true'
+2025-10-25T20:52:19.3848219Z ##[debug]omitBrokenSymbolicLinks 'true'
+2025-10-25T20:52:19.3848859Z ##[debug]excludeHiddenFiles 'true'
+2025-10-25T20:52:19.3849549Z ##[debug]Search path '/home/runner/work/Eden_erp/Eden_erp/coverage'
+2025-10-25T20:52:19.3850604Z No files were found with the provided path: coverage/ui-gaps.*. No artifacts will be uploaded.
+2025-10-25T20:52:19.3851992Z ##[debug]Node Action run completed with exit code 0
+2025-10-25T20:52:19.3854364Z ##[debug]Finishing: Upload UI gaps (if any)
