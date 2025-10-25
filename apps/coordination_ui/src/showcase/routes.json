@@ -1,0 +1,100 @@
+{
+  "routes": [
+    {
+      "route": "/admin/court-flow",
+      "label": "/admin/court-flow"
+    },
+    {
+      "route": "/admin/decisions",
+      "label": "/admin/decisions"
+    },
+    {
+      "route": "/admin/rbac",
+      "label": "/admin/rbac"
+    },
+    {
+      "route": "/alltasks",
+      "label": "/alltasks"
+    },
+    {
+      "route": "/archive",
+      "label": "/archive"
+    },
+    {
+      "route": "/audit-log",
+      "label": "/audit-log"
+    },
+    {
+      "route": "/dashboard",
+      "label": "/dashboard"
+    },
+    {
+      "route": "/guest",
+      "label": "/guest"
+    },
+    {
+      "route": "/incidents",
+      "label": "/incidents"
+    },
+    {
+      "route": "/incidents/123",
+      "label": "/incidents/123"
+    },
+    {
+      "route": "/intake",
+      "label": "/intake"
+    },
+    {
+      "route": "/leaderboard",
+      "label": "/leaderboard"
+    },
+    {
+      "route": "/login",
+      "label": "/login"
+    },
+    {
+      "route": "/profile",
+      "label": "/profile"
+    },
+    {
+      "route": "/project/123",
+      "label": "/project/123"
+    },
+    {
+      "route": "/projects-delta",
+      "label": "/projects-delta"
+    },
+    {
+      "route": "/reports",
+      "label": "/reports"
+    },
+    {
+      "route": "/request-project",
+      "label": "/request-project"
+    },
+    {
+      "route": "/signup",
+      "label": "/signup"
+    },
+    {
+      "route": "/task/123",
+      "label": "/task/123"
+    },
+    {
+      "route": "/tasks-delta",
+      "label": "/tasks-delta"
+    },
+    {
+      "route": "/tasks/new",
+      "label": "/tasks/new"
+    },
+    {
+      "route": "/team",
+      "label": "/team"
+    },
+    {
+      "route": "/velocity",
+      "label": "/velocity"
+    }
+  ]
+}
