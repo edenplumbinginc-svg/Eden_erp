@@ -28,7 +28,8 @@
     "diag:db:json": "curl -sS http://localhost:3000/diag/db",
     "dev:web": "npm --prefix apps/coordination_ui run dev",
     "smoke:api": "node scripts/smoke-api.js",
-    "test": "jest --runInBand"
+    "test": "jest --runInBand",
+    "check:ui": "node scripts/check-ui-coverage.js"
   },
   "description": "Monolithic shell.",
   "main": "server.js",
@@ -49,6 +50,7 @@
     "express": "^5.1.0",
     "express-rate-limit": "^8.1.0",
     "jose": "^6.1.0",
+    "js-yaml": "^4.1.0",
     "jsonwebtoken": "^9.0.2",
     "luxon": "^3.7.2",
     "node-cron": "^4.2.1",
