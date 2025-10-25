@@ -1,0 +1,69 @@
+﻿2025-10-25T22:46:29.3481012Z ##[group]Run actions/checkout@v4
+2025-10-25T22:46:29.3482352Z with:
+2025-10-25T22:46:29.3483206Z   repository: edenplumbinginc-svg/Eden_erp
+2025-10-25T22:46:29.3484617Z   token: ***
+2025-10-25T22:46:29.3485371Z   ssh-strict: true
+2025-10-25T22:46:29.3486152Z   ssh-user: git
+2025-10-25T22:46:29.3486980Z   persist-credentials: true
+2025-10-25T22:46:29.3487905Z   clean: true
+2025-10-25T22:46:29.3488867Z   sparse-checkout-cone-mode: true
+2025-10-25T22:46:29.3489879Z   fetch-depth: 1
+2025-10-25T22:46:29.3490668Z   fetch-tags: false
+2025-10-25T22:46:29.3491474Z   show-progress: true
+2025-10-25T22:46:29.3492298Z   lfs: false
+2025-10-25T22:46:29.3493034Z   submodules: false
+2025-10-25T22:46:29.3493870Z   set-safe-directory: true
+2025-10-25T22:46:29.3495004Z ##[endgroup]
+2025-10-25T22:46:29.4659210Z Syncing repository: edenplumbinginc-svg/Eden_erp
+2025-10-25T22:46:29.4663847Z ##[group]Getting Git version info
+2025-10-25T22:46:29.4667322Z Working directory is '/home/runner/work/Eden_erp/Eden_erp'
+2025-10-25T22:46:29.4671045Z [command]/usr/bin/git version
+2025-10-25T22:46:29.4773306Z git version 2.51.0
+2025-10-25T22:46:29.4804301Z ##[endgroup]
+2025-10-25T22:46:29.4821489Z Temporarily overriding HOME='/home/runner/work/_temp/4bef9300-996c-4874-88e9-f42259a384d0' before making global git config changes
+2025-10-25T22:46:29.4827477Z Adding repository directory to the temporary git global config as a safe directory
+2025-10-25T22:46:29.4840243Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Eden_erp/Eden_erp
+2025-10-25T22:46:29.4878121Z Deleting the contents of '/home/runner/work/Eden_erp/Eden_erp'
+2025-10-25T22:46:29.4882805Z ##[group]Initializing the repository
+2025-10-25T22:46:29.4888232Z [command]/usr/bin/git init /home/runner/work/Eden_erp/Eden_erp
+2025-10-25T22:46:29.5010496Z hint: Using 'master' as the name for the initial branch. This default branch name
+2025-10-25T22:46:29.5013805Z hint: is subject to change. To configure the initial branch name to use in all
+2025-10-25T22:46:29.5017048Z hint: of your new repositories, which will suppress this warning, call:
+2025-10-25T22:46:29.5019771Z hint:
+2025-10-25T22:46:29.5021819Z hint: 	git config --global init.defaultBranch <name>
+2025-10-25T22:46:29.5023835Z hint:
+2025-10-25T22:46:29.5025862Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2025-10-25T22:46:29.5029410Z hint: 'development'. The just-created branch can be renamed via this command:
+2025-10-25T22:46:29.5031931Z hint:
+2025-10-25T22:46:29.5033152Z hint: 	git branch -m <name>
+2025-10-25T22:46:29.5034571Z hint:
+2025-10-25T22:46:29.5036517Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2025-10-25T22:46:29.5040430Z Initialized empty Git repository in /home/runner/work/Eden_erp/Eden_erp/.git/
+2025-10-25T22:46:29.5048623Z [command]/usr/bin/git remote add origin https://github.com/edenplumbinginc-svg/Eden_erp
+2025-10-25T22:46:29.5079366Z ##[endgroup]
+2025-10-25T22:46:29.5081908Z ##[group]Disabling automatic garbage collection
+2025-10-25T22:46:29.5085011Z [command]/usr/bin/git config --local gc.auto 0
+2025-10-25T22:46:29.5118243Z ##[endgroup]
+2025-10-25T22:46:29.5120885Z ##[group]Setting up auth
+2025-10-25T22:46:29.5124260Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2025-10-25T22:46:29.5159636Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2025-10-25T22:46:29.5532335Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2025-10-25T22:46:29.5568303Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2025-10-25T22:46:29.5797477Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2025-10-25T22:46:29.5835410Z ##[endgroup]
+2025-10-25T22:46:29.5839708Z ##[group]Fetching the repository
+2025-10-25T22:46:29.5858601Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +326b1a72bd588213bb502d69f98f1de63638fcec:refs/remotes/origin/main
+2025-10-25T22:46:30.9444505Z From https://github.com/edenplumbinginc-svg/Eden_erp
+2025-10-25T22:46:30.9446794Z  * [new ref]         326b1a72bd588213bb502d69f98f1de63638fcec -> origin/main
+2025-10-25T22:46:30.9482383Z ##[endgroup]
+2025-10-25T22:46:30.9483206Z ##[group]Determining the checkout info
+2025-10-25T22:46:30.9484479Z ##[endgroup]
+2025-10-25T22:46:30.9490223Z [command]/usr/bin/git sparse-checkout disable
+2025-10-25T22:46:30.9534374Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2025-10-25T22:46:30.9570320Z ##[group]Checking out the ref
+2025-10-25T22:46:30.9572049Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+2025-10-25T22:46:31.0771701Z Switched to a new branch 'main'
+2025-10-25T22:46:31.0786050Z branch 'main' set up to track 'origin/main'.
+2025-10-25T22:46:31.0792422Z ##[endgroup]
+2025-10-25T22:46:31.0861787Z [command]/usr/bin/git log -1 --format=%H
+2025-10-25T22:46:31.0904729Z 326b1a72bd588213bb502d69f98f1de63638fcec

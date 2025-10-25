@@ -5,6 +5,7 @@
   "license": "UNLICENSED",
 
   "scripts": {
+    "dev": "node server.js",
     "uptime": "node scripts/ping-health.js",
     "sentry:test": "node -e \"require('@sentry/node').captureMessage('SENTRY_SCRIPT_OK')\"",
     "health:strict": "curl -sS http://localhost:3000/healthz || true",

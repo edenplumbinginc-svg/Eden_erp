@@ -1,0 +1,17 @@
+﻿2025-10-25T22:46:31.1156511Z ##[group]Run actions/setup-node@v4
+2025-10-25T22:46:31.1156884Z with:
+2025-10-25T22:46:31.1157113Z   node-version: 20
+2025-10-25T22:46:31.1157351Z   cache: npm
+2025-10-25T22:46:31.1157583Z   always-auth: false
+2025-10-25T22:46:31.1157834Z   check-latest: false
+2025-10-25T22:46:31.1158222Z   token: ***
+2025-10-25T22:46:31.1158464Z ##[endgroup]
+2025-10-25T22:46:31.3002059Z Found in cache @ /opt/hostedtoolcache/node/20.19.5/x64
+2025-10-25T22:46:31.3003152Z ##[group]Environment details
+2025-10-25T22:46:31.8366017Z node: v20.19.5
+2025-10-25T22:46:31.8372546Z npm: 10.8.2
+2025-10-25T22:46:31.8372906Z yarn: 1.22.22
+2025-10-25T22:46:31.8373665Z ##[endgroup]
+2025-10-25T22:46:31.8410324Z [command]/opt/hostedtoolcache/node/20.19.5/x64/bin/npm config get cache
+2025-10-25T22:46:32.0226888Z /home/runner/.npm
+2025-10-25T22:46:32.2827285Z npm cache is not found

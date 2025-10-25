@@ -1,0 +1,1164 @@
+﻿2025-10-25T22:49:34.3019772Z ##[group]Run npm run test:smoke
+2025-10-25T22:49:34.3020044Z [36;1mnpm run test:smoke[0m
+2025-10-25T22:49:34.3048214Z shell: /usr/bin/bash -e {0}
+2025-10-25T22:49:34.3048450Z env:
+2025-10-25T22:49:34.3048627Z   PREVIEW_PID: 5827
+2025-10-25T22:49:34.3049404Z   PW_EMAIL: ***
+2025-10-25T22:49:34.3049637Z   PW_PASSWORD: ***
+2025-10-25T22:49:34.3049832Z   PW_SKIP_WEBSERVER: 1
+2025-10-25T22:49:34.3050050Z   BASE_URL: http://localhost:4173
+2025-10-25T22:49:34.3050285Z ##[endgroup]
+2025-10-25T22:49:35.2102363Z 
+2025-10-25T22:49:35.2161721Z > eden_erp@0.1.0 test:smoke
+2025-10-25T22:49:35.2162296Z > playwright test -g 'contract routes'
+2025-10-25T22:49:35.2162626Z 
+2025-10-25T22:49:36.2096277Z [auth-setup] Attempting login for ***...
+2025-10-25T22:49:37.2292439Z [auth-setup] ✅ Login successful! storageState.json saved.
+2025-10-25T22:49:37.2294491Z [auth-setup] Storage state: /home/runner/work/Eden_erp/Eden_erp/coverage/storageState.json
+2025-10-25T22:49:37.2295526Z [auth-setup] Protected routes will now render without redirects.
+2025-10-25T22:49:37.3650531Z 📋 Loaded 24 routes from UI contract:
+2025-10-25T22:49:37.3654124Z /admin/court-flow
+2025-10-25T22:49:37.3654509Z /admin/decisions
+2025-10-25T22:49:37.3654837Z /admin/rbac
+2025-10-25T22:49:37.3655127Z /alltasks
+2025-10-25T22:49:37.3655405Z /archive
+2025-10-25T22:49:37.3655697Z /audit-log
+2025-10-25T22:49:37.3655975Z /dashboard
+2025-10-25T22:49:37.3656257Z /guest
+2025-10-25T22:49:37.3656533Z /incidents
+2025-10-25T22:49:37.3656830Z /incidents/123
+2025-10-25T22:49:37.3657133Z /intake
+2025-10-25T22:49:37.3657420Z /leaderboard
+2025-10-25T22:49:37.3657708Z /login
+2025-10-25T22:49:37.3657983Z /profile
+2025-10-25T22:49:37.3658272Z /project/123
+2025-10-25T22:49:37.3658614Z /projects-delta
+2025-10-25T22:49:37.3659227Z /reports
+2025-10-25T22:49:37.3659526Z /request-project
+2025-10-25T22:49:37.3659836Z /signup
+2025-10-25T22:49:37.3660113Z /task/123
+2025-10-25T22:49:37.3660402Z /tasks-delta
+2025-10-25T22:49:37.3660693Z /tasks/new
+2025-10-25T22:49:37.3660967Z /team
+2025-10-25T22:49:37.3661264Z /velocity
+2025-10-25T22:49:37.3661424Z 
+2025-10-25T22:49:37.4117458Z 
+2025-10-25T22:49:37.4120299Z Running 26 tests using 1 worker
+2025-10-25T22:49:37.4122474Z 
+2025-10-25T22:49:37.9990311Z 📋 Loaded 24 routes from UI contract:
+2025-10-25T22:49:37.9992123Z /admin/court-flow
+2025-10-25T22:49:37.9993830Z /admin/decisions
+2025-10-25T22:49:38.0004396Z /admin/rbac
+2025-10-25T22:49:38.0005242Z /alltasks
+2025-10-25T22:49:38.0006047Z /archive
+2025-10-25T22:49:38.0006520Z /audit-log
+2025-10-25T22:49:38.0007420Z /dashboard
+2025-10-25T22:49:38.0007978Z /guest
+2025-10-25T22:49:38.0010624Z /incidents
+2025-10-25T22:49:38.0011222Z /incidents/123
+2025-10-25T22:49:38.0013552Z /intake
+2025-10-25T22:49:38.0013852Z /leaderboard
+2025-10-25T22:49:38.0014144Z /login
+2025-10-25T22:49:38.0014427Z /profile
+2025-10-25T22:49:38.0044795Z /project/123
+2025-10-25T22:49:38.0045153Z /projects-delta
+2025-10-25T22:49:38.0045476Z /reports
+2025-10-25T22:49:38.0045781Z /request-project
+2025-10-25T22:49:38.0046089Z /signup
+2025-10-25T22:49:38.0046392Z /task/123
+2025-10-25T22:49:38.0046673Z /tasks-delta
+2025-10-25T22:49:38.0046964Z /tasks/new
+2025-10-25T22:49:38.0047240Z /team
+2025-10-25T22:49:38.0047515Z /velocity
+2025-10-25T22:49:38.0047677Z 
+2025-10-25T22:49:38.0712105Z   ✓   1 [chromium] › tests/smoke-nav.spec.cjs:57:3 › Contract Routes - Navigation Smoke Test › contract route count locked (8ms)
+2025-10-25T22:49:38.2911040Z 🔍 Testing route: /admin/court-flow
+2025-10-25T22:49:38.7214412Z   ✅ Verified /admin/court-flow
+2025-10-25T22:49:38.8171834Z   ✓   2 [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /admin/court-flow (641ms)
+2025-10-25T22:49:38.9068240Z 🔍 Testing route: /admin/decisions
+2025-10-25T22:49:39.3745965Z   ✅ Verified /admin/decisions
+2025-10-25T22:49:39.4579609Z   ✓   3 [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /admin/decisions (626ms)
+2025-10-25T22:49:39.5609555Z 🔍 Testing route: /admin/rbac
+2025-10-25T22:49:40.0132574Z   ✅ Verified /admin/rbac
+2025-10-25T22:49:40.0794586Z   ✓   4 [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /admin/rbac (608ms)
+2025-10-25T22:49:40.1694293Z 🔍 Testing route: /alltasks
+2025-10-25T22:49:40.6423491Z   ✅ Verified /alltasks
+2025-10-25T22:49:40.7470500Z   ✓   5 [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /alltasks (645ms)
+2025-10-25T22:49:40.8382990Z 🔍 Testing route: /archive
+2025-10-25T22:49:41.2779431Z   ✅ Verified /archive
+2025-10-25T22:49:41.3563401Z   ✓   6 [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /archive (594ms)
+2025-10-25T22:49:41.4473675Z 🔍 Testing route: /audit-log
+2025-10-25T22:49:42.1155042Z   ✘   7 [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /audit-log (664ms)
+2025-10-25T22:49:42.7068041Z 📋 Loaded 24 routes from UI contract:
+2025-10-25T22:49:42.7068615Z /admin/court-flow
+2025-10-25T22:49:42.7069211Z /admin/decisions
+2025-10-25T22:49:42.7069538Z /admin/rbac
+2025-10-25T22:49:42.7069830Z /alltasks
+2025-10-25T22:49:42.7070110Z /archive
+2025-10-25T22:49:42.7070386Z /audit-log
+2025-10-25T22:49:42.7070672Z /dashboard
+2025-10-25T22:49:42.7070953Z /guest
+2025-10-25T22:49:42.7071226Z /incidents
+2025-10-25T22:49:42.7071507Z /incidents/123
+2025-10-25T22:49:42.7071804Z /intake
+2025-10-25T22:49:42.7072084Z /leaderboard
+2025-10-25T22:49:42.7072368Z /login
+2025-10-25T22:49:42.7072637Z /profile
+2025-10-25T22:49:42.7072921Z /project/123
+2025-10-25T22:49:42.7073217Z /projects-delta
+2025-10-25T22:49:42.7073519Z /reports
+2025-10-25T22:49:42.7073807Z /request-project
+2025-10-25T22:49:42.7074143Z /signup
+2025-10-25T22:49:42.7074406Z /task/123
+2025-10-25T22:49:42.7074688Z /tasks-delta
+2025-10-25T22:49:42.7074976Z /tasks/new
+2025-10-25T22:49:42.7075259Z /team
+2025-10-25T22:49:42.7086795Z /velocity
+2025-10-25T22:49:42.7086997Z 
+2025-10-25T22:49:42.9621437Z 🔍 Testing route: /audit-log
+2025-10-25T22:49:43.7599359Z   ✘   8 [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /audit-log (retry #1) (834ms)
+2025-10-25T22:49:44.3770472Z 📋 Loaded 24 routes from UI contract:
+2025-10-25T22:49:44.3772315Z /admin/court-flow
+2025-10-25T22:49:44.3772676Z /admin/decisions
+2025-10-25T22:49:44.3772995Z /admin/rbac
+2025-10-25T22:49:44.3773285Z /alltasks
+2025-10-25T22:49:44.3773563Z /archive
+2025-10-25T22:49:44.3773840Z /audit-log
+2025-10-25T22:49:44.3774128Z /dashboard
+2025-10-25T22:49:44.3774407Z /guest
+2025-10-25T22:49:44.3774684Z /incidents
+2025-10-25T22:49:44.3774970Z /incidents/123
+2025-10-25T22:49:44.3775270Z /intake
+2025-10-25T22:49:44.3775589Z /leaderboard
+2025-10-25T22:49:44.3775878Z /login
+2025-10-25T22:49:44.3776155Z /profile
+2025-10-25T22:49:44.3776438Z /project/123
+2025-10-25T22:49:44.3776741Z /projects-delta
+2025-10-25T22:49:44.3777047Z /reports
+2025-10-25T22:49:44.3777336Z /request-project
+2025-10-25T22:49:44.3777652Z /signup
+2025-10-25T22:49:44.3777931Z /task/123
+2025-10-25T22:49:44.3778242Z /tasks-delta
+2025-10-25T22:49:44.3778538Z /tasks/new
+2025-10-25T22:49:44.3778998Z /team
+2025-10-25T22:49:44.3779280Z /velocity
+2025-10-25T22:49:44.3779443Z 
+2025-10-25T22:49:44.6640536Z 🔍 Testing route: /dashboard
+2025-10-25T22:49:45.1042195Z   ✅ Verified /dashboard
+2025-10-25T22:49:45.2159768Z   ✓   9 [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /dashboard (688ms)
+2025-10-25T22:49:45.3123284Z 🔍 Testing route: /guest
+2025-10-25T22:49:45.6621528Z   ✅ Verified /guest
+2025-10-25T22:49:45.7600789Z   ✓  10 [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /guest (521ms)
+2025-10-25T22:49:45.8515913Z 🔍 Testing route: /incidents
+2025-10-25T22:49:46.3052977Z     ✓ Heading matched: "Failed to Load Incidents" contains "Incidents"
+2025-10-25T22:49:46.3112016Z   ✅ Verified /incidents
+2025-10-25T22:49:46.3933221Z   ✓  11 [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /incidents (611ms)
+2025-10-25T22:49:46.4846097Z 🔍 Testing route: /incidents/123
+2025-10-25T22:49:46.9100879Z     ✓ Heading matched: "Failed to Load Incident" contains "Incident"
+2025-10-25T22:49:46.9166792Z   ✅ Verified /incidents/123
+2025-10-25T22:49:46.9890600Z   ✓  12 [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /incidents/123 (576ms)
+2025-10-25T22:49:47.0803239Z 🔍 Testing route: /intake
+2025-10-25T22:49:47.5248549Z   ✅ Verified /intake
+2025-10-25T22:49:47.6103578Z   ✓  13 [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /intake (606ms)
+2025-10-25T22:49:47.6974019Z 🔍 Testing route: /leaderboard
+2025-10-25T22:49:48.1430322Z   ✅ Verified /leaderboard
+2025-10-25T22:49:48.2287567Z   ✓  14 [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /leaderboard (603ms)
+2025-10-25T22:49:48.3187814Z 🔍 Testing route: /login
+2025-10-25T22:49:48.9645126Z   ✘  15 [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /login (645ms)
+2025-10-25T22:49:49.5503593Z 📋 Loaded 24 routes from UI contract:
+2025-10-25T22:49:49.5504171Z /admin/court-flow
+2025-10-25T22:49:49.5504527Z /admin/decisions
+2025-10-25T22:49:49.5504852Z /admin/rbac
+2025-10-25T22:49:49.5505139Z /alltasks
+2025-10-25T22:49:49.5505486Z /archive
+2025-10-25T22:49:49.5505769Z /audit-log
+2025-10-25T22:49:49.5506060Z /dashboard
+2025-10-25T22:49:49.5506338Z /guest
+2025-10-25T22:49:49.5506608Z /incidents
+2025-10-25T22:49:49.5506901Z /incidents/123
+2025-10-25T22:49:49.5507204Z /intake
+2025-10-25T22:49:49.5507483Z /leaderboard
+2025-10-25T22:49:49.5507816Z /login
+2025-10-25T22:49:49.5508097Z /profile
+2025-10-25T22:49:49.5508385Z /project/123
+2025-10-25T22:49:49.5508689Z /projects-delta
+2025-10-25T22:49:49.5509186Z /reports
+2025-10-25T22:49:49.5509482Z /request-project
+2025-10-25T22:49:49.5509787Z /signup
+2025-10-25T22:49:49.5510061Z /task/123
+2025-10-25T22:49:49.5510361Z /tasks-delta
+2025-10-25T22:49:49.5510686Z /tasks/new
+2025-10-25T22:49:49.5510968Z /team
+2025-10-25T22:49:49.5511245Z /velocity
+2025-10-25T22:49:49.5511408Z 
+2025-10-25T22:49:49.8106133Z 🔍 Testing route: /login
+2025-10-25T22:49:50.4705879Z   ✘  16 [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /login (retry #1) (699ms)
+2025-10-25T22:49:51.0473365Z 📋 Loaded 24 routes from UI contract:
+2025-10-25T22:49:51.0474990Z /admin/court-flow
+2025-10-25T22:49:51.0475335Z /admin/decisions
+2025-10-25T22:49:51.0475660Z /admin/rbac
+2025-10-25T22:49:51.0475947Z /alltasks
+2025-10-25T22:49:51.0476220Z /archive
+2025-10-25T22:49:51.0476492Z /audit-log
+2025-10-25T22:49:51.0476808Z /dashboard
+2025-10-25T22:49:51.0477074Z /guest
+2025-10-25T22:49:51.0477344Z /incidents
+2025-10-25T22:49:51.0477631Z /incidents/123
+2025-10-25T22:49:51.0477936Z /intake
+2025-10-25T22:49:51.0478245Z /leaderboard
+2025-10-25T22:49:51.0478566Z /login
+2025-10-25T22:49:51.0479189Z /profile
+2025-10-25T22:49:51.0479501Z /project/123
+2025-10-25T22:49:51.0479851Z /projects-delta
+2025-10-25T22:49:51.0480166Z /reports
+2025-10-25T22:49:51.0480462Z /request-project
+2025-10-25T22:49:51.0480773Z /signup
+2025-10-25T22:49:51.0481048Z /task/123
+2025-10-25T22:49:51.0481333Z /tasks-delta
+2025-10-25T22:49:51.0481630Z /tasks/new
+2025-10-25T22:49:51.0481908Z /team
+2025-10-25T22:49:51.0482181Z /velocity
+2025-10-25T22:49:51.0482342Z 
+2025-10-25T22:49:51.3078540Z 🔍 Testing route: /profile
+2025-10-25T22:49:52.2281953Z     ✓ Heading matched: "Edit Profile" contains "Profile"
+2025-10-25T22:49:52.2282828Z   ✅ Verified /profile
+2025-10-25T22:49:52.2284014Z   ✓  17 [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /profile (658ms)
+2025-10-25T22:49:52.2285263Z 🔍 Testing route: /project/123
+2025-10-25T22:49:52.3729957Z   ✅ Verified /project/123
+2025-10-25T22:49:52.4635160Z   ✓  18 [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /project/123 (575ms)
+2025-10-25T22:49:52.5629575Z 🔍 Testing route: /projects-delta
+2025-10-25T22:49:57.9766109Z   ✘  19 [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /projects-delta (5.4s)
+2025-10-25T22:49:58.5596759Z 📋 Loaded 24 routes from UI contract:
+2025-10-25T22:49:58.5597353Z /admin/court-flow
+2025-10-25T22:49:58.5597692Z /admin/decisions
+2025-10-25T22:49:58.5598012Z /admin/rbac
+2025-10-25T22:49:58.5598300Z /alltasks
+2025-10-25T22:49:58.5598579Z /archive
+2025-10-25T22:49:58.5599163Z /audit-log
+2025-10-25T22:49:58.5599451Z /dashboard
+2025-10-25T22:49:58.5599734Z /guest
+2025-10-25T22:49:58.5600017Z /incidents
+2025-10-25T22:49:58.5600326Z /incidents/123
+2025-10-25T22:49:58.5601044Z /intake
+2025-10-25T22:49:58.5601326Z /leaderboard
+2025-10-25T22:49:58.5601616Z /login
+2025-10-25T22:49:58.5601893Z /profile
+2025-10-25T22:49:58.5602184Z /project/123
+2025-10-25T22:49:58.5602487Z /projects-delta
+2025-10-25T22:49:58.5602795Z /reports
+2025-10-25T22:49:58.5603086Z /request-project
+2025-10-25T22:49:58.5603393Z /signup
+2025-10-25T22:49:58.5603688Z /task/123
+2025-10-25T22:49:58.5614756Z /tasks-delta
+2025-10-25T22:49:58.5615108Z /tasks/new
+2025-10-25T22:49:58.5615392Z /team
+2025-10-25T22:49:58.5615672Z /velocity
+2025-10-25T22:49:58.5615842Z 
+2025-10-25T22:49:58.8175473Z 🔍 Testing route: /projects-delta
+2025-10-25T22:50:04.2776075Z   ✘  20 [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /projects-delta (retry #1) (5.5s)
+2025-10-25T22:50:04.8590061Z 📋 Loaded 24 routes from UI contract:
+2025-10-25T22:50:04.8591892Z /admin/court-flow
+2025-10-25T22:50:04.8593037Z /admin/decisions
+2025-10-25T22:50:04.8594053Z /admin/rbac
+2025-10-25T22:50:04.8595152Z /alltasks
+2025-10-25T22:50:04.8595445Z /archive
+2025-10-25T22:50:04.8595726Z /audit-log
+2025-10-25T22:50:04.8596012Z /dashboard
+2025-10-25T22:50:04.8596284Z /guest
+2025-10-25T22:50:04.8596558Z /incidents
+2025-10-25T22:50:04.8596847Z /incidents/123
+2025-10-25T22:50:04.8597144Z /intake
+2025-10-25T22:50:04.8597422Z /leaderboard
+2025-10-25T22:50:04.8597732Z /login
+2025-10-25T22:50:04.8598007Z /profile
+2025-10-25T22:50:04.8598303Z /project/123
+2025-10-25T22:50:04.8598615Z /projects-delta
+2025-10-25T22:50:04.8599163Z /reports
+2025-10-25T22:50:04.8599461Z /request-project
+2025-10-25T22:50:04.8599784Z /signup
+2025-10-25T22:50:04.8600062Z /task/123
+2025-10-25T22:50:04.8600348Z /tasks-delta
+2025-10-25T22:50:04.8600638Z /tasks/new
+2025-10-25T22:50:04.8600922Z /team
+2025-10-25T22:50:04.8601194Z /velocity
+2025-10-25T22:50:04.8601358Z 
+2025-10-25T22:50:05.1220110Z 🔍 Testing route: /reports
+2025-10-25T22:50:05.5605484Z   ✅ Verified /reports
+2025-10-25T22:50:05.6703335Z   ✓  21 [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /reports (663ms)
+2025-10-25T22:50:05.7676835Z 🔍 Testing route: /request-project
+2025-10-25T22:50:06.1399487Z   ✅ Verified /request-project
+2025-10-25T22:50:06.2314799Z   ✓  22 [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /request-project (535ms)
+2025-10-25T22:50:06.3252684Z 🔍 Testing route: /signup
+2025-10-25T22:50:06.9599018Z   ✘  23 [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /signup (634ms)
+2025-10-25T22:50:07.5465544Z 📋 Loaded 24 routes from UI contract:
+2025-10-25T22:50:07.5466100Z /admin/court-flow
+2025-10-25T22:50:07.5466438Z /admin/decisions
+2025-10-25T22:50:07.5466752Z /admin/rbac
+2025-10-25T22:50:07.5467035Z /alltasks
+2025-10-25T22:50:07.5467308Z /archive
+2025-10-25T22:50:07.5467587Z /audit-log
+2025-10-25T22:50:07.5467874Z /dashboard
+2025-10-25T22:50:07.5468152Z /guest
+2025-10-25T22:50:07.5468431Z /incidents
+2025-10-25T22:50:07.5468993Z /incidents/123
+2025-10-25T22:50:07.5469312Z /intake
+2025-10-25T22:50:07.5469595Z /leaderboard
+2025-10-25T22:50:07.5469900Z /login
+2025-10-25T22:50:07.5470184Z /profile
+2025-10-25T22:50:07.5470464Z /project/123
+2025-10-25T22:50:07.5470765Z /projects-delta
+2025-10-25T22:50:07.5471067Z /reports
+2025-10-25T22:50:07.5471354Z /request-project
+2025-10-25T22:50:07.5472062Z /signup
+2025-10-25T22:50:07.5472335Z /task/123
+2025-10-25T22:50:07.5472618Z /tasks-delta
+2025-10-25T22:50:07.5472909Z /tasks/new
+2025-10-25T22:50:07.5473185Z /team
+2025-10-25T22:50:07.5473448Z /velocity
+2025-10-25T22:50:07.5473613Z 
+2025-10-25T22:50:08.2345128Z 🔍 Testing route: /signup
+2025-10-25T22:50:08.4694344Z   ✘  24 [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /signup (retry #1) (711ms)
+2025-10-25T22:50:09.0498537Z 📋 Loaded 24 routes from UI contract:
+2025-10-25T22:50:09.0500571Z /admin/court-flow
+2025-10-25T22:50:09.0500945Z /admin/decisions
+2025-10-25T22:50:09.0501270Z /admin/rbac
+2025-10-25T22:50:09.0502022Z /alltasks
+2025-10-25T22:50:09.0502308Z /archive
+2025-10-25T22:50:09.0502588Z /audit-log
+2025-10-25T22:50:09.0502873Z /dashboard
+2025-10-25T22:50:09.0503145Z /guest
+2025-10-25T22:50:09.0503420Z /incidents
+2025-10-25T22:50:09.0503707Z /incidents/123
+2025-10-25T22:50:09.0504010Z /intake
+2025-10-25T22:50:09.0504285Z /leaderboard
+2025-10-25T22:50:09.0504591Z /login
+2025-10-25T22:50:09.0504863Z /profile
+2025-10-25T22:50:09.0505155Z /project/123
+2025-10-25T22:50:09.0505463Z /projects-delta
+2025-10-25T22:50:09.0505770Z /reports
+2025-10-25T22:50:09.0506057Z /request-project
+2025-10-25T22:50:09.0506371Z /signup
+2025-10-25T22:50:09.0506654Z /task/123
+2025-10-25T22:50:09.0506953Z /tasks-delta
+2025-10-25T22:50:09.0507264Z /tasks/new
+2025-10-25T22:50:09.0507567Z /team
+2025-10-25T22:50:09.0507850Z /velocity
+2025-10-25T22:50:09.0508019Z 
+2025-10-25T22:50:09.3088293Z 🔍 Testing route: /task/123
+2025-10-25T22:50:14.7746184Z   ✘  25 [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /task/123 (5.5s)
+2025-10-25T22:50:15.3521326Z 📋 Loaded 24 routes from UI contract:
+2025-10-25T22:50:15.3521921Z /admin/court-flow
+2025-10-25T22:50:15.3522267Z /admin/decisions
+2025-10-25T22:50:15.3522593Z /admin/rbac
+2025-10-25T22:50:15.3522887Z /alltasks
+2025-10-25T22:50:15.3523162Z /archive
+2025-10-25T22:50:15.3523436Z /audit-log
+2025-10-25T22:50:15.3523762Z /dashboard
+2025-10-25T22:50:15.3524038Z /guest
+2025-10-25T22:50:15.3524316Z /incidents
+2025-10-25T22:50:15.3524605Z /incidents/123
+2025-10-25T22:50:15.3524906Z /intake
+2025-10-25T22:50:15.3525189Z /leaderboard
+2025-10-25T22:50:15.3525482Z /login
+2025-10-25T22:50:15.3525760Z /profile
+2025-10-25T22:50:15.3526044Z /project/123
+2025-10-25T22:50:15.3526348Z /projects-delta
+2025-10-25T22:50:15.3526655Z /reports
+2025-10-25T22:50:15.3526948Z /request-project
+2025-10-25T22:50:15.3527261Z /signup
+2025-10-25T22:50:15.3527537Z /task/123
+2025-10-25T22:50:15.3527823Z /tasks-delta
+2025-10-25T22:50:15.3528127Z /tasks/new
+2025-10-25T22:50:15.3528433Z /team
+2025-10-25T22:50:15.3528700Z /velocity
+2025-10-25T22:50:15.3529052Z 
+2025-10-25T22:50:15.6081278Z 🔍 Testing route: /task/123
+2025-10-25T22:50:21.0711852Z   ✘  26 [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /task/123 (retry #1) (5.5s)
+2025-10-25T22:50:21.6548116Z 📋 Loaded 24 routes from UI contract:
+2025-10-25T22:50:21.6549500Z /admin/court-flow
+2025-10-25T22:50:21.6553450Z /admin/decisions
+2025-10-25T22:50:21.6555780Z /admin/rbac
+2025-10-25T22:50:21.6557217Z /alltasks
+2025-10-25T22:50:21.6557716Z /archive
+2025-10-25T22:50:21.6559459Z /audit-log
+2025-10-25T22:50:21.6559966Z /dashboard
+2025-10-25T22:50:21.6561760Z /guest
+2025-10-25T22:50:21.6563334Z /incidents
+2025-10-25T22:50:21.6563904Z /incidents/123
+2025-10-25T22:50:21.6565847Z /intake
+2025-10-25T22:50:21.6567474Z /leaderboard
+2025-10-25T22:50:21.6567947Z /login
+2025-10-25T22:50:21.6569765Z /profile
+2025-10-25T22:50:21.6570082Z /project/123
+2025-10-25T22:50:21.6570407Z /projects-delta
+2025-10-25T22:50:21.6570747Z /reports
+2025-10-25T22:50:21.6571047Z /request-project
+2025-10-25T22:50:21.6571364Z /signup
+2025-10-25T22:50:21.6571644Z /task/123
+2025-10-25T22:50:21.6571949Z /tasks-delta
+2025-10-25T22:50:21.6572237Z /tasks/new
+2025-10-25T22:50:21.6572519Z /team
+2025-10-25T22:50:21.6572792Z /velocity
+2025-10-25T22:50:21.6572961Z 
+2025-10-25T22:50:21.9056163Z 🔍 Testing route: /tasks-delta
+2025-10-25T22:50:27.3689635Z   ✘  27 [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /tasks-delta (5.5s)
+2025-10-25T22:50:27.9796801Z 📋 Loaded 24 routes from UI contract:
+2025-10-25T22:50:27.9797760Z /admin/court-flow
+2025-10-25T22:50:27.9803383Z /admin/decisions
+2025-10-25T22:50:27.9803735Z /admin/rbac
+2025-10-25T22:50:27.9804028Z /alltasks
+2025-10-25T22:50:27.9804302Z /archive
+2025-10-25T22:50:27.9804587Z /audit-log
+2025-10-25T22:50:27.9804874Z /dashboard
+2025-10-25T22:50:27.9805153Z /guest
+2025-10-25T22:50:27.9805442Z /incidents
+2025-10-25T22:50:27.9805749Z /incidents/123
+2025-10-25T22:50:27.9806488Z /intake
+2025-10-25T22:50:27.9806770Z /leaderboard
+2025-10-25T22:50:27.9807059Z /login
+2025-10-25T22:50:27.9807336Z /profile
+2025-10-25T22:50:27.9807616Z /project/123
+2025-10-25T22:50:27.9807918Z /projects-delta
+2025-10-25T22:50:27.9808220Z /reports
+2025-10-25T22:50:27.9808505Z /request-project
+2025-10-25T22:50:27.9812084Z /signup
+2025-10-25T22:50:27.9812375Z /task/123
+2025-10-25T22:50:27.9812660Z /tasks-delta
+2025-10-25T22:50:27.9812951Z /tasks/new
+2025-10-25T22:50:27.9813229Z /team
+2025-10-25T22:50:27.9813493Z /velocity
+2025-10-25T22:50:27.9813656Z 
+2025-10-25T22:50:28.2376849Z 🔍 Testing route: /tasks-delta
+2025-10-25T22:50:33.7150930Z   ✘  28 [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /tasks-delta (retry #1) (5.5s)
+2025-10-25T22:50:34.2933039Z 📋 Loaded 24 routes from UI contract:
+2025-10-25T22:50:34.2934017Z /admin/court-flow
+2025-10-25T22:50:34.2934486Z /admin/decisions
+2025-10-25T22:50:34.2934797Z /admin/rbac
+2025-10-25T22:50:34.2935124Z /alltasks
+2025-10-25T22:50:34.2935397Z /archive
+2025-10-25T22:50:34.2935666Z /audit-log
+2025-10-25T22:50:34.2935936Z /dashboard
+2025-10-25T22:50:34.2936202Z /guest
+2025-10-25T22:50:34.2936475Z /incidents
+2025-10-25T22:50:34.2936754Z /incidents/123
+2025-10-25T22:50:34.2937037Z /intake
+2025-10-25T22:50:34.2937307Z /leaderboard
+2025-10-25T22:50:34.2937604Z /login
+2025-10-25T22:50:34.2937873Z /profile
+2025-10-25T22:50:34.2938146Z /project/123
+2025-10-25T22:50:34.2938440Z /projects-delta
+2025-10-25T22:50:34.2938905Z /reports
+2025-10-25T22:50:34.2939203Z /request-project
+2025-10-25T22:50:34.2939502Z /signup
+2025-10-25T22:50:34.2939792Z /task/123
+2025-10-25T22:50:34.2940095Z /tasks-delta
+2025-10-25T22:50:34.2940425Z /tasks/new
+2025-10-25T22:50:34.2940717Z /team
+2025-10-25T22:50:34.2941005Z /velocity
+2025-10-25T22:50:34.2941180Z 
+2025-10-25T22:50:34.5510115Z 🔍 Testing route: /tasks/new
+2025-10-25T22:50:35.0423866Z   ✅ Verified /tasks/new
+2025-10-25T22:50:35.1461030Z   ✓  29 [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /tasks/new (706ms)
+2025-10-25T22:50:35.2434444Z 🔍 Testing route: /team
+2025-10-25T22:50:35.8628176Z   ✘  30 [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /team (632ms)
+2025-10-25T22:50:36.4406198Z 📋 Loaded 24 routes from UI contract:
+2025-10-25T22:50:36.4409652Z /admin/court-flow
+2025-10-25T22:50:36.4409995Z /admin/decisions
+2025-10-25T22:50:36.4410313Z /admin/rbac
+2025-10-25T22:50:36.4410600Z /alltasks
+2025-10-25T22:50:36.4410870Z /archive
+2025-10-25T22:50:36.4411142Z /audit-log
+2025-10-25T22:50:36.4411422Z /dashboard
+2025-10-25T22:50:36.4411692Z /guest
+2025-10-25T22:50:36.4411968Z /incidents
+2025-10-25T22:50:36.4412256Z /incidents/123
+2025-10-25T22:50:36.4412551Z /intake
+2025-10-25T22:50:36.4412829Z /leaderboard
+2025-10-25T22:50:36.4413111Z /login
+2025-10-25T22:50:36.4413378Z /profile
+2025-10-25T22:50:36.4413662Z /project/123
+2025-10-25T22:50:36.4413963Z /projects-delta
+2025-10-25T22:50:36.4414297Z /reports
+2025-10-25T22:50:36.4414589Z /request-project
+2025-10-25T22:50:36.4414899Z /signup
+2025-10-25T22:50:36.4415172Z /task/123
+2025-10-25T22:50:36.4415454Z /tasks-delta
+2025-10-25T22:50:36.4415739Z /tasks/new
+2025-10-25T22:50:36.4416014Z /team
+2025-10-25T22:50:36.4416287Z /velocity
+2025-10-25T22:50:36.4416455Z 
+2025-10-25T22:50:36.6901792Z 🔍 Testing route: /team
+2025-10-25T22:50:37.7472298Z   ✘  31 [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /team (retry #1) (679ms)
+2025-10-25T22:50:37.9276810Z 📋 Loaded 24 routes from UI contract:
+2025-10-25T22:50:37.9278462Z /admin/court-flow
+2025-10-25T22:50:37.9279699Z /admin/decisions
+2025-10-25T22:50:37.9280075Z /admin/rbac
+2025-10-25T22:50:37.9280374Z /alltasks
+2025-10-25T22:50:37.9280657Z /archive
+2025-10-25T22:50:37.9280943Z /audit-log
+2025-10-25T22:50:37.9281216Z /dashboard
+2025-10-25T22:50:37.9281495Z /guest
+2025-10-25T22:50:37.9281771Z /incidents
+2025-10-25T22:50:37.9282064Z /incidents/123
+2025-10-25T22:50:37.9282798Z /intake
+2025-10-25T22:50:37.9283082Z /leaderboard
+2025-10-25T22:50:37.9283366Z /login
+2025-10-25T22:50:37.9283638Z /profile
+2025-10-25T22:50:37.9283923Z /project/123
+2025-10-25T22:50:37.9284218Z /projects-delta
+2025-10-25T22:50:37.9284520Z /reports
+2025-10-25T22:50:37.9284813Z /request-project
+2025-10-25T22:50:37.9285117Z /signup
+2025-10-25T22:50:37.9285417Z /task/123
+2025-10-25T22:50:37.9285700Z /tasks-delta
+2025-10-25T22:50:37.9285985Z /tasks/new
+2025-10-25T22:50:37.9286263Z /team
+2025-10-25T22:50:37.9286539Z /velocity
+2025-10-25T22:50:37.9286701Z 
+2025-10-25T22:50:38.1783792Z 🔍 Testing route: /velocity
+2025-10-25T22:50:38.6606626Z     ✓ Heading matched: "Could not load velocity metrics" contains "Velocity"
+2025-10-25T22:50:38.6694054Z   ✅ Verified /velocity
+2025-10-25T22:50:38.7706848Z   ✓  32 [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /velocity (702ms)
+2025-10-25T22:50:38.7824072Z 
+2025-10-25T22:50:38.7824592Z 📊 Smoke Test Summary:
+2025-10-25T22:50:38.7825439Z    Total routes tested: 24
+2025-10-25T22:50:38.7826693Z    Expected routes: 24
+2025-10-25T22:50:38.7830527Z    ✅ All routes from UI contract validated
+2025-10-25T22:50:38.7831106Z 
+2025-10-25T22:50:38.7890208Z   ✓  33 [chromium] › tests/smoke-nav.spec.cjs:202:3 › Contract Routes - Summary › all routes tested (3ms)
+2025-10-25T22:50:38.8367321Z 
+2025-10-25T22:50:38.8373657Z 
+2025-10-25T22:50:38.8387862Z   1) [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /audit-log 
+2025-10-25T22:50:38.8390165Z 
+2025-10-25T22:50:38.8391679Z     Error: JS/React errors on /audit-log
+2025-10-25T22:50:38.8400171Z 
+2025-10-25T22:50:38.8400994Z     [2mexpect([22m[31mreceived[39m[2m).[22mtoEqual[2m([22m[32mexpected[39m[2m) // deep equality[22m
+2025-10-25T22:50:38.8401599Z 
+2025-10-25T22:50:38.8401866Z     [32m- Expected  - 1[39m
+2025-10-25T22:50:38.8402374Z     [31m+ Received  + 3[39m
+2025-10-25T22:50:38.8402642Z 
+2025-10-25T22:50:38.8404278Z     [32m- Array [][39m
+2025-10-25T22:50:38.8404949Z     [31m+ Array [[39m
+2025-10-25T22:50:38.8412721Z     [31m+   "Failed to fetch audit logs: ue",[39m
+2025-10-25T22:50:38.8413247Z     [31m+ ][39m
+2025-10-25T22:50:38.8413443Z 
+2025-10-25T22:50:38.8413942Z       180 |         !e.includes('defaultQueryOptions')           // React Query errors when backend unavailable
+2025-10-25T22:50:38.8414661Z       181 |       );
+2025-10-25T22:50:38.8415430Z     > 182 |       expect(realConsoleErrors, `JS/React errors on ${urlPath}`).toEqual([]);
+2025-10-25T22:50:38.8416184Z           |                                                                  ^
+2025-10-25T22:50:38.8416652Z       183 |       
+2025-10-25T22:50:38.8417270Z       184 |       // Network failures: filter out ERR_ABORTED (backend unavailable in CI)
+2025-10-25T22:50:38.8418215Z       185 |       // Keep only true network failures (DNS, connection refused to running servers)
+2025-10-25T22:50:38.8419404Z         at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:182:66
+2025-10-25T22:50:38.8419865Z 
+2025-10-25T22:50:38.8420610Z     attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8421859Z     test-results/smoke-nav-Contract-Routes--57a46-moke-Test-renders-audit-log-chromium/test-failed-1.png
+2025-10-25T22:50:38.8423551Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8423964Z 
+2025-10-25T22:50:38.8424749Z     Error Context: test-results/smoke-nav-Contract-Routes--57a46-moke-Test-renders-audit-log-chromium/error-context.md
+2025-10-25T22:50:38.8425592Z 
+2025-10-25T22:50:38.8426328Z     attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8427506Z     test-results/smoke-nav-Contract-Routes--57a46-moke-Test-renders-audit-log-chromium/trace.zip
+2025-10-25T22:50:38.8428253Z     Usage:
+2025-10-25T22:50:38.8428435Z 
+2025-10-25T22:50:38.8433100Z         npx playwright show-trace test-results/smoke-nav-Contract-Routes--57a46-moke-Test-renders-audit-log-chromium/trace.zip
+2025-10-25T22:50:38.8434269Z 
+2025-10-25T22:50:38.8434923Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8435334Z 
+2025-10-25T22:50:38.8435953Z     Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8436441Z 
+2025-10-25T22:50:38.8436683Z     Error: JS/React errors on /audit-log
+2025-10-25T22:50:38.8437003Z 
+2025-10-25T22:50:38.8437737Z     [2mexpect([22m[31mreceived[39m[2m).[22mtoEqual[2m([22m[32mexpected[39m[2m) // deep equality[22m
+2025-10-25T22:50:38.8438314Z 
+2025-10-25T22:50:38.8438574Z     [32m- Expected  - 1[39m
+2025-10-25T22:50:38.8439298Z     [31m+ Received  + 3[39m
+2025-10-25T22:50:38.8439569Z 
+2025-10-25T22:50:38.8439781Z     [32m- Array [][39m
+2025-10-25T22:50:38.8440231Z     [31m+ Array [[39m
+2025-10-25T22:50:38.8440818Z     [31m+   "Failed to fetch audit logs: ue",[39m
+2025-10-25T22:50:38.8441361Z     [31m+ ][39m
+2025-10-25T22:50:38.8441560Z 
+2025-10-25T22:50:38.8442093Z       180 |         !e.includes('defaultQueryOptions')           // React Query errors when backend unavailable
+2025-10-25T22:50:38.8442858Z       181 |       );
+2025-10-25T22:50:38.8443549Z     > 182 |       expect(realConsoleErrors, `JS/React errors on ${urlPath}`).toEqual([]);
+2025-10-25T22:50:38.8444327Z           |                                                                  ^
+2025-10-25T22:50:38.8444869Z       183 |       
+2025-10-25T22:50:38.8445709Z       184 |       // Network failures: filter out ERR_ABORTED (backend unavailable in CI)
+2025-10-25T22:50:38.8446861Z       185 |       // Keep only true network failures (DNS, connection refused to running servers)
+2025-10-25T22:50:38.8447939Z         at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:182:66
+2025-10-25T22:50:38.8448610Z 
+2025-10-25T22:50:38.8449638Z     attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8471067Z     test-results/smoke-nav-Contract-Routes--57a46-moke-Test-renders-audit-log-chromium-retry1/test-failed-1.png
+2025-10-25T22:50:38.8472481Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8473138Z 
+2025-10-25T22:50:38.8473954Z     Error Context: test-results/smoke-nav-Contract-Routes--57a46-moke-Test-renders-audit-log-chromium-retry1/error-context.md
+2025-10-25T22:50:38.8474778Z 
+2025-10-25T22:50:38.8475464Z     attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8476632Z     test-results/smoke-nav-Contract-Routes--57a46-moke-Test-renders-audit-log-chromium-retry1/trace.zip
+2025-10-25T22:50:38.8477476Z     Usage:
+2025-10-25T22:50:38.8477647Z 
+2025-10-25T22:50:38.8478480Z         npx playwright show-trace test-results/smoke-nav-Contract-Routes--57a46-moke-Test-renders-audit-log-chromium-retry1/trace.zip
+2025-10-25T22:50:38.8479954Z 
+2025-10-25T22:50:38.8480554Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8480937Z 
+2025-10-25T22:50:38.8481592Z   2) [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /login 
+2025-10-25T22:50:38.8482206Z 
+2025-10-25T22:50:38.8482456Z     Error: HTTP errors on /login (excluding auth)
+2025-10-25T22:50:38.8482766Z 
+2025-10-25T22:50:38.8483437Z     [2mexpect([22m[31mreceived[39m[2m).[22mtoEqual[2m([22m[32mexpected[39m[2m) // deep equality[22m
+2025-10-25T22:50:38.8483997Z 
+2025-10-25T22:50:38.8484254Z     [32m- Expected  -  1[39m
+2025-10-25T22:50:38.8484731Z     [31m+ Received  + 27[39m
+2025-10-25T22:50:38.8484965Z 
+2025-10-25T22:50:38.8485162Z     [32m- Array [][39m
+2025-10-25T22:50:38.8485794Z     [31m+ Array [[39m
+2025-10-25T22:50:38.8486260Z     [31m+   Object {[39m
+2025-10-25T22:50:38.8486789Z     [31m+     "status": 500,[39m
+2025-10-25T22:50:38.8487444Z     [31m+     "statusText": "Internal Server Error",[39m
+2025-10-25T22:50:38.8488369Z     [31m+     "url": "http://localhost:4173/api/notifications/recent",[39m
+2025-10-25T22:50:38.8489265Z     [31m+   },[39m
+2025-10-25T22:50:38.8489707Z     [31m+   Object {[39m
+2025-10-25T22:50:38.8490231Z     [31m+     "status": 500,[39m
+2025-10-25T22:50:38.8490883Z     [31m+     "statusText": "Internal Server Error",[39m
+2025-10-25T22:50:38.8491654Z     [31m+     "url": "http://localhost:4173/api/projects",[39m
+2025-10-25T22:50:38.8492220Z     [31m+   },[39m
+2025-10-25T22:50:38.8492656Z     [31m+   Object {[39m
+2025-10-25T22:50:38.8493152Z     [31m+     "status": 500,[39m
+2025-10-25T22:50:38.8493799Z     [31m+     "statusText": "Internal Server Error",[39m
+2025-10-25T22:50:38.8494546Z     [31m+     "url": "http://localhost:4173/api/users",[39m
+2025-10-25T22:50:38.8495128Z     [31m+   },[39m
+2025-10-25T22:50:38.8495565Z     [31m+   Object {[39m
+2025-10-25T22:50:38.8496104Z     [31m+     "status": 500,[39m
+2025-10-25T22:50:38.8496768Z     [31m+     "statusText": "Internal Server Error",[39m
+2025-10-25T22:50:38.8497541Z     [31m+     "url": "http://localhost:4173/api/me/permissions",[39m
+2025-10-25T22:50:38.8498103Z     [31m+   },[39m
+2025-10-25T22:50:38.8498431Z     [31m+   Object {[39m
+2025-10-25T22:50:38.8499146Z     [31m+     "status": 500,[39m
+2025-10-25T22:50:38.8499667Z     [31m+     "statusText": "Internal Server Error",[39m
+2025-10-25T22:50:38.8500448Z     [31m+     "url": "http://localhost:4173/api/me/permissions",[39m
+2025-10-25T22:50:38.8501033Z     [31m+   },[39m
+2025-10-25T22:50:38.8501400Z     [31m+ ][39m
+2025-10-25T22:50:38.8501597Z 
+2025-10-25T22:50:38.8501986Z       143 |         // 401/403 are expected when redirected to login, so filter them out
+2025-10-25T22:50:38.8502945Z       144 |         const httpErrorsFiltered = httpErrors.filter(e => e.status !== 401 && e.status !== 403);
+2025-10-25T22:50:38.8504283Z     > 145 |         expect(httpErrorsFiltered, `HTTP errors on ${urlPath} (excluding auth)`).toEqual([]);
+2025-10-25T22:50:38.8505223Z           |                                                                                  ^
+2025-10-25T22:50:38.8506196Z       146 |         console.log(`  ✓ ${urlPath} → redirected to auth (${finalUrl})`);
+2025-10-25T22:50:38.8507002Z       147 |         return; 
+2025-10-25T22:50:38.8507384Z       148 |       }
+2025-10-25T22:50:38.8508007Z         at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:145:82
+2025-10-25T22:50:38.8508441Z 
+2025-10-25T22:50:38.8509378Z     attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8510589Z     test-results/smoke-nav-Contract-Routes--2252a-on-Smoke-Test-renders-login-chromium/test-failed-1.png
+2025-10-25T22:50:38.8511863Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8512283Z 
+2025-10-25T22:50:38.8513027Z     Error Context: test-results/smoke-nav-Contract-Routes--2252a-on-Smoke-Test-renders-login-chromium/error-context.md
+2025-10-25T22:50:38.8513792Z 
+2025-10-25T22:50:38.8514437Z     attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8515545Z     test-results/smoke-nav-Contract-Routes--2252a-on-Smoke-Test-renders-login-chromium/trace.zip
+2025-10-25T22:50:38.8516336Z     Usage:
+2025-10-25T22:50:38.8516509Z 
+2025-10-25T22:50:38.8517279Z         npx playwright show-trace test-results/smoke-nav-Contract-Routes--2252a-on-Smoke-Test-renders-login-chromium/trace.zip
+2025-10-25T22:50:38.8518083Z 
+2025-10-25T22:50:38.8518641Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8519213Z 
+2025-10-25T22:50:38.8519781Z     Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8520189Z 
+2025-10-25T22:50:38.8520456Z     Error: HTTP errors on /login (excluding auth)
+2025-10-25T22:50:38.8521305Z 
+2025-10-25T22:50:38.8522018Z     [2mexpect([22m[31mreceived[39m[2m).[22mtoEqual[2m([22m[32mexpected[39m[2m) // deep equality[22m
+2025-10-25T22:50:38.8522579Z 
+2025-10-25T22:50:38.8522823Z     [32m- Expected  -  1[39m
+2025-10-25T22:50:38.8523343Z     [31m+ Received  + 37[39m
+2025-10-25T22:50:38.8523594Z 
+2025-10-25T22:50:38.8523787Z     [32m- Array [][39m
+2025-10-25T22:50:38.8524196Z     [31m+ Array [[39m
+2025-10-25T22:50:38.8524593Z     [31m+   Object {[39m
+2025-10-25T22:50:38.8525072Z     [31m+     "status": 500,[39m
+2025-10-25T22:50:38.8525674Z     [31m+     "statusText": "Internal Server Error",[39m
+2025-10-25T22:50:38.8526470Z     [31m+     "url": "http://localhost:4173/api/notifications/recent",[39m
+2025-10-25T22:50:38.8527061Z     [31m+   },[39m
+2025-10-25T22:50:38.8527451Z     [31m+   Object {[39m
+2025-10-25T22:50:38.8527906Z     [31m+     "status": 500,[39m
+2025-10-25T22:50:38.8528929Z     [31m+     "statusText": "Internal Server Error",[39m
+2025-10-25T22:50:38.8529704Z     [31m+     "url": "http://localhost:4173/api/projects",[39m
+2025-10-25T22:50:38.8530309Z     [31m+   },[39m
+2025-10-25T22:50:38.8530757Z     [31m+   Object {[39m
+2025-10-25T22:50:38.8531275Z     [31m+     "status": 500,[39m
+2025-10-25T22:50:38.8532083Z     [31m+     "statusText": "Internal Server Error",[39m
+2025-10-25T22:50:38.8532861Z     [31m+     "url": "http://localhost:4173/api/me/permissions",[39m
+2025-10-25T22:50:38.8533440Z     [31m+   },[39m
+2025-10-25T22:50:38.8533778Z     [31m+   Object {[39m
+2025-10-25T22:50:38.8534177Z     [31m+     "status": 500,[39m
+2025-10-25T22:50:38.8534689Z     [31m+     "statusText": "Internal Server Error",[39m
+2025-10-25T22:50:38.8535390Z     [31m+     "url": "http://localhost:4173/api/users",[39m
+2025-10-25T22:50:38.8535969Z     [31m+   },[39m
+2025-10-25T22:50:38.8536362Z     [31m+   Object {[39m
+2025-10-25T22:50:38.8536824Z     [31m+     "status": 500,[39m
+2025-10-25T22:50:38.8537427Z     [31m+     "statusText": "Internal Server Error",[39m
+2025-10-25T22:50:38.8538215Z     [31m+     "url": "http://localhost:4173/api/me/permissions",[39m
+2025-10-25T22:50:38.8539009Z     [31m+   },[39m
+2025-10-25T22:50:38.8539462Z     [31m+   Object {[39m
+2025-10-25T22:50:38.8539952Z     [31m+     "status": 500,[39m
+2025-10-25T22:50:38.8540602Z     [31m+     "statusText": "Internal Server Error",[39m
+2025-10-25T22:50:38.8541599Z     [31m+     "url": "http://localhost:4173/api/tasks?limit=20&sort=updated_at&order=desc",[39m
+2025-10-25T22:50:38.8542335Z     [31m+   },[39m
+2025-10-25T22:50:38.8542790Z     [31m+   Object {[39m
+2025-10-25T22:50:38.8543295Z     [31m+     "status": 500,[39m
+2025-10-25T22:50:38.8543922Z     [31m+     "statusText": "Internal Server Error",[39m
+2025-10-25T22:50:38.8544658Z     [31m+     "url": "http://localhost:4173/api/projects",[39m
+2025-10-25T22:50:38.8545206Z     [31m+   },[39m
+2025-10-25T22:50:38.8545619Z     [31m+ ][39m
+2025-10-25T22:50:38.8545826Z 
+2025-10-25T22:50:38.8546210Z       143 |         // 401/403 are expected when redirected to login, so filter them out
+2025-10-25T22:50:38.8547184Z       144 |         const httpErrorsFiltered = httpErrors.filter(e => e.status !== 401 && e.status !== 403);
+2025-10-25T22:50:38.8548270Z     > 145 |         expect(httpErrorsFiltered, `HTTP errors on ${urlPath} (excluding auth)`).toEqual([]);
+2025-10-25T22:50:38.8549494Z           |                                                                                  ^
+2025-10-25T22:50:38.8550336Z       146 |         console.log(`  ✓ ${urlPath} → redirected to auth (${finalUrl})`);
+2025-10-25T22:50:38.8550902Z       147 |         return; 
+2025-10-25T22:50:38.8551254Z       148 |       }
+2025-10-25T22:50:38.8551830Z         at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:145:82
+2025-10-25T22:50:38.8552284Z 
+2025-10-25T22:50:38.8552911Z     attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8554147Z     test-results/smoke-nav-Contract-Routes--2252a-on-Smoke-Test-renders-login-chromium-retry1/test-failed-1.png
+2025-10-25T22:50:38.8555474Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8555870Z 
+2025-10-25T22:50:38.8556719Z     Error Context: test-results/smoke-nav-Contract-Routes--2252a-on-Smoke-Test-renders-login-chromium-retry1/error-context.md
+2025-10-25T22:50:38.8557562Z 
+2025-10-25T22:50:38.8558230Z     attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8559576Z     test-results/smoke-nav-Contract-Routes--2252a-on-Smoke-Test-renders-login-chromium-retry1/trace.zip
+2025-10-25T22:50:38.8560410Z     Usage:
+2025-10-25T22:50:38.8560590Z 
+2025-10-25T22:50:38.8561422Z         npx playwright show-trace test-results/smoke-nav-Contract-Routes--2252a-on-Smoke-Test-renders-login-chromium-retry1/trace.zip
+2025-10-25T22:50:38.8563279Z 
+2025-10-25T22:50:38.8563865Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8564249Z 
+2025-10-25T22:50:38.8565019Z   3) [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /projects-delta 
+2025-10-25T22:50:38.8565873Z 
+2025-10-25T22:50:38.8566446Z     Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+2025-10-25T22:50:38.8566939Z 
+2025-10-25T22:50:38.8567821Z     Locator: locator('h1, h2, h3, [role="heading"], [data-state="loading"], [data-state="error"], [data-state="unauthorized"], [data-state="empty"], [data-state="not_found"]').first()
+2025-10-25T22:50:38.8569039Z     Expected: visible
+2025-10-25T22:50:38.8569413Z     Timeout: 5000ms
+2025-10-25T22:50:38.8569800Z     Error: element(s) not found
+2025-10-25T22:50:38.8570068Z 
+2025-10-25T22:50:38.8570191Z     Call log:
+2025-10-25T22:50:38.8570765Z     [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+2025-10-25T22:50:38.8572378Z     [2m  - waiting for locator('h1, h2, h3, [role="heading"], [data-state="loading"], [data-state="error"], [data-state="unauthorized"], [data-state="empty"], [data-state="not_found"]').first()[22m
+2025-10-25T22:50:38.8573307Z 
+2025-10-25T22:50:38.8573319Z 
+2025-10-25T22:50:38.8573718Z       150 |       // Otherwise, the route must render something meaningful and stable.
+2025-10-25T22:50:38.8574509Z       151 |       const firstMatch = page.locator(selectors).first();
+2025-10-25T22:50:38.8575135Z     > 152 |       await expect(firstMatch).toBeVisible();
+2025-10-25T22:50:38.8575674Z           |                                ^
+2025-10-25T22:50:38.8576128Z       153 |
+2025-10-25T22:50:38.8576876Z       154 |       // If an explicit heading expectation exists, assert it (prefix match allowed).
+2025-10-25T22:50:38.8577647Z       155 |       const exp = EXPECT.get(route);
+2025-10-25T22:50:38.8578381Z         at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:152:32
+2025-10-25T22:50:38.8579039Z 
+2025-10-25T22:50:38.8579698Z     attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8580753Z     test-results/smoke-nav-Contract-Routes--67e4c-Test-renders-projects-delta-chromium/test-failed-1.png
+2025-10-25T22:50:38.8582084Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8582494Z 
+2025-10-25T22:50:38.8583250Z     Error Context: test-results/smoke-nav-Contract-Routes--67e4c-Test-renders-projects-delta-chromium/error-context.md
+2025-10-25T22:50:38.8584049Z 
+2025-10-25T22:50:38.8584756Z     attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8585905Z     test-results/smoke-nav-Contract-Routes--67e4c-Test-renders-projects-delta-chromium/trace.zip
+2025-10-25T22:50:38.8586691Z     Usage:
+2025-10-25T22:50:38.8586865Z 
+2025-10-25T22:50:38.8587658Z         npx playwright show-trace test-results/smoke-nav-Contract-Routes--67e4c-Test-renders-projects-delta-chromium/trace.zip
+2025-10-25T22:50:38.8588936Z 
+2025-10-25T22:50:38.8589571Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8589978Z 
+2025-10-25T22:50:38.8590563Z     Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8591200Z 
+2025-10-25T22:50:38.8591778Z     Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+2025-10-25T22:50:38.8592272Z 
+2025-10-25T22:50:38.8593147Z     Locator: locator('h1, h2, h3, [role="heading"], [data-state="loading"], [data-state="error"], [data-state="unauthorized"], [data-state="empty"], [data-state="not_found"]').first()
+2025-10-25T22:50:38.8594125Z     Expected: visible
+2025-10-25T22:50:38.8594471Z     Timeout: 5000ms
+2025-10-25T22:50:38.8594840Z     Error: element(s) not found
+2025-10-25T22:50:38.8595085Z 
+2025-10-25T22:50:38.8595232Z     Call log:
+2025-10-25T22:50:38.8595757Z     [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+2025-10-25T22:50:38.8597257Z     [2m  - waiting for locator('h1, h2, h3, [role="heading"], [data-state="loading"], [data-state="error"], [data-state="unauthorized"], [data-state="empty"], [data-state="not_found"]').first()[22m
+2025-10-25T22:50:38.8598186Z 
+2025-10-25T22:50:38.8598196Z 
+2025-10-25T22:50:38.8598593Z       150 |       // Otherwise, the route must render something meaningful and stable.
+2025-10-25T22:50:38.8599507Z       151 |       const firstMatch = page.locator(selectors).first();
+2025-10-25T22:50:38.8600131Z     > 152 |       await expect(firstMatch).toBeVisible();
+2025-10-25T22:50:38.8600646Z           |                                ^
+2025-10-25T22:50:38.8601040Z       153 |
+2025-10-25T22:50:38.8601652Z       154 |       // If an explicit heading expectation exists, assert it (prefix match allowed).
+2025-10-25T22:50:38.8602372Z       155 |       const exp = EXPECT.get(route);
+2025-10-25T22:50:38.8603075Z         at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:152:32
+2025-10-25T22:50:38.8603522Z 
+2025-10-25T22:50:38.8604193Z     attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8605461Z     test-results/smoke-nav-Contract-Routes--67e4c-Test-renders-projects-delta-chromium-retry1/test-failed-1.png
+2025-10-25T22:50:38.8606802Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8607188Z 
+2025-10-25T22:50:38.8608020Z     Error Context: test-results/smoke-nav-Contract-Routes--67e4c-Test-renders-projects-delta-chromium-retry1/error-context.md
+2025-10-25T22:50:38.8609023Z 
+2025-10-25T22:50:38.8609720Z     attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8610980Z     test-results/smoke-nav-Contract-Routes--67e4c-Test-renders-projects-delta-chromium-retry1/trace.zip
+2025-10-25T22:50:38.8611902Z     Usage:
+2025-10-25T22:50:38.8612075Z 
+2025-10-25T22:50:38.8612960Z         npx playwright show-trace test-results/smoke-nav-Contract-Routes--67e4c-Test-renders-projects-delta-chromium-retry1/trace.zip
+2025-10-25T22:50:38.8613981Z 
+2025-10-25T22:50:38.8614537Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8615198Z 
+2025-10-25T22:50:38.8615967Z   4) [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /signup 
+2025-10-25T22:50:38.8616561Z 
+2025-10-25T22:50:38.8616830Z     Error: HTTP errors on /signup (excluding auth)
+2025-10-25T22:50:38.8617179Z 
+2025-10-25T22:50:38.8617889Z     [2mexpect([22m[31mreceived[39m[2m).[22mtoEqual[2m([22m[32mexpected[39m[2m) // deep equality[22m
+2025-10-25T22:50:38.8618454Z 
+2025-10-25T22:50:38.8618913Z     [32m- Expected  -  1[39m
+2025-10-25T22:50:38.8619459Z     [31m+ Received  + 27[39m
+2025-10-25T22:50:38.8619703Z 
+2025-10-25T22:50:38.8620179Z     [32m- Array [][39m
+2025-10-25T22:50:38.8620619Z     [31m+ Array [[39m
+2025-10-25T22:50:38.8621037Z     [31m+   Object {[39m
+2025-10-25T22:50:38.8621539Z     [31m+     "status": 500,[39m
+2025-10-25T22:50:38.8622170Z     [31m+     "statusText": "Internal Server Error",[39m
+2025-10-25T22:50:38.8622959Z     [31m+     "url": "http://localhost:4173/api/notifications/recent",[39m
+2025-10-25T22:50:38.8623579Z     [31m+   },[39m
+2025-10-25T22:50:38.8623960Z     [31m+   Object {[39m
+2025-10-25T22:50:38.8624402Z     [31m+     "status": 500,[39m
+2025-10-25T22:50:38.8624992Z     [31m+     "statusText": "Internal Server Error",[39m
+2025-10-25T22:50:38.8625707Z     [31m+     "url": "http://localhost:4173/api/projects",[39m
+2025-10-25T22:50:38.8626240Z     [31m+   },[39m
+2025-10-25T22:50:38.8626623Z     [31m+   Object {[39m
+2025-10-25T22:50:38.8627077Z     [31m+     "status": 500,[39m
+2025-10-25T22:50:38.8627659Z     [31m+     "statusText": "Internal Server Error",[39m
+2025-10-25T22:50:38.8628352Z     [31m+     "url": "http://localhost:4173/api/users",[39m
+2025-10-25T22:50:38.8629047Z     [31m+   },[39m
+2025-10-25T22:50:38.8629438Z     [31m+   Object {[39m
+2025-10-25T22:50:38.8629886Z     [31m+     "status": 500,[39m
+2025-10-25T22:50:38.8630470Z     [31m+     "statusText": "Internal Server Error",[39m
+2025-10-25T22:50:38.8631220Z     [31m+     "url": "http://localhost:4173/api/me/permissions",[39m
+2025-10-25T22:50:38.8631763Z     [31m+   },[39m
+2025-10-25T22:50:38.8632139Z     [31m+   Object {[39m
+2025-10-25T22:50:38.8632582Z     [31m+     "status": 500,[39m
+2025-10-25T22:50:38.8633157Z     [31m+     "statusText": "Internal Server Error",[39m
+2025-10-25T22:50:38.8633876Z     [31m+     "url": "http://localhost:4173/api/me/permissions",[39m
+2025-10-25T22:50:38.8634421Z     [31m+   },[39m
+2025-10-25T22:50:38.8634773Z     [31m+ ][39m
+2025-10-25T22:50:38.8634956Z 
+2025-10-25T22:50:38.8635332Z       143 |         // 401/403 are expected when redirected to login, so filter them out
+2025-10-25T22:50:38.8636273Z       144 |         const httpErrorsFiltered = httpErrors.filter(e => e.status !== 401 && e.status !== 403);
+2025-10-25T22:50:38.8637326Z     > 145 |         expect(httpErrorsFiltered, `HTTP errors on ${urlPath} (excluding auth)`).toEqual([]);
+2025-10-25T22:50:38.8638123Z           |                                                                                  ^
+2025-10-25T22:50:38.8639121Z       146 |         console.log(`  ✓ ${urlPath} → redirected to auth (${finalUrl})`);
+2025-10-25T22:50:38.8639691Z       147 |         return; 
+2025-10-25T22:50:38.8640044Z       148 |       }
+2025-10-25T22:50:38.8640608Z         at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:145:82
+2025-10-25T22:50:38.8641061Z 
+2025-10-25T22:50:38.8641717Z     attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8642941Z     test-results/smoke-nav-Contract-Routes--64787-n-Smoke-Test-renders-signup-chromium/test-failed-1.png
+2025-10-25T22:50:38.8644520Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8644927Z 
+2025-10-25T22:50:38.8645712Z     Error Context: test-results/smoke-nav-Contract-Routes--64787-n-Smoke-Test-renders-signup-chromium/error-context.md
+2025-10-25T22:50:38.8646732Z 
+2025-10-25T22:50:38.8647482Z     attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8648662Z     test-results/smoke-nav-Contract-Routes--64787-n-Smoke-Test-renders-signup-chromium/trace.zip
+2025-10-25T22:50:38.8649969Z     Usage:
+2025-10-25T22:50:38.8650136Z 
+2025-10-25T22:50:38.8650800Z         npx playwright show-trace test-results/smoke-nav-Contract-Routes--64787-n-Smoke-Test-renders-signup-chromium/trace.zip
+2025-10-25T22:50:38.8651623Z 
+2025-10-25T22:50:38.8652229Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8652661Z 
+2025-10-25T22:50:38.8653249Z     Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8653675Z 
+2025-10-25T22:50:38.8653936Z     Error: HTTP errors on /signup (excluding auth)
+2025-10-25T22:50:38.8654293Z 
+2025-10-25T22:50:38.8655016Z     [2mexpect([22m[31mreceived[39m[2m).[22mtoEqual[2m([22m[32mexpected[39m[2m) // deep equality[22m
+2025-10-25T22:50:38.8655628Z 
+2025-10-25T22:50:38.8655885Z     [32m- Expected  -  1[39m
+2025-10-25T22:50:38.8656371Z     [31m+ Received  + 27[39m
+2025-10-25T22:50:38.8656616Z 
+2025-10-25T22:50:38.8656810Z     [32m- Array [][39m
+2025-10-25T22:50:38.8657256Z     [31m+ Array [[39m
+2025-10-25T22:50:38.8657683Z     [31m+   Object {[39m
+2025-10-25T22:50:38.8658182Z     [31m+     "status": 500,[39m
+2025-10-25T22:50:38.8659119Z     [31m+     "statusText": "Internal Server Error",[39m
+2025-10-25T22:50:38.8659984Z     [31m+     "url": "http://localhost:4173/api/notifications/recent",[39m
+2025-10-25T22:50:38.8660621Z     [31m+   },[39m
+2025-10-25T22:50:38.8661022Z     [31m+   Object {[39m
+2025-10-25T22:50:38.8661488Z     [31m+     "status": 500,[39m
+2025-10-25T22:50:38.8662086Z     [31m+     "statusText": "Internal Server Error",[39m
+2025-10-25T22:50:38.8662808Z     [31m+     "url": "http://localhost:4173/api/projects",[39m
+2025-10-25T22:50:38.8663370Z     [31m+   },[39m
+2025-10-25T22:50:38.8664009Z     [31m+   Object {[39m
+2025-10-25T22:50:38.8664481Z     [31m+     "status": 500,[39m
+2025-10-25T22:50:38.8665077Z     [31m+     "statusText": "Internal Server Error",[39m
+2025-10-25T22:50:38.8665776Z     [31m+     "url": "http://localhost:4173/api/users",[39m
+2025-10-25T22:50:38.8666302Z     [31m+   },[39m
+2025-10-25T22:50:38.8666680Z     [31m+   Object {[39m
+2025-10-25T22:50:38.8667129Z     [31m+     "status": 500,[39m
+2025-10-25T22:50:38.8667713Z     [31m+     "statusText": "Internal Server Error",[39m
+2025-10-25T22:50:38.8668452Z     [31m+     "url": "http://localhost:4173/api/me/permissions",[39m
+2025-10-25T22:50:38.8669200Z     [31m+   },[39m
+2025-10-25T22:50:38.8669587Z     [31m+   Object {[39m
+2025-10-25T22:50:38.8670048Z     [31m+     "status": 500,[39m
+2025-10-25T22:50:38.8670635Z     [31m+     "statusText": "Internal Server Error",[39m
+2025-10-25T22:50:38.8671380Z     [31m+     "url": "http://localhost:4173/api/me/permissions",[39m
+2025-10-25T22:50:38.8672161Z     [31m+   },[39m
+2025-10-25T22:50:38.8672528Z     [31m+ ][39m
+2025-10-25T22:50:38.8672722Z 
+2025-10-25T22:50:38.8673098Z       143 |         // 401/403 are expected when redirected to login, so filter them out
+2025-10-25T22:50:38.8674059Z       144 |         const httpErrorsFiltered = httpErrors.filter(e => e.status !== 401 && e.status !== 403);
+2025-10-25T22:50:38.8675120Z     > 145 |         expect(httpErrorsFiltered, `HTTP errors on ${urlPath} (excluding auth)`).toEqual([]);
+2025-10-25T22:50:38.8675924Z           |                                                                                  ^
+2025-10-25T22:50:38.8676946Z       146 |         console.log(`  ✓ ${urlPath} → redirected to auth (${finalUrl})`);
+2025-10-25T22:50:38.8677510Z       147 |         return; 
+2025-10-25T22:50:38.8677872Z       148 |       }
+2025-10-25T22:50:38.8678447Z         at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:145:82
+2025-10-25T22:50:38.8679175Z 
+2025-10-25T22:50:38.8679918Z     attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8681227Z     test-results/smoke-nav-Contract-Routes--64787-n-Smoke-Test-renders-signup-chromium-retry1/test-failed-1.png
+2025-10-25T22:50:38.8682477Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8682877Z 
+2025-10-25T22:50:38.8683721Z     Error Context: test-results/smoke-nav-Contract-Routes--64787-n-Smoke-Test-renders-signup-chromium-retry1/error-context.md
+2025-10-25T22:50:38.8684566Z 
+2025-10-25T22:50:38.8685509Z     attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8686775Z     test-results/smoke-nav-Contract-Routes--64787-n-Smoke-Test-renders-signup-chromium-retry1/trace.zip
+2025-10-25T22:50:38.8687624Z     Usage:
+2025-10-25T22:50:38.8687798Z 
+2025-10-25T22:50:38.8688658Z         npx playwright show-trace test-results/smoke-nav-Contract-Routes--64787-n-Smoke-Test-renders-signup-chromium-retry1/trace.zip
+2025-10-25T22:50:38.8689761Z 
+2025-10-25T22:50:38.8690385Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8690772Z 
+2025-10-25T22:50:38.8691502Z   5) [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /task/123 
+2025-10-25T22:50:38.8692123Z 
+2025-10-25T22:50:38.8692698Z     Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+2025-10-25T22:50:38.8693213Z 
+2025-10-25T22:50:38.8694132Z     Locator: locator('h1, h2, h3, [role="heading"], [data-state="loading"], [data-state="error"], [data-state="unauthorized"], [data-state="empty"], [data-state="not_found"]').first()
+2025-10-25T22:50:38.8695226Z     Expected: visible
+2025-10-25T22:50:38.8695535Z     Timeout: 5000ms
+2025-10-25T22:50:38.8695851Z     Error: element(s) not found
+2025-10-25T22:50:38.8696080Z 
+2025-10-25T22:50:38.8696189Z     Call log:
+2025-10-25T22:50:38.8696744Z     [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+2025-10-25T22:50:38.8698306Z     [2m  - waiting for locator('h1, h2, h3, [role="heading"], [data-state="loading"], [data-state="error"], [data-state="unauthorized"], [data-state="empty"], [data-state="not_found"]').first()[22m
+2025-10-25T22:50:38.8699420Z 
+2025-10-25T22:50:38.8699435Z 
+2025-10-25T22:50:38.8699843Z       150 |       // Otherwise, the route must render something meaningful and stable.
+2025-10-25T22:50:38.8700606Z       151 |       const firstMatch = page.locator(selectors).first();
+2025-10-25T22:50:38.8701222Z     > 152 |       await expect(firstMatch).toBeVisible();
+2025-10-25T22:50:38.8701946Z           |                                ^
+2025-10-25T22:50:38.8702350Z       153 |
+2025-10-25T22:50:38.8702966Z       154 |       // If an explicit heading expectation exists, assert it (prefix match allowed).
+2025-10-25T22:50:38.8703672Z       155 |       const exp = EXPECT.get(route);
+2025-10-25T22:50:38.8704565Z         at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:152:32
+2025-10-25T22:50:38.8705019Z 
+2025-10-25T22:50:38.8705705Z     attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8706866Z     test-results/smoke-nav-Contract-Routes--34fc0-Smoke-Test-renders-task-123-chromium/test-failed-1.png
+2025-10-25T22:50:38.8708108Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8708484Z 
+2025-10-25T22:50:38.8709414Z     Error Context: test-results/smoke-nav-Contract-Routes--34fc0-Smoke-Test-renders-task-123-chromium/error-context.md
+2025-10-25T22:50:38.8710213Z 
+2025-10-25T22:50:38.8710866Z     attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8711981Z     test-results/smoke-nav-Contract-Routes--34fc0-Smoke-Test-renders-task-123-chromium/trace.zip
+2025-10-25T22:50:38.8712799Z     Usage:
+2025-10-25T22:50:38.8712972Z 
+2025-10-25T22:50:38.8713755Z         npx playwright show-trace test-results/smoke-nav-Contract-Routes--34fc0-Smoke-Test-renders-task-123-chromium/trace.zip
+2025-10-25T22:50:38.8714544Z 
+2025-10-25T22:50:38.8715134Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8715529Z 
+2025-10-25T22:50:38.8716136Z     Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8716543Z 
+2025-10-25T22:50:38.8717132Z     Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+2025-10-25T22:50:38.8717652Z 
+2025-10-25T22:50:38.8718562Z     Locator: locator('h1, h2, h3, [role="heading"], [data-state="loading"], [data-state="error"], [data-state="unauthorized"], [data-state="empty"], [data-state="not_found"]').first()
+2025-10-25T22:50:38.8719766Z     Expected: visible
+2025-10-25T22:50:38.8720138Z     Timeout: 5000ms
+2025-10-25T22:50:38.8720560Z     Error: element(s) not found
+2025-10-25T22:50:38.8720827Z 
+2025-10-25T22:50:38.8720974Z     Call log:
+2025-10-25T22:50:38.8721583Z     [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+2025-10-25T22:50:38.8723137Z     [2m  - waiting for locator('h1, h2, h3, [role="heading"], [data-state="loading"], [data-state="error"], [data-state="unauthorized"], [data-state="empty"], [data-state="not_found"]').first()[22m
+2025-10-25T22:50:38.8723941Z 
+2025-10-25T22:50:38.8723955Z 
+2025-10-25T22:50:38.8724362Z       150 |       // Otherwise, the route must render something meaningful and stable.
+2025-10-25T22:50:38.8725138Z       151 |       const firstMatch = page.locator(selectors).first();
+2025-10-25T22:50:38.8725956Z     > 152 |       await expect(firstMatch).toBeVisible();
+2025-10-25T22:50:38.8726483Z           |                                ^
+2025-10-25T22:50:38.8726883Z       153 |
+2025-10-25T22:50:38.8727515Z       154 |       // If an explicit heading expectation exists, assert it (prefix match allowed).
+2025-10-25T22:50:38.8728855Z       155 |       const exp = EXPECT.get(route);
+2025-10-25T22:50:38.8729616Z         at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:152:32
+2025-10-25T22:50:38.8730078Z 
+2025-10-25T22:50:38.8730765Z     attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8732043Z     test-results/smoke-nav-Contract-Routes--34fc0-Smoke-Test-renders-task-123-chromium-retry1/test-failed-1.png
+2025-10-25T22:50:38.8733393Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8733817Z 
+2025-10-25T22:50:38.8734620Z     Error Context: test-results/smoke-nav-Contract-Routes--34fc0-Smoke-Test-renders-task-123-chromium-retry1/error-context.md
+2025-10-25T22:50:38.8735458Z 
+2025-10-25T22:50:38.8736157Z     attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8737398Z     test-results/smoke-nav-Contract-Routes--34fc0-Smoke-Test-renders-task-123-chromium-retry1/trace.zip
+2025-10-25T22:50:38.8738293Z     Usage:
+2025-10-25T22:50:38.8738491Z 
+2025-10-25T22:50:38.8739655Z         npx playwright show-trace test-results/smoke-nav-Contract-Routes--34fc0-Smoke-Test-renders-task-123-chromium-retry1/trace.zip
+2025-10-25T22:50:38.8740537Z 
+2025-10-25T22:50:38.8741060Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8741405Z 
+2025-10-25T22:50:38.8742166Z   6) [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /tasks-delta 
+2025-10-25T22:50:38.8742909Z 
+2025-10-25T22:50:38.8743506Z     Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+2025-10-25T22:50:38.8743998Z 
+2025-10-25T22:50:38.8744922Z     Locator: locator('h1, h2, h3, [role="heading"], [data-state="loading"], [data-state="error"], [data-state="unauthorized"], [data-state="empty"], [data-state="not_found"]').first()
+2025-10-25T22:50:38.8746019Z     Expected: visible
+2025-10-25T22:50:38.8746369Z     Timeout: 5000ms
+2025-10-25T22:50:38.8746735Z     Error: element(s) not found
+2025-10-25T22:50:38.8746994Z 
+2025-10-25T22:50:38.8747118Z     Call log:
+2025-10-25T22:50:38.8747693Z     [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+2025-10-25T22:50:38.8759871Z     [2m  - waiting for locator('h1, h2, h3, [role="heading"], [data-state="loading"], [data-state="error"], [data-state="unauthorized"], [data-state="empty"], [data-state="not_found"]').first()[22m
+2025-10-25T22:50:38.8760839Z 
+2025-10-25T22:50:38.8760854Z 
+2025-10-25T22:50:38.8761287Z       150 |       // Otherwise, the route must render something meaningful and stable.
+2025-10-25T22:50:38.8762079Z       151 |       const firstMatch = page.locator(selectors).first();
+2025-10-25T22:50:38.8762759Z     > 152 |       await expect(firstMatch).toBeVisible();
+2025-10-25T22:50:38.8763316Z           |                                ^
+2025-10-25T22:50:38.8763931Z       153 |
+2025-10-25T22:50:38.8764458Z       154 |       // If an explicit heading expectation exists, assert it (prefix match allowed).
+2025-10-25T22:50:38.8765138Z       155 |       const exp = EXPECT.get(route);
+2025-10-25T22:50:38.8765852Z         at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:152:32
+2025-10-25T22:50:38.8766310Z 
+2025-10-25T22:50:38.8767010Z     attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8768232Z     test-results/smoke-nav-Contract-Routes--bf14c-ke-Test-renders-tasks-delta-chromium/test-failed-1.png
+2025-10-25T22:50:38.8769985Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8770384Z 
+2025-10-25T22:50:38.8771140Z     Error Context: test-results/smoke-nav-Contract-Routes--bf14c-ke-Test-renders-tasks-delta-chromium/error-context.md
+2025-10-25T22:50:38.8771947Z 
+2025-10-25T22:50:38.8772874Z     attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8774059Z     test-results/smoke-nav-Contract-Routes--bf14c-ke-Test-renders-tasks-delta-chromium/trace.zip
+2025-10-25T22:50:38.8789335Z     Usage:
+2025-10-25T22:50:38.8789596Z 
+2025-10-25T22:50:38.8790450Z         npx playwright show-trace test-results/smoke-nav-Contract-Routes--bf14c-ke-Test-renders-tasks-delta-chromium/trace.zip
+2025-10-25T22:50:38.8791274Z 
+2025-10-25T22:50:38.8791900Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8792316Z 
+2025-10-25T22:50:38.8792910Z     Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8793341Z 
+2025-10-25T22:50:38.8793924Z     Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+2025-10-25T22:50:38.8794384Z 
+2025-10-25T22:50:38.8795288Z     Locator: locator('h1, h2, h3, [role="heading"], [data-state="loading"], [data-state="error"], [data-state="unauthorized"], [data-state="empty"], [data-state="not_found"]').first()
+2025-10-25T22:50:38.8796333Z     Expected: visible
+2025-10-25T22:50:38.8796697Z     Timeout: 5000ms
+2025-10-25T22:50:38.8797074Z     Error: element(s) not found
+2025-10-25T22:50:38.8797331Z 
+2025-10-25T22:50:38.8797457Z     Call log:
+2025-10-25T22:50:38.8798027Z     [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+2025-10-25T22:50:38.8810152Z     [2m  - waiting for locator('h1, h2, h3, [role="heading"], [data-state="loading"], [data-state="error"], [data-state="unauthorized"], [data-state="empty"], [data-state="not_found"]').first()[22m
+2025-10-25T22:50:38.8811162Z 
+2025-10-25T22:50:38.8811179Z 
+2025-10-25T22:50:38.8811604Z       150 |       // Otherwise, the route must render something meaningful and stable.
+2025-10-25T22:50:38.8812379Z       151 |       const firstMatch = page.locator(selectors).first();
+2025-10-25T22:50:38.8813001Z     > 152 |       await expect(firstMatch).toBeVisible();
+2025-10-25T22:50:38.8813774Z           |                                ^
+2025-10-25T22:50:38.8814179Z       153 |
+2025-10-25T22:50:38.8814806Z       154 |       // If an explicit heading expectation exists, assert it (prefix match allowed).
+2025-10-25T22:50:38.8815535Z       155 |       const exp = EXPECT.get(route);
+2025-10-25T22:50:38.8816236Z         at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:152:32
+2025-10-25T22:50:38.8816704Z 
+2025-10-25T22:50:38.8817424Z     attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8818695Z     test-results/smoke-nav-Contract-Routes--bf14c-ke-Test-renders-tasks-delta-chromium-retry1/test-failed-1.png
+2025-10-25T22:50:38.8820491Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8820896Z 
+2025-10-25T22:50:38.8821721Z     Error Context: test-results/smoke-nav-Contract-Routes--bf14c-ke-Test-renders-tasks-delta-chromium-retry1/error-context.md
+2025-10-25T22:50:38.8822582Z 
+2025-10-25T22:50:38.8823248Z     attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8824436Z     test-results/smoke-nav-Contract-Routes--bf14c-ke-Test-renders-tasks-delta-chromium-retry1/trace.zip
+2025-10-25T22:50:38.8825287Z     Usage:
+2025-10-25T22:50:38.8825460Z 
+2025-10-25T22:50:38.8826280Z         npx playwright show-trace test-results/smoke-nav-Contract-Routes--bf14c-ke-Test-renders-tasks-delta-chromium-retry1/trace.zip
+2025-10-25T22:50:38.8827123Z 
+2025-10-25T22:50:38.8827691Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8828108Z 
+2025-10-25T22:50:38.8829123Z   7) [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /team 
+2025-10-25T22:50:38.8829747Z 
+2025-10-25T22:50:38.8829952Z     Error: JS/React errors on /team
+2025-10-25T22:50:38.8830269Z 
+2025-10-25T22:50:38.8830970Z     [2mexpect([22m[31mreceived[39m[2m).[22mtoEqual[2m([22m[32mexpected[39m[2m) // deep equality[22m
+2025-10-25T22:50:38.8831546Z 
+2025-10-25T22:50:38.8831758Z     [32m- Expected  - 1[39m
+2025-10-25T22:50:38.8832203Z     [31m+ Received  + 3[39m
+2025-10-25T22:50:38.8832441Z 
+2025-10-25T22:50:38.8832625Z     [32m- Array [][39m
+2025-10-25T22:50:38.8833039Z     [31m+ Array [[39m
+2025-10-25T22:50:38.8833541Z     [31m+   "Failed to fetch users: ue",[39m
+2025-10-25T22:50:38.8834036Z     [31m+ ][39m
+2025-10-25T22:50:38.8834226Z 
+2025-10-25T22:50:38.8834735Z       180 |         !e.includes('defaultQueryOptions')           // React Query errors when backend unavailable
+2025-10-25T22:50:38.8835440Z       181 |       );
+2025-10-25T22:50:38.8836077Z     > 182 |       expect(realConsoleErrors, `JS/React errors on ${urlPath}`).toEqual([]);
+2025-10-25T22:50:38.8836833Z           |                                                                  ^
+2025-10-25T22:50:38.8837297Z       183 |       
+2025-10-25T22:50:38.8837883Z       184 |       // Network failures: filter out ERR_ABORTED (backend unavailable in CI)
+2025-10-25T22:50:38.8838966Z       185 |       // Keep only true network failures (DNS, connection refused to running servers)
+2025-10-25T22:50:38.8839855Z         at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:182:66
+2025-10-25T22:50:38.8840308Z 
+2025-10-25T22:50:38.8841001Z     attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8842157Z     test-results/smoke-nav-Contract-Routes--cf7e9-ion-Smoke-Test-renders-team-chromium/test-failed-1.png
+2025-10-25T22:50:38.8843705Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8844085Z 
+2025-10-25T22:50:38.8844827Z     Error Context: test-results/smoke-nav-Contract-Routes--cf7e9-ion-Smoke-Test-renders-team-chromium/error-context.md
+2025-10-25T22:50:38.8845592Z 
+2025-10-25T22:50:38.8846419Z     attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8847526Z     test-results/smoke-nav-Contract-Routes--cf7e9-ion-Smoke-Test-renders-team-chromium/trace.zip
+2025-10-25T22:50:38.8848298Z     Usage:
+2025-10-25T22:50:38.8848464Z 
+2025-10-25T22:50:38.8849392Z         npx playwright show-trace test-results/smoke-nav-Contract-Routes--cf7e9-ion-Smoke-Test-renders-team-chromium/trace.zip
+2025-10-25T22:50:38.8850184Z 
+2025-10-25T22:50:38.8850734Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8851110Z 
+2025-10-25T22:50:38.8851685Z     Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8852073Z 
+2025-10-25T22:50:38.8852267Z     Error: JS/React errors on /team
+2025-10-25T22:50:38.8852539Z 
+2025-10-25T22:50:38.8853208Z     [2mexpect([22m[31mreceived[39m[2m).[22mtoEqual[2m([22m[32mexpected[39m[2m) // deep equality[22m
+2025-10-25T22:50:38.8853777Z 
+2025-10-25T22:50:38.8853986Z     [32m- Expected  - 1[39m
+2025-10-25T22:50:38.8854427Z     [31m+ Received  + 3[39m
+2025-10-25T22:50:38.8854660Z 
+2025-10-25T22:50:38.8854847Z     [32m- Array [][39m
+2025-10-25T22:50:38.8855241Z     [31m+ Array [[39m
+2025-10-25T22:50:38.8855722Z     [31m+   "Failed to fetch users: ue",[39m
+2025-10-25T22:50:38.8856184Z     [31m+ ][39m
+2025-10-25T22:50:38.8856374Z 
+2025-10-25T22:50:38.8856866Z       180 |         !e.includes('defaultQueryOptions')           // React Query errors when backend unavailable
+2025-10-25T22:50:38.8857522Z       181 |       );
+2025-10-25T22:50:38.8858145Z     > 182 |       expect(realConsoleErrors, `JS/React errors on ${urlPath}`).toEqual([]);
+2025-10-25T22:50:38.8859090Z           |                                                                  ^
+2025-10-25T22:50:38.8859539Z       183 |       
+2025-10-25T22:50:38.8860122Z       184 |       // Network failures: filter out ERR_ABORTED (backend unavailable in CI)
+2025-10-25T22:50:38.8861025Z       185 |       // Keep only true network failures (DNS, connection refused to running servers)
+2025-10-25T22:50:38.8861886Z         at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:182:66
+2025-10-25T22:50:38.8862338Z 
+2025-10-25T22:50:38.8863004Z     attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8864231Z     test-results/smoke-nav-Contract-Routes--cf7e9-ion-Smoke-Test-renders-team-chromium-retry1/test-failed-1.png
+2025-10-25T22:50:38.8865519Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8866115Z 
+2025-10-25T22:50:38.8866910Z     Error Context: test-results/smoke-nav-Contract-Routes--cf7e9-ion-Smoke-Test-renders-team-chromium-retry1/error-context.md
+2025-10-25T22:50:38.8867736Z 
+2025-10-25T22:50:38.8868360Z     attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8869967Z     test-results/smoke-nav-Contract-Routes--cf7e9-ion-Smoke-Test-renders-team-chromium-retry1/trace.zip
+2025-10-25T22:50:38.8870798Z     Usage:
+2025-10-25T22:50:38.8870970Z 
+2025-10-25T22:50:38.8871799Z         npx playwright show-trace test-results/smoke-nav-Contract-Routes--cf7e9-ion-Smoke-Test-renders-team-chromium-retry1/trace.zip
+2025-10-25T22:50:38.8872658Z 
+2025-10-25T22:50:38.8873230Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2025-10-25T22:50:38.8873630Z 
+2025-10-25T22:50:38.8873764Z   7 failed
+2025-10-25T22:50:38.8874694Z     [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /audit-log 
+2025-10-25T22:50:38.8876104Z     [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /login 
+2025-10-25T22:50:38.8877544Z     [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /projects-delta 
+2025-10-25T22:50:38.8879270Z     [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /signup 
+2025-10-25T22:50:38.8880581Z     [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /task/123 
+2025-10-25T22:50:38.8881894Z     [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /tasks-delta 
+2025-10-25T22:50:38.8883178Z     [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /team 
+2025-10-25T22:50:38.8883903Z   19 passed (1.1m)
+2025-10-25T22:50:38.9221585Z ##[error]Process completed with exit code 1.
