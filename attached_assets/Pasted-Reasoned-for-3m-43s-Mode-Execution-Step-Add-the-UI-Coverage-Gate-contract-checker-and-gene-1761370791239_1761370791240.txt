@@ -1,0 +1,300 @@
+Reasoned for 3m 43s
+
+[Mode: Execution]
+
+Step: Add the UI Coverage Gate (contract + checker) and generate a UI Gaps Report.
+
+Why it matters: Blocks merges that ship missing pages/states so nothing reaches prod half-built.
+
+Inputs needed:
+
+Repo root path
+
+Your Next.js paths (defaults below): apps/coordination_ui/src/app, apps/coordination_ui/src/pages
+
+Node + npm
+
+Command (copy–paste):
+
+# Create the UI contract
+mkdir -p docs
+cat > docs/ui-contract.yaml << 'YAML'
+resources:
+  - name: incidents
+    routes:
+      - GET   /ops/incidents
+      - POST  /ops/incidents/:id/acknowledge
+    required_pages:
+      - /incidents
+      - /incidents/[id]
+    required_states: [loading, empty, error, unauthorized, not_found]
+
+  - name: velocity
+    routes:
+      - GET /velocity
+    required_pages:
+      - /velocity
+    required_states: [loading, error]
+
+  - name: profile
+    routes:
+      - GET  /api/me/profile
+      - PATCH /api/me/profile
+    required_pages:
+      - /profile
+    required_states: [loading, error, unauthorized]
+YAML
+
+# Add the checker (pure JS, supports Next.js App Router & Pages Router)
+mkdir -p scripts coverage
+cat > scripts/check-ui-coverage.js << 'JS'
+/* eslint-disable no-console */
+const fs = require("fs");
+const path = require("path");
+const yaml = require("js-yaml");
+
+// --- Config -------------------------------------------------------
+const root = process.cwd();
+const ENV_PAGES = process.env.UI_PAGES_DIR;
+const ENV_APP   = process.env.UI_APP_DIR;
+
+// Search a few common layouts automatically if env vars not provided
+const defaultCandidates = {
+  pages: [
+    "apps/coordination_ui/src/pages",
+    "apps/web/src/pages",
+    "src/pages",
+    "pages"
+  ],
+  app: [
+    "apps/coordination_ui/src/app",
+    "apps/web/src/app",
+    "src/app",
+    "app"
+  ]
+};
+
+function firstExistingDir(cands) {
+  for (const rel of cands) {
+    const abs = path.join(root, rel);
+    if (fs.existsSync(abs) && fs.statSync(abs).isDirectory()) return abs;
+  }
+  return null;
+}
+
+const pagesDir = ENV_PAGES ? path.resolve(root, ENV_PAGES) : firstExistingDir(defaultCandidates.pages);
+const appDir   = ENV_APP   ? path.resolve(root, ENV_APP)   : firstExistingDir(defaultCandidates.app);
+
+function extVariants(p) {
+  return [".tsx", ".jsx", ".ts", ".js"].map(ext => p.replace(/\.(jsx|tsx|ts|js)$/i, "") + ext);
+}
+function existsAny(paths) { return paths.some(p => fs.existsSync(p)); }
+function cleanRoute(route) { return (route || "").replace(/^\//, "").replace(/\/+$/, ""); }
+
+// Pages Router candidate files for a route
+function pagesCandidates(route) {
+  if (!pagesDir) return [];
+  const c = cleanRoute(route);
+  const files = [];
+  if (c === "" || c === "/") {
+    files.push(path.join(pagesDir, "index.tsx"));
+  } else {
+    const last = c.split("/").pop() || "";
+    // common patterns
+    files.push(path.join(pagesDir, `${c}.tsx`));            // e.g. pages/incidents.tsx or pages/incidents/[id].tsx
+    files.push(path.join(pagesDir, c, "index.tsx"));        // e.g. pages/incidents/index.tsx or pages/incidents/[id]/index.tsx
+    // if last segment is a param folder, also try parent/[param].tsx explicitly
+    if (/\[.*\]/.test(last)) {
+      const parent = path.dirname(c);
+      files.push(path.join(pagesDir, parent, `${last}.tsx`)); // pages/incidents/[id].tsx
+    }
+  }
+  // Try all valid extensions
+  return files.flatMap(extVariants);
+}
+
+// App Router candidate files for a route
+function appCandidates(route) {
+  if (!appDir) return [];
+  const c = cleanRoute(route);
+  const dir = path.join(appDir, c);
+  const file = path.join(dir, "page.tsx");
+  return extVariants(file);
+}
+
+function pageExists(route) {
+  return existsAny([...pagesCandidates(route), ...appCandidates(route)]);
+}
+
+// --- State checks -------------------------------------------------
+const STATE_ALIASES = {
+  not_found: ["not_found", "not-found", "404"],
+  loading: ["loading", "skeleton"],
+  error: ["error"],
+  unauthorized: ["unauthorized", "401", "forbidden", "403"],
+  empty: ["empty", "blank"]
+};
+
+function appStateCandidates(route, stateKey) {
+  if (!appDir) return [];
+  const c = cleanRoute(route);
+  const routeDir = path.join(appDir, c);
+  // Native Next app router filenames for some states:
+  const native = {
+    loading: "loading",
+    error: "error",
+    not_found: "not-found"
+  };
+  const choices = [];
+  if (native[stateKey]) {
+    choices.push(path.join(routeDir, `${native[stateKey]}.tsx`));
+  }
+  // Optional __states__ convention for non-native states
+  const aliasList = STATE_ALIASES[stateKey] || [stateKey];
+  for (const a of aliasList) {
+    choices.push(path.join(routeDir, "__states__", `${a}.tsx`));
+  }
+  return choices.flatMap(extVariants);
+}
+
+function pagesStateCandidates(route, stateKey) {
+  if (!pagesDir) return [];
+  const c = cleanRoute(route);
+  const routeDir = path.join(pagesDir, c);
+  const parentDir = path.join(pagesDir, path.dirname(c));
+  const dirsToCheck = [routeDir, parentDir];
+
+  const files = [];
+  const aliasList = STATE_ALIASES[stateKey] || [stateKey];
+
+  // Route-local __states__ convention
+  for (const d of dirsToCheck) {
+    for (const a of aliasList) {
+      files.push(path.join(d, "__states__", `${a}.tsx`));
+    }
+  }
+
+  // Global fallbacks for Pages Router
+  if (stateKey === "error") {
+    files.push(path.join(pagesDir, "_error.tsx"));
+  }
+  if (stateKey === "not_found") {
+    files.push(path.join(pagesDir, "404.tsx"));
+  }
+  if (stateKey === "unauthorized") {
+    files.push(path.join(pagesDir, "401.tsx"));
+    files.push(path.join(pagesDir, "403.tsx"));
+  }
+
+  return files.flatMap(extVariants);
+}
+
+function stateExists(route, stateKey) {
+  return existsAny([...appStateCandidates(route, stateKey), ...pagesStateCandidates(route, stateKey)]);
+}
+
+// --- Main ---------------------------------------------------------
+function loadSpec() {
+  const specPath = path.join(root, "docs/ui-contract.yaml");
+  if (!fs.existsSync(specPath)) {
+    console.error("❌ Missing docs/ui-contract.yaml");
+    process.exit(1);
+  }
+  return yaml.load(fs.readFileSync(specPath, "utf8"));
+}
+
+function ensureDir(p) { if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true }); }
+
+function writeReports(missingPages, missingStates) {
+  ensureDir(path.join(root, "coverage"));
+  const jsonPath = path.join(root, "coverage/ui-gaps.json");
+  const mdPath   = path.join(root, "coverage/ui-gaps.md");
+  const payload = { missingPages, missingStates, generatedAt: new Date().toISOString(), pagesDir, appDir };
+  fs.writeFileSync(jsonPath, JSON.stringify(payload, null, 2), "utf8");
+
+  const toList = (arr) => arr.length ? arr.map(x => `- ${x.resource} → ${x.route}${x.state ? " [" + x.state + "]" : ""}`).join("\n") : "- none";
+  const md = `# UI Gaps Report
+
+**Generated:** ${payload.generatedAt}
+
+**Roots:**  
+- pagesDir: \`${pagesDir || "∅"}\`  
+- appDir: \`${appDir || "∅"}\`
+
+## Missing Pages
+${toList(missingPages)}
+
+## Missing States
+${toList(missingStates)}
+`;
+  fs.writeFileSync(mdPath, md, "utf8");
+  return { jsonPath, mdPath };
+}
+
+function main() {
+  const spec = loadSpec();
+  const missingPages = [];
+  const missingStates = [];
+
+  for (const res of spec.resources || []) {
+    for (const route of res.required_pages || []) {
+      if (!pageExists(route)) {
+        missingPages.push({ resource: res.name, route });
+      }
+      const states = res.required_states || [];
+      for (let raw of states) {
+        // normalize keys
+        const key = String(raw).toLowerCase().replace("-", "_");
+        if (!stateExists(route, key)) {
+          missingStates.push({ resource: res.name, route, state: key });
+        }
+      }
+    }
+  }
+
+  const { mdPath } = writeReports(missingPages, missingStates);
+
+  if (missingPages.length || missingStates.length) {
+    console.error("❌ UI coverage check failed.");
+    if (missingPages.length) {
+      console.error("Missing pages:");
+      for (const m of missingPages) console.error(`  - ${m.resource}: ${m.route}`);
+    }
+    if (missingStates.length) {
+      console.error("Missing states:");
+      for (const m of missingStates) console.error(`  - ${m.resource}: ${m.route} [${m.state}]`);
+    }
+    console.error(`\n↪ Wrote gaps report: ${mdPath}`);
+    process.exit(1);
+  } else {
+    console.log("✅ UI coverage satisfied for all declared resources and states.");
+  }
+}
+
+main();
+JS
+
+# Wire it up
+npm i -D js-yaml
+npm pkg set scripts.check:ui="node scripts/check-ui-coverage.js"
+
+# (Optional) If your paths differ, export overrides instead of editing the script:
+# export UI_APP_DIR="web/app" UI_PAGES_DIR="web/pages"
+
+# Run once locally to produce a Gaps Report (does not stop your shell if failing)
+node scripts/check-ui-coverage.js || true
+
+
+CI step (GitHub Actions snippet):
+
+- name: UI coverage
+  run: npm run check:ui
+
+
+Success check:
+
+npm run check:ui prints ✅ UI coverage satisfied… or fails with a list of missing pages/states.
+
+A report is written to coverage/ui-gaps.md and coverage/ui-gaps.json identifying gaps by resource, route, and state.
+
+Next: wait for user
