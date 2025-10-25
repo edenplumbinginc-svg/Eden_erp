@@ -1,0 +1,145 @@
+Step: Wire incident correlation into the alarm pipeline (create/update an incident per route::kind whenever an alarm fires). (Backend layer → Service logic)
+
+Why it matters: This turns noisy, transient alarms into durable “incident” objects you can acknowledge, escalate, and resolve over time.
+
+Inputs needed: Your code editor, access to the backend repo, ability to run the server and psql.
+
+Command (copy–paste):
+
+Add helper lib/incidents.ts
+
+// lib/incidents.ts
+import { and, desc, eq } from "drizzle-orm";
+import { db } from "./db/client";
+import { incidents } from "./db/schema/incidents";
+
+export type AlarmLike = {
+  route: string;                 // e.g., "GET /notifications/recent"
+  kind: string;                  // "error_rate" | "p95_regress" | "slo_violation"
+  severity: "warning" | "critical";
+  evidence?: Record<string, unknown>;
+  owner?: { owner?: string; slack_webhook?: string } | null;
+  sentryUrl?: string;
+};
+
+const buildKey = (route: string, kind: string) => `${route}::${kind}`;
+
+export async function recordIncidentForAlarm(alarm: AlarmLike) {
+  const incidentKey = buildKey(alarm.route, alarm.kind);
+  const now = new Date();
+
+  // Transactional upsert without requiring a unique constraint
+  // (safe even if called concurrently; last writer wins)
+  return await db.transaction(async (tx) => {
+    const existing = await tx
+      .select()
+      .from(incidents)
+      .where(and(eq(incidents.incidentKey, incidentKey)))
+      .orderBy(desc(incidents.lastSeen))
+      .limit(1);
+
+    const baseMeta = {
+      lastEvidence: alarm.evidence ?? {},
+      sentryUrl: alarm.sentryUrl ?? null,
+    };
+
+    if (existing.length === 0) {
+      // Create new incident
+      const [created] = await tx
+        .insert(incidents)
+        .values({
+          incidentKey,
+          route: alarm.route,
+          kind: alarm.kind,
+          severity: alarm.severity,
+          status: "open",
+          firstSeen: now.toISOString(),
+          lastSeen: now.toISOString(),
+          owner: alarm.owner ?? null,
+          metadata: baseMeta as any,
+        })
+        .returning();
+      return created;
+    } else {
+      const current = existing[0];
+
+      // Keep earliest firstSeen, update lastSeen/severity/metadata
+      const [updated] = await tx
+        .update(incidents)
+        .set({
+          lastSeen: now.toISOString(),
+          // bubble up severity if it got worse (critical > warning)
+          severity:
+            current.severity === "critical" || alarm.severity === "critical"
+              ? "critical"
+              : "warning",
+          metadata: {
+            ...(current.metadata as any),
+            ...baseMeta,
+          } as any,
+        })
+        .where(eq(incidents.id, current.id))
+        .returning();
+      return updated;
+    }
+  });
+}
+
+
+Call the helper right after you create each alarm (likely in lib/metrics.js where evaluateAlarmsForRoute or similar pushes alarms):
+
+// lib/metrics.js (or wherever alarms are produced)
+import { recordIncidentForAlarm } from "./incidents";
+
+// ... inside the loop that finalizes an alarm object:
+const alarm = {
+  route,                 // ensure matches incident.ts expectations
+  kind,                  // "error_rate" | "p95_regress" | "slo_violation"
+  severity,              // "warning" | "critical"
+  evidence,              // { err_rate_1m, samples_1m, ... }
+  owner: ownerInfo ?? null,
+  sentryUrl: sentryDeepLink, // if you already compute this
+};
+
+alarms.push(alarm);
+
+// NEW: persist / correlate
+recordIncidentForAlarm(alarm).catch((e) => {
+  // non-fatal; never block alarm emission
+  console.error("incident record failed", { incidentKey: `${route}::${kind}`, error: e });
+});
+
+
+(Optional) Add a tiny unit test tests/incidents.test.ts
+
+import { recordIncidentForAlarm } from "../lib/incidents";
+
+test("creates then updates incident by incident_key", async () => {
+  const route = "GET /test/route";
+  const kind = "error_rate";
+  const first = await recordIncidentForAlarm({
+    route, kind, severity: "warning", evidence: { err: 50 }, owner: { owner: "@ops" }
+  });
+  expect(first.status).toBe("open");
+
+  const second = await recordIncidentForAlarm({
+    route, kind, severity: "critical", evidence: { err: 90 }
+  });
+  expect(second.id).toBe(first.id);
+  expect(second.severity).toBe("critical");
+});
+
+
+Success check:
+
+# Trigger alarms as you did before (load the app so one fires)
+curl -s http://localhost:3000/ops/alarms | jq '.alarms | length'
+
+# Verify an incident appeared/updated
+psql "$DATABASE_URL" -c "SELECT incident_key, status, severity, first_seen, last_seen FROM incidents ORDER BY last_seen DESC LIMIT 5;"
+# Expect to see keys like: "GET /notifications/recent::error_rate" with status 'open'
+
+
+Next: wait for user
+
+(After this lands, we’ll add the escalation timer: a background task that increments escalation_level and pings owner-specific Slack if an incident stays open beyond thresholds.)
