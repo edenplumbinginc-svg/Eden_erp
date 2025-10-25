@@ -972,6 +972,79 @@ app.post('/ops/escalation/recalc',
   }
 );
 
+// ChatOps: Acknowledge incident endpoint (for Slack integration)
+// Security: RBAC + HMAC + Rate Limit
+// Usage: POST /ops/incidents/:id/ack with HMAC signature
+app.post('/ops/incidents/:id/ack',
+  requireAuth,
+  loadRbacPermissions,
+  requireOpsAdmin,
+  verifyHmac,
+  opsRateLimiter,
+  async (req, res) => {
+    try {
+      const id = req.params.id;
+      const user = req.user?.email || 'ops-bot';
+      const reason = req.body?.reason || 'chatops-ack';
+      
+      logger.info({ 
+        incident_id: id, 
+        user, 
+        reason 
+      }, 'incident_acknowledgment_attempt');
+      
+      const result = await pool.query(
+        `UPDATE incidents
+         SET status = 'acknowledged',
+             acknowledged_by = $1,
+             acknowledged_at = NOW()
+         WHERE id = $2
+         RETURNING id, incident_key, status, acknowledged_by, acknowledged_at, 
+                   escalation_level, severity, route`,
+        [user, id]
+      );
+      
+      if (result.rows.length === 0) {
+        logger.warn({ incident_id: id, user }, 'incident_not_found');
+        return res.status(404).json({ 
+          ok: false, 
+          error: 'not_found',
+          message: `Incident ${id} not found` 
+        });
+      }
+      
+      const incident = result.rows[0];
+      logger.info({ 
+        incident_id: id, 
+        incident_key: incident.incident_key,
+        user,
+        escalation_level: incident.escalation_level 
+      }, 'incident_acknowledged');
+      
+      res.json({ 
+        ok: true, 
+        incident: {
+          id: incident.id,
+          incident_key: incident.incident_key,
+          status: incident.status,
+          acknowledged_by: incident.acknowledged_by,
+          acknowledged_at: incident.acknowledged_at,
+          escalation_level: incident.escalation_level,
+          severity: incident.severity,
+          route: incident.route
+        }
+      });
+    } catch (error) {
+      logger.error({ err: error, incident_id: req.params.id }, 'incident_acknowledgment_failed');
+      res.status(500).json({ 
+        ok: false, 
+        error: 'internal_error',
+        message: error.message 
+      });
+    }
+  }
+);
+
 // --- Sentry test route (development only) ---
 if (process.env.NODE_ENV !== 'production') {
   app.get('/api/_sentry-test', (req, res) => {
