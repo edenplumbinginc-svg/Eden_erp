@@ -65,6 +65,12 @@ const { bootstrapDatabase, refreshPoolMetadata, pool } = require('./services/dat
 const { logActivity } = require('./middleware/audit');
 const logger = require('./lib/logger');
 
+const { requireAuth } = require('./middleware/auth');
+const { loadRbacPermissions } = require('./middleware/loadRbacPermissions');
+const { requireOpsAdmin } = require('./lib/rbac');
+const { verifyHmac } = require('./lib/hmac');
+const { makeRateLimiter } = require('./lib/rate-limit');
+
 const app = express();
 app.use(express.json());
 
@@ -427,7 +433,6 @@ app.use('/api/guest', require('./routes/guestView'));
 app.use('/api', require('./routes/me'));
 
 // --- Enforce authentication on all /api/* routes ---
-const { requireAuth } = require('./middleware/auth');
 app.use('/api', requireAuth);
 
 // --- Protected API endpoints ---
@@ -846,53 +851,72 @@ app.get('/ops/sentry-link', (req, res) => {
   res.json({ url });
 });
 
+// Escalation: Secured ops admin endpoints
+const opsRateLimiter = makeRateLimiter();
+
 // Escalation: Manual test endpoint for forcing an escalation tick
-app.post('/ops/escalation/tick', async (_req, res) => {
-  try {
-    const escalatedCount = await runEscalationTick();
-    logger.info({ escalatedCount }, 'manual_escalation_tick_completed');
-    res.json({ 
-      success: true,
-      escalated: escalatedCount,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    logger.error({ err: error }, 'manual_escalation_tick_failed');
-    res.status(500).json({ 
-      success: false,
-      error: error.message 
-    });
+// Security: RBAC + HMAC + Rate Limit
+app.post('/ops/escalation/tick', 
+  requireAuth,
+  loadRbacPermissions,
+  requireOpsAdmin,
+  verifyHmac,
+  opsRateLimiter,
+  async (_req, res) => {
+    try {
+      const escalatedCount = await runEscalationTick();
+      logger.info({ escalatedCount }, 'manual_escalation_tick_completed');
+      res.json({ 
+        success: true,
+        escalated: escalatedCount,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error({ err: error }, 'manual_escalation_tick_failed');
+      res.status(500).json({ 
+        success: false,
+        error: error.message 
+      });
+    }
   }
-});
+);
 
 // Escalation: Recalculate next_due_at for all incidents (backfill/maintenance)
-app.post('/ops/escalation/recalc', async (req, res) => {
-  try {
-    const forceRecalc = req.query.force === 'true';
-    const result = await pool.query(`
-      UPDATE incidents
-      SET next_due_at = first_seen + (
-        CASE severity
-          WHEN 'critical' THEN 5
-          ELSE 15
-        END * (escalation_level + 1)
-      ) * INTERVAL '1 minute'
-      WHERE next_due_at IS NULL ${forceRecalc ? 'OR true' : ''}
-      RETURNING id
-    `);
-    
-    logger.info({ recalculated: result.rows.length, force: forceRecalc }, 'next_due_at_recalculated');
-    res.json({ 
-      success: true, 
-      recalculated: result.rows.length,
-      force: forceRecalc,
-      timestamp: new Date().toISOString() 
-    });
-  } catch (error) {
-    logger.error({ err: error }, 'recalculation_failed');
-    res.status(500).json({ success: false, error: error.message });
+// Security: RBAC + HMAC + Rate Limit
+app.post('/ops/escalation/recalc',
+  requireAuth,
+  loadRbacPermissions,
+  requireOpsAdmin,
+  verifyHmac,
+  opsRateLimiter,
+  async (req, res) => {
+    try {
+      const forceRecalc = req.query.force === 'true';
+      const result = await pool.query(`
+        UPDATE incidents
+        SET next_due_at = first_seen + (
+          CASE severity
+            WHEN 'critical' THEN 5
+            ELSE 15
+          END * (escalation_level + 1)
+        ) * INTERVAL '1 minute'
+        WHERE next_due_at IS NULL ${forceRecalc ? 'OR true' : ''}
+        RETURNING id
+      `);
+      
+      logger.info({ recalculated: result.rows.length, force: forceRecalc }, 'next_due_at_recalculated');
+      res.json({ 
+        success: true, 
+        recalculated: result.rows.length,
+        force: forceRecalc,
+        timestamp: new Date().toISOString() 
+      });
+    } catch (error) {
+      logger.error({ err: error }, 'recalculation_failed');
+      res.status(500).json({ success: false, error: error.message });
+    }
   }
-});
+);
 
 // --- Sentry test route (development only) ---
 if (process.env.NODE_ENV !== 'production') {
