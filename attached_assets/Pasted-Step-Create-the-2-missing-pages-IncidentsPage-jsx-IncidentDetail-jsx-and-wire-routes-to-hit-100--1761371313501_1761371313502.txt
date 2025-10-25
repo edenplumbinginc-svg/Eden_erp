@@ -1,0 +1,169 @@
+Step: Create the 2 missing pages (IncidentsPage.jsx, IncidentDetail.jsx) and wire routes to hit 100% UI coverage.
+
+Why it matters: This closes the last gap so npm run check:ui blocks nothing and CI can enforce “no dummy pages.”
+
+Inputs needed:
+
+Your pages folder (assumes src/pages)
+
+Your router file (commonly src/App.jsx or src/router.jsx)
+
+React Router v6 present (install if missing)
+
+Command (copy–paste):
+
+# If React Router isn't installed yet (skip if you already have it)
+npm i react-router-dom
+
+# Create the pages directory (if not present)
+mkdir -p src/pages
+
+# 1) Incidents list page
+cat > src/pages/IncidentsPage.jsx << 'JSX'
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+
+export default function IncidentsPage() {
+  const [data, setData] = useState([]);
+  const [status, setStatus] = useState('loading'); // loading | ok | empty | unauthorized | error
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/ops/incidents');
+        if (res.status === 401 || res.status === 403) { if (!cancelled) setStatus('unauthorized'); return; }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        const items = Array.isArray(json) ? json : (json?.items ?? []);
+        if (!cancelled) {
+          setData(items);
+          setStatus(items.length ? 'ok' : 'empty');
+        }
+      } catch {
+        if (!cancelled) setStatus('error');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (status === 'loading') return <div data-state="loading" className="skeleton">Loading incidents…</div>;
+  if (status === 'unauthorized') return <div data-state="unauthorized">You are not authorized to view incidents.</div>;
+  if (status === 'error') return <div data-state="error">Could not load incidents.</div>;
+  if (status === 'empty') return <div data-state="empty">No incidents found.</div>;
+
+  return (
+    <div>
+      <h1>Incidents</h1>
+      <ul>
+        {data.map(it => (
+          <li key={it.id}>
+            <Link to={`/incidents/${encodeURIComponent(it.id)}`}>{it.title || `Incident ${it.id}`}</Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+JSX
+
+# 2) Incident detail page
+cat > src/pages/IncidentDetail.jsx << 'JSX'
+import { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+
+export default function IncidentDetail() {
+  const { id } = useParams();
+  const [incident, setIncident] = useState(null);
+  const [status, setStatus] = useState('loading'); // loading | ok | not_found | unauthorized | error
+  const [ackState, setAckState] = useState('idle'); // idle | saving | saved | error
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/ops/incidents/${encodeURIComponent(id)}`);
+        if (res.status === 401 || res.status === 403) { if (!cancelled) setStatus('unauthorized'); return; }
+        if (res.status === 404) { if (!cancelled) setStatus('not_found'); return; }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        if (!cancelled) { setIncident(json); setStatus('ok'); }
+      } catch {
+        if (!cancelled) setStatus('error');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [id]);
+
+  async function acknowledge() {
+    setAckState('saving');
+    try {
+      const res = await fetch(`/ops/incidents/${encodeURIComponent(id)}/acknowledge`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ acknowledged: true })
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setAckState('saved');
+    } catch {
+      setAckState('error');
+    }
+  }
+
+  if (status === 'loading') return <div data-state="loading" className="skeleton">Loading incident…</div>;
+  if (status === 'unauthorized') return <div data-state="unauthorized">Not authorized.</div>;
+  if (status === 'not_found') return <div data-state="not_found">Incident not found.</div>;
+  if (status === 'error') return <div data-state="error">Failed to load incident.</div>;
+
+  return (
+    <div>
+      <h1>Incident {incident?.id}</h1>
+      <pre>{JSON.stringify(incident, null, 2)}</pre>
+      <button disabled={ackState === 'saving'} onClick={acknowledge}>
+        {ackState === 'saving' ? 'Acknowledging…' : 'Acknowledge'}
+      </button>
+      {ackState === 'saved' && <span role="status"> ✓ Acknowledged</span>}
+      {ackState === 'error' && <span role="status"> Failed to acknowledge</span>}
+    </div>
+  );
+}
+JSX
+
+# (Optional) Tiny skeleton style so loading states are visible in screenshots
+# If you have a global stylesheet (e.g., src/index.css), append:
+cat >> src/index.css << 'CSS'
+.skeleton {
+  min-height: 2.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #e9e9e9, #f4f4f4, #e9e9e9);
+  background-size: 200% 100%;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+CSS
+
+
+Wire routes (add these where your <Routes> live):
+
+// Imports
+import IncidentsPage from './pages/IncidentsPage.jsx';
+import IncidentDetail from './pages/IncidentDetail.jsx';
+
+// Inside <Routes>
+<Route path="/incidents" element={<IncidentsPage />} />
+<Route path="/incidents/:id" element={<IncidentDetail />} />
+
+
+If your router is in a different file or you use a route config array, paste your current router snippet next and I’ll adapt this to match it.
+
+Success check:
+
+Run npm run check:ui → expect ✅ and 100% coverage.
+
+Dev smoke: open /incidents (list with states) and /incidents/123 (detail with ack button).
+
+CI: your existing “UI coverage” job should now pass.
