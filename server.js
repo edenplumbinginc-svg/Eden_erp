@@ -134,7 +134,7 @@ const alerter = makeAlerter({
 alerter.start(logger);
 
 // Incident Escalation Worker: bump unacknowledged incidents
-const { runEscalationTick } = require('./lib/escalation');
+const { runEscalationTick, getLastTickTimestamp } = require('./lib/escalation');
 
 if (process.env.ESCALATION_WORKER_ENABLED !== 'false') {
   const intervalMs = parseInt(process.env.ESC_TICK_MS || '60000', 10);
