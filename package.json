@@ -30,9 +30,9 @@
     "smoke:api": "node scripts/smoke-api.js",
     "test": "jest --runInBand",
     "check:ui": "node scripts/check-ui-coverage.js",
-      "test:smoke": "playwright test -g 'contract routes'"
-    "test:smoke:headed": "PW_SKIP_WEBSERVER=1 BASE_URL=http://localhost:5000 playwright test --project=chromium --headed",
-    "test:smoke:ui": "playwright test --project=chromium --ui",
+         "test:smoke": "playwright test -g 'contract routes'",
+    "test:smoke:headed": "PW_SKIP_WEBSERVER=1 BASE_URL=http://localhost:4173 playwright test -g 'contract routes' --headed",
+    "test:smoke:ui": "PW_SKIP_WEBSERVER=1 BASE_URL=http://localhost:4173 playwright test -g 'contract routes' --ui",
     "test:lint:h1": "node tests/lint-empty-headings.cjs"
   },
   "description": "Monolithic shell.",
