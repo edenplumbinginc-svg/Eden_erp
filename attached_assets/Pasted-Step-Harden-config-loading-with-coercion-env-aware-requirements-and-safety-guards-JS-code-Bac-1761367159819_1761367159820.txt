@@ -1,19 +1,20 @@
+Step: Harden config loading with coercion, env-aware requirements, and safety guards (JS code). (Backend → startup reliability)
+
+Why it matters: Prevents bad boots (wrong types, missing prod secrets), catches unsafe prod configs, and gives a clear /ops/config/health snapshot.
+
+Inputs needed: Backend repo access.
+
+Command (copy–paste):
+
+Replace lib/config.js with coercion + prod guards
+
 // lib/config.js
 const { z } = require("zod");
 
-const coerceBool = z.preprocess(
-  v => String(v).trim().toLowerCase(), 
-  z.enum(["true","false"])
-).transform(v => v === "true");
-
-const coerceInt = (def, min, max) => z.preprocess(
-  v => (v == null ? String(def) : String(v)), 
-  z.string().regex(/^\d+$/)
-).transform(n => {
-  const x = Number(n);
-  if (min != null && x < min) throw new Error(`must be >= ${min}`);
-  if (max != null && x > max) throw new Error(`must be <= ${max}`);
-  return x;
+const coerceBool = z.preprocess(v => String(v).trim().toLowerCase(), z.enum(["true","false"])).transform(v => v === "true");
+const coerceInt  = (def, min, max) => z.preprocess(v => (v == null ? String(def) : String(v)), z.string().regex(/^\d+$/)).transform(n => {
+  const x = Number(n); if (min != null && x < min) throw new Error(`must be >= ${min}`);
+  if (max != null && x > max) throw new Error(`must be <= ${max}`); return x;
 });
 
 const Base = z.object({
@@ -30,14 +31,7 @@ const Base = z.object({
   OPS_HMAC_SECRET: z.string().min(16, "OPS_HMAC_SECRET must be >=16 chars"),
   APP_BASE_URL: z.string().url().optional(),
   SLACK_WEBHOOK_URL: z.string().url().optional(),
-  SLACK_VELOCITY_WEBHOOK: z.string().url().optional(),
   SLACK_SIGNING_SECRET: z.string().optional(),
-  SENTRY_DSN: z.string().url().optional(),
-  SENTRY_ENV: z.string().optional(),
-  RELEASE_SHA: z.string().optional(),
-  BUILD_TIME: z.string().optional(),
-  REPL_SLUG: z.string().optional(),
-  REPL_OWNER: z.string().optional(),
 });
 
 function validateEnv(env) {
@@ -50,26 +44,18 @@ function validateEnv(env) {
   }
   const c = parsed.data;
 
-  // Environment-aware additional guards
+  // Environment-aware *additional* guards
   const isProd = c.NODE_ENV === "production";
   if (isProd) {
     if (!c.APP_BASE_URL) die("APP_BASE_URL is required in production");
-    if (new URL(c.DATABASE_URL).hostname === "localhost") {
-      die("DATABASE_URL must not point to localhost in production");
-    }
-    if (c.ESC_DRY_RUN) {
-      warn("ESC_DRY_RUN=true in production — escalations will not send");
-    }
+    if (new URL(c.DATABASE_URL).hostname === "localhost") die("DATABASE_URL must not point to localhost in production");
+    if (c.ESC_DRY_RUN) warn("ESC_DRY_RUN=true in production — escalations will not send");
   }
 
   // Shadowing/unknown env keys (helps catch typos)
   const known = new Set(Object.keys(Base.shape));
-  const unknown = Object.keys(env).filter(
-    k => /^[A-Z0-9_]+$/.test(k) && !known.has(k)
-  );
-  if (unknown.length) {
-    warn(`Unknown env keys: ${unknown.join(", ")}`);
-  }
+  const unknown = Object.keys(env).filter(k => /^[A-Z0-9_]+$/.test(k) && !known.has(k));
+  if (unknown.length) warn(`Unknown env keys: ${unknown.join(", ")}`);
 
   return c;
 
@@ -78,10 +64,7 @@ function validateEnv(env) {
 }
 
 let _cfg = null;
-function cfg() { 
-  _cfg ??= validateEnv(process.env); 
-  return _cfg; 
-}
+function cfg() { _cfg ??= validateEnv(process.env); return _cfg; }
 
 function cfgSnapshot() {
   const c = cfg();
@@ -92,11 +75,6 @@ function cfgSnapshot() {
     OPS_HMAC_SECRET: "redacted",
     SLACK_SIGNING_SECRET: c.SLACK_SIGNING_SECRET ? "set" : "unset",
     SLACK_WEBHOOK_URL: c.SLACK_WEBHOOK_URL ? "set" : "unset",
-    SLACK_VELOCITY_WEBHOOK: c.SLACK_VELOCITY_WEBHOOK ? "set" : "unset",
-    SENTRY_DSN: c.SENTRY_DSN ? "set" : "unset",
-    SENTRY_ENV: c.SENTRY_ENV ?? null,
-    RELEASE_SHA: c.RELEASE_SHA ?? null,
-    BUILD_TIME: c.BUILD_TIME ?? null,
     ESCALATION_WORKER_ENABLED: c.ESCALATION_WORKER_ENABLED,
     ESCALATION_V1: c.ESCALATION_V1,
     ESC_CANARY_PCT: c.ESC_CANARY_PCT,
@@ -110,3 +88,28 @@ function cfgSnapshot() {
 }
 
 module.exports = { cfg, cfgSnapshot };
+
+
+Use it at boot and add a config health route
+
+// server.js (top)
+const { cfg, cfgSnapshot } = require("./lib/config");
+const C = cfg(); // fail fast if invalid
+
+// …after other mounts
+app.get("/ops/config/health", (_req, res) => res.json({ ok: true, config: cfgSnapshot() }));
+
+
+Success check:
+
+# 1) Break something intentionally (e.g., unset OPS_HMAC_SECRET) and restart
+#    → process exits with a clear error message listing the missing/invalid keys.
+
+# 2) With secrets set, verify snapshot (redacted & coerced types):
+curl -s https://<STAGING_HOST>/ops/config/health | jq
+# Expect booleans/ints as proper types, secrets redacted, and your current canary/dry-run shown.
+
+
+Next: wait for user
+
+(Once this is green, we can flip DRY_RUN off in staging for a short window, or move to “Update user profile editing to include new optional fields.”)
