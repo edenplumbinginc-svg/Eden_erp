@@ -61,9 +61,10 @@ test.describe('Contract Routes - Navigation Smoke Test', () => {
 
   for (const route of ROUTES) {
     test(`renders ${route}`, async ({ page }) => {
-      // Collect console errors and failed requests for this route
+      // Collect console errors, failed requests, and HTTP errors for this route
       const consoleErrors = [];
       const failedRequests = [];
+      const httpErrors = [];
       
       page.on('console', msg => {
         if (msg.type() === 'error') consoleErrors.push(msg.text());
@@ -76,6 +77,22 @@ test.describe('Contract Routes - Navigation Smoke Test', () => {
         if (/\.(ico|png|jpg|jpeg|gif|svg)$/i.test(url)) return;
         if (url.includes('__vite') || url.includes('hot-update')) return;
         failedRequests.push({ url, errorText: failure?.errorText });
+      });
+      
+      // Track HTTP error status codes (4xx/5xx)
+      // Note: We capture ALL errors including 401/403, then filter based on context
+      page.on('response', res => {
+        const status = res.status();
+        const url = res.url();
+        
+        // Ignore images, fonts, and dev server noise
+        if (/\.(ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$/i.test(url)) return;
+        if (url.includes('__vite') || url.includes('hot-update')) return;
+        
+        // Capture all 4xx/5xx errors (we'll filter 401/403 only during login redirects)
+        if (status >= 400) {
+          httpErrors.push({ url, status, statusText: res.statusText() });
+        }
       });
 
       const urlPath = route.startsWith('/') ? route : `/${route}`;
@@ -103,11 +120,16 @@ test.describe('Contract Routes - Navigation Smoke Test', () => {
 
       // In auth-gated apps, redirects to /login are okay if a form or heading exists.
       const finalUrl = page.url();
-      if (finalUrl.includes('/login')) {
+      const wasRedirectedToLogin = finalUrl.includes('/login') || finalUrl.includes('/signup');
+      
+      if (wasRedirectedToLogin) {
         await expect(page.locator('form, [role="form"], h1, h2, [role="heading"]')
           .first()).toBeVisible();
         // Still check there were no console errors loading the login page
         expect(consoleErrors, `console errors on ${urlPath} -> ${finalUrl}`).toEqual([]);
+        // 401/403 are expected when redirected to login, so filter them out
+        const httpErrorsFiltered = httpErrors.filter(e => e.status !== 401 && e.status !== 403);
+        expect(httpErrorsFiltered, `HTTP errors on ${urlPath} (excluding auth)`).toEqual([]);
         console.log(`  ✓ ${urlPath} → redirected to auth (${finalUrl})`);
         return; 
       }
@@ -129,11 +151,17 @@ test.describe('Contract Routes - Navigation Smoke Test', () => {
       const title = await page.title();
       expect(title?.trim().length || 0).toBeGreaterThan(0);
 
-      // Fail fast if console errors or failed requests were captured
+      // Fail fast if console errors, failed requests, or HTTP errors were captured
       expect(consoleErrors, `console errors on ${urlPath}`).toEqual([]);
-      // Allow 401/403 on auth-gated API calls but fail on 404/5xx during initial render
+      
+      // Network failures (DNS, connection refused, etc.)
       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
-      expect(hardFailures, `failed requests on ${urlPath}`).toEqual([]);
+      expect(hardFailures, `network failures on ${urlPath}`).toEqual([]);
+      
+      // HTTP error responses (404, 500, etc.)
+      // If authenticated and on actual route, ALL errors including 401/403 are failures
+      // (401/403 only allowed during login redirects, handled above)
+      expect(httpErrors, `HTTP errors on ${urlPath}`).toEqual([]);
 
       console.log(`  ✅ Verified ${urlPath}`);
     });

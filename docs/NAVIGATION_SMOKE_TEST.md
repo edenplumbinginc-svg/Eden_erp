@@ -167,12 +167,17 @@ npm run test:smoke
 ### CI/CD Testing (Production Build)
 
 ```bash
-# Install Playwright browsers (CI only)
+# Install Playwright browsers (CI only - not available in Replit)
 npx playwright install --with-deps
 
 # Run headless tests (builds and previews app)
 npm run test:smoke
 ```
+
+**Note:** Playwright browser installation requires system dependencies not available in Replit. These tests are designed to run in:
+- GitHub Actions CI/CD pipelines
+- Local development machines with Playwright installed
+- Docker containers with browser dependencies
 
 This builds the app, starts a preview server, and runs tests.
 
