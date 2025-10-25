@@ -507,3 +507,23 @@ export const incidents = pgTable("incidents", {
         index("idx_incidents_status").using("btree", table.status.asc().nullsLast()),
         index("idx_incidents_route_kind").using("btree", table.route.asc().nullsLast(), table.kind.asc().nullsLast()),
 ]);
+
+export const escalationEvents = pgTable("escalation_events", {
+        id: uuid().defaultRandom().primaryKey().notNull(),
+        incidentId: uuid("incident_id").notNull(),
+        incidentKey: text("incident_key").notNull(),
+        escalationLevel: integer("escalation_level").notNull(),
+        eventHash: text("event_hash").notNull(),
+        severity: text().notNull(),
+        metadata: jsonb().default({}).notNull(),
+        createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+        foreignKey({
+                        columns: [table.incidentId],
+                        foreignColumns: [incidents.id],
+                        name: "escalation_events_incident_id_fkey"
+                }).onDelete("cascade"),
+        unique("escalation_events_event_hash_key").on(table.eventHash),
+        index("idx_esc_events_incident").using("btree", table.incidentId.asc().nullsLast()),
+        index("idx_esc_events_created").using("btree", table.createdAt.desc().nullsFirst()),
+]);
