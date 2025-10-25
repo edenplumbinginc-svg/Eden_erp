@@ -30,6 +30,89 @@ Core modules include `coordination` (projects, tasks, comments, attachments) and
 
 **Incident Escalation Worker**: Runs every 60 seconds (configurable via `ESC_TICK_MS`) to automatically bump escalation levels for unacknowledged incidents based on SLA thresholds (critical: 5 minutes per level via `ESC_CRIT_ACK_MIN`, warning: 15 minutes per level via `ESC_WARN_ACK_MIN`); sends Slack notifications with incident details and Velocity Dashboard deep links for each escalation event via owner-specific or global webhooks. A manual test endpoint (`POST /ops/escalation/tick`) allows on-demand escalation checks. Full test coverage with 4 passing tests validates SLA compliance, multi-level escalation, acknowledgment handling, and severity-specific timing.
 
+#### Escalation Worker - Operational Runbook
+
+**Configuration:**
+
+Environment variables controlling escalation behavior:
+
+- `MAX_ESC_LEVEL` - Maximum escalation level (default: 7, hard limit enforced)
+- `ESC_SNOOZE_MIN` - Snooze duration in minutes when incident is acknowledged (default: 30)
+- `ESC_TICK_MS` - Worker tick interval in milliseconds (default: 60000, i.e., 60 seconds)
+- `ESC_CRIT_ACK_MIN` - Minutes per escalation level for critical incidents (default: 5)
+- `ESC_WARN_ACK_MIN` - Minutes per escalation level for warning incidents (default: 15)
+- `ESCALATION_WORKER_ENABLED` - Master kill switch for escalation worker (default: true)
+- `ESCALATION_V1` - Feature flag for escalation system (default: true)
+- `ESC_CANARY_PCT` - Percentage of incidents to escalate (0-100, default: 100 for full rollout)
+- `ESC_DRY_RUN` - If true, worker logs actions without executing them (default: false)
+- `ESC_PAUSE_CRON` - Cron expression to pause escalations during maintenance windows (optional)
+- `OPS_HMAC_SECRET` - Secret key for HMAC signature verification on ops endpoints (required for production)
+- `OPS_ADMIN_ROLE` - Role name required for ops endpoints (default: "ops_admin")
+
+Safety limits: Maximum escalation level is capped at 7 to prevent runaway escalation. Snooze duration defaults to 30 minutes to balance responsiveness with avoiding alert fatigue.
+
+**Operations:**
+
+1. **Pause Escalation Worker:**
+   - Set environment variable: `ESCALATION_WORKER_ENABLED=false`
+   - Deploy changes or restart the backend server
+   - Verify in server logs for message: `"escalation worker disabled via feature flag"`
+   - Confirm via health endpoint: `GET /ops/escalation/health` returns `enabled: false`
+
+2. **Drain Escalations (Emergency):**
+   - Acknowledge all open incidents: `UPDATE incidents SET acknowledged_at = now() WHERE acknowledged_at IS NULL`
+   - Or reduce escalation levels: `UPDATE incidents SET escalation_level = GREATEST(escalation_level - 1, 0) WHERE incident_key = $1`
+   - Verify drain completion: `SELECT COUNT(*) FROM incidents WHERE acknowledged_at IS NULL AND escalation_level > 0`
+
+3. **Recalculate next_due_at (After SLA Changes):**
+   - Note: `next_due_at` is a GENERATED STORED column that automatically recalculates when row data changes
+   - Force recalculation via API: `POST /ops/escalation/recalc` (requires ops_admin role + HMAC signature)
+   - Or use SQL: `UPDATE incidents SET escalation_level = escalation_level` (triggers column regeneration)
+
+4. **Canary Rollout:**
+   - Start conservatively: Set `ESC_CANARY_PCT=10` to enable escalation for 10% of incidents
+   - Monitor canary metrics: Check server logs for `skipped_canary` counter
+   - Gradual expansion: Increase to 25, then 50, then 100 over time as confidence grows
+   - Emergency rollback: Set `ESC_CANARY_PCT=0` to disable escalation for all incidents
+
+5. **Manual Escalation Tick:**
+   - Trigger endpoint: `POST /ops/escalation/tick`
+   - Authorization requirements: authenticated user with ops_admin role, valid HMAC signature in `X-Signature` header
+   - Rate limiting: 10 requests per minute
+   - Response format: `{success: true, escalated: <count>}`
+
+6. **Health Monitoring:**
+   - Health endpoint: `GET /ops/escalation/health`
+   - Alert condition 1: `tickLagMs > 2 * tickIntervalMs` indicates worker is stuck or lagging
+   - Alert condition 2: `healthStatus === 'critical'` returns HTTP 503 status code
+   - Use for load balancer health checks and monitoring dashboards
+
+7. **Audit Last 24h Escalations:**
+   - Query escalation history: `SELECT * FROM escalation_events WHERE created_at > now() - INTERVAL '24 hours' ORDER BY created_at DESC`
+   - Inspect for anomalies: Check for duplicate escalations (should never occur due to idempotency via unique_hash)
+   - Validate Slack delivery: Cross-reference with Slack webhook logs
+
+**Security:**
+
+All ops escalation endpoints enforce multi-layered security:
+
+- Authentication: Valid JWT token required
+- Authorization: User must have the ops_admin role
+- HMAC signature: Request body must be signed with `OPS_HMAC_SECRET`
+- Rate limiting: 10 requests per minute per IP to prevent abuse
+
+HMAC signature mechanism:
+- Algorithm: `HMAC-SHA256(request_body, OPS_HMAC_SECRET)`
+- Header: Include signature in `X-Signature` request header
+- Generate signature example: `echo -n '{"foo":"bar"}' | openssl dgst -sha256 -hmac "your_secret"`
+
+**Troubleshooting:**
+
+- **Worker not running:** Verify `ESCALATION_WORKER_ENABLED=true` and `ESCALATION_V1=true` are both set
+- **No escalations occurring:** Check `ESC_CANARY_PCT` is >0; verify incidents have `next_due_at NOT NULL`
+- **Duplicate Slack messages:** Query `escalation_events` table for `unique_hash` constraint violations (should never happen)
+- **Slow escalations:** Monitor `escalation_tick_ms` metric in logs; verify database has proper indices on `incidents(next_due_at, acknowledged_at)`
+
 ### System Design Choices
 The project adopts a monolithic architecture with a scalable PostgreSQL database. It emphasizes observability through monitoring, logging, and health checks, and is designed for security with enforced authentication and multi-layered database validation. An `autosync.sh` script automates Git commits and pushes.
 
