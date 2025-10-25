@@ -127,6 +127,21 @@ const alerter = makeAlerter({
 
 alerter.start(logger);
 
+// Incident Escalation Worker: bump unacknowledged incidents
+const { runEscalationTick } = require('./lib/escalation');
+
+if (process.env.ESCALATION_WORKER_ENABLED !== 'false') {
+  const intervalMs = parseInt(process.env.ESC_TICK_MS || '60000', 10);
+  setInterval(() => {
+    runEscalationTick().catch(err => {
+      logger.error({ err }, 'escalation_tick_failed');
+    });
+  }, intervalMs);
+  logger.info({ intervalMs }, 'escalation_worker_enabled');
+} else {
+  logger.info('escalation_worker_disabled');
+}
+
 // Velocity Layer: Persistence (historical metrics snapshots)
 const { makeHistory } = require('./lib/history');
 
@@ -829,6 +844,25 @@ app.get('/ops/sentry-link', (req, res) => {
     `&query=${query}&project=${project}&statsPeriod=1h`;
 
   res.json({ url });
+});
+
+// Escalation: Manual test endpoint for forcing an escalation tick
+app.post('/ops/escalation/tick', async (_req, res) => {
+  try {
+    const escalatedCount = await runEscalationTick();
+    logger.info({ escalatedCount }, 'manual_escalation_tick_completed');
+    res.json({ 
+      success: true,
+      escalated: escalatedCount,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    logger.error({ err: error }, 'manual_escalation_tick_failed');
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
+  }
 });
 
 // --- Sentry test route (development only) ---
