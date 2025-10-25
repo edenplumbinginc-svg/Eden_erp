@@ -9,13 +9,26 @@ echo "[AUTOSYNC] Will check for changes every 5 minutes"
 git config --global user.email "eden-erp-bot@edenplumbing.com"
 git config --global user.name "Eden ERP Auto-Sync"
 
+# Fetch GitHub token from Replit integration
+echo "[AUTOSYNC] 🔑 Fetching GitHub token from Replit integration..."
+GITHUB_TOKEN=$(node get-github-token.js 2>/dev/null)
+
 # Configure Git to use token authentication
 if [[ -n "$GITHUB_TOKEN" ]]; then
-  git config --global credential.helper store
+  # Set up Git credential helper
+  git config --global credential.helper 'store --file ~/.git-credentials'
+  
+  # Write credentials file
   echo "https://oauth2:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
-  echo "[AUTOSYNC] ✓ GitHub token configured"
+  chmod 600 ~/.git-credentials
+  
+  # Configure Git to not prompt for credentials
+  export GIT_TERMINAL_PROMPT=0
+  
+  echo "[AUTOSYNC] ✓ GitHub token configured from Replit integration"
 else
-  echo "[AUTOSYNC] ⚠️ GITHUB_TOKEN not set — pushes may fail"
+  echo "[AUTOSYNC] ⚠️ GitHub token not available — pushes may fail"
+  echo "[AUTOSYNC] ⚠️ Make sure GitHub integration is connected"
 fi
 
 while true; do
