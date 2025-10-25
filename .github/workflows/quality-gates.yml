@@ -32,6 +32,12 @@ jobs:
 
       # Build the UI app (vite build)
       - name: Build UI
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
+          VITE_SENTRY_ENV: ci
+          VITE_RELEASE_SHA: ${{ github.sha }}
         run: npm --prefix apps/coordination_ui run build
 
       # Contract-driven UI coverage
