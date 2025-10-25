@@ -7,6 +7,12 @@ module.exports = async (config) => {
   const password = process.env.PW_PASSWORD;
   const baseURL = process.env.BASE_URL || 'http://localhost:5000';
 
+  // Ensure coverage directory exists
+  const coverageDir = path.join(__dirname, '..', 'coverage');
+  if (!fs.existsSync(coverageDir)) {
+    fs.mkdirSync(coverageDir, { recursive: true });
+  }
+
   // If no creds, skip — tests will still pass by accepting /login as valid.
   if (!email || !password) {
     console.log('[auth-setup] No PW_EMAIL/PW_PASSWORD set; tests will run unauthenticated.');
@@ -20,9 +26,11 @@ module.exports = async (config) => {
   const context = await browser.newContext({ baseURL });
   const page = await context.newPage();
 
+  const storagePath = path.join(coverageDir, 'storageState.json');
+
   try {
     // Navigate to login page
-    await page.goto('/login', { waitUntil: 'domcontentloaded' });
+    await page.goto('/login', { waitUntil: 'domcontentloaded', timeout: 15_000 });
     
     // Fill in login form
     await page.fill('input[type="email"]', email);
@@ -33,7 +41,7 @@ module.exports = async (config) => {
     
     // Wait for successful login (navigation to dashboard or any authenticated page)
     await page.waitForURL((url) => !url.pathname.includes('/login'), { 
-      timeout: 10_000 
+      timeout: 15_000 
     });
     
     // Verify we have the auth token in localStorage
@@ -44,10 +52,10 @@ module.exports = async (config) => {
     }
     
     // Save authenticated state
-    const storagePath = path.join(__dirname, '..', 'coverage', 'storageState.json');
     await context.storageState({ path: storagePath });
     
     console.log('[auth-setup] ✅ Login successful! storageState.json saved.');
+    console.log(`[auth-setup] Storage state: ${storagePath}`);
     console.log('[auth-setup] Protected routes will now render without redirects.');
     
   } catch (error) {
@@ -55,7 +63,6 @@ module.exports = async (config) => {
     console.error('[auth-setup] Tests will run unauthenticated and accept /login redirects.');
     
     // Clean up any partial storage state file
-    const storagePath = path.join(__dirname, '..', 'coverage', 'storageState.json');
     if (fs.existsSync(storagePath)) {
       fs.unlinkSync(storagePath);
     }

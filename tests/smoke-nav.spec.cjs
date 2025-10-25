@@ -60,21 +60,19 @@ test.describe('Contract Routes - Navigation Smoke Test', () => {
         timeout: 10_000 
       });
 
-      // Accept either a real header/heading or any explicit UI state marker
+      // STRICT: Require route-specific content, NOT shared layout elements
+      // We accept page headings (h1/h2/h3) or explicit state markers
+      // Generic elements like <header> and <main> are too weak (they're in the layout)
       const validSelectors = [
-        'header',
-        'h1',
-        'h2',
-        'h3',
-        '[role="heading"]',
-        '[data-state="loading"]',
-        '[data-state="error"]',
-        '[data-state="unauthorized"]',
-        '[data-state="empty"]',
-        '[data-state="not_found"]',
-        '[data-testid]', // Accept any test ID as proof of rendering
-        'main',
-        '[role="main"]',
+        'h1',              // Page-specific heading
+        'h2',              // Section heading
+        'h3',              // Subsection heading
+        '[role="heading"]', // ARIA heading
+        '[data-state="loading"]',      // Loading skeleton
+        '[data-state="error"]',        // Error state
+        '[data-state="unauthorized"]', // Access denied
+        '[data-state="empty"]',        // No data
+        '[data-state="not_found"]',    // 404
       ].join(', ');
 
       // Check the final URL after any redirects
@@ -106,9 +104,13 @@ test.describe('Contract Routes - Navigation Smoke Test', () => {
 
 test.describe('Contract Routes - Summary', () => {
   test('all routes tested', () => {
+    const expectedRouteCount = 24; // Must match docs/ui-contract.yaml
     console.log(`\n📊 Smoke Test Summary:`);
     console.log(`   Total routes tested: ${ROUTES.length}`);
+    console.log(`   Expected routes: ${expectedRouteCount}`);
     console.log(`   ✅ All routes from UI contract validated\n`);
-    expect(ROUTES.length).toBeGreaterThan(0);
+    
+    // Assert route count matches expectations to catch contract drift
+    expect(ROUTES.length).toBe(expectedRouteCount);
   });
 });
