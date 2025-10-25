@@ -32,6 +32,10 @@ Core modules include `coordination` (projects, tasks, comments, attachments) and
 
 **ChatOps Incident Management** (`/ops/incidents/:id/ack`): Operational endpoint for acknowledging incidents via ChatOps interfaces (Slack). Protected by 5-layer security stack (JWT Auth → RBAC Permissions → Ops Admin Role → HMAC Signature → Rate Limit). Updates incident status to 'acknowledged', records acknowledging user and timestamp, provides full audit trail. Designed for integration with Slack slash commands to enable incident management without leaving chat interface.
 
+**Startup Config Validation**: Production-grade environment variable validation with Zod schemas, fail-fast behavior on misconfiguration, environment-aware production guards, and unknown key detection for typo prevention. Config health endpoint (`/ops/config/health`) exposes runtime configuration with secret redaction.
+
+**User Profile Management**: Optional profile fields API (`/api/me/profile`) with GET and PATCH endpoints for managing user information. Supports phone, title, avatar URL, timezone, locale, and notification preferences. Zod validation ensures data integrity with constraints on field lengths and formats. Partial updates supported for efficient data changes. All fields nullable for backward compatibility.
+
 ### System Design Choices
 The project adopts a monolithic architecture with a scalable PostgreSQL database. It emphasizes observability through monitoring, logging, and health checks, and is designed for security with enforced authentication and multi-layered database validation. An `autosync.sh` script automates Git commits and pushes.
 
