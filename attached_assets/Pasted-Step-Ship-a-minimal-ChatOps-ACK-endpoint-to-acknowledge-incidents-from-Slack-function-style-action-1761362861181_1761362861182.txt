@@ -1,0 +1,60 @@
+Step: Ship a minimal ChatOps ACK endpoint to acknowledge incidents from Slack (function-style action on top of your hardened backend). (Layer: Ops API → RBAC/HMAC-secured function)
+
+Why it matters: Highest instant leverage—lets you clear blockers without leaving Slack, proving “functions” while reusing your new security + incidents stack.
+
+Inputs needed: Backend repo access, existing RBAC/HMAC middleware, Slack workspace (we’ll wire the slash command in the next step).
+
+Command (copy–paste):
+
+Add endpoint routes/ops-incidents.ts
+
+// routes/ops-incidents.ts
+import type { Express, Request, Response } from "express";
+import { db } from "../lib/db/client";
+import { eq } from "drizzle-orm";
+import { incidents } from "../lib/db/schema/incidents";
+import { requireOpsAdmin } from "../lib/rbac";     // already built
+import { verifyHmac } from "../lib/hmac";          // already built
+import { rateLimit } from "../lib/rate-limit";     // already built
+
+export function mountIncidentOps(app: Express) {
+  const guard = [rateLimit(), verifyHmac(), requireOpsAdmin()];
+
+  app.post("/ops/incidents/:id/ack", guard, async (req: Request, res: Response) => {
+    const id = req.params.id;
+    const user = (req as any).auth?.user || "ops-bot";
+    const [row] = await db.update(incidents)
+      .set({ status: "acknowledged", acknowledgedBy: user, acknowledgedAt: new Date().toISOString() })
+      .where(eq(incidents.id, id))
+      .returning({ id: incidents.id, status: incidents.status, acknowledgedBy: incidents.acknowledgedBy, acknowledgedAt: incidents.acknowledgedAt });
+    if (!row) return res.status(404).json({ ok: false, error: "not_found" });
+    return res.json({ ok: true, incident: row });
+  });
+}
+
+
+Mount it in your server (reporting layer change):
+
+// server.ts  (Layer change: Ops API starting…)
+import { mountIncidentOps } from "./routes/ops-incidents";
+mountIncidentOps(app);
+// …(Layer ready)
+
+
+Quick local test (HMAC header):
+
+id="<an-incident-id>"
+body='{"reason":"chatops-ack"}'
+sig=$(printf '%s' "$body" | openssl dgst -sha256 -hmac "$OPS_HMAC_SECRET" -binary | xxd -p -c 256)
+
+curl -s -X POST "https://<STAGING_HOST>/ops/incidents/$id/ack" \
+  -H "Content-Type: application/json" \
+  -H "X-Signature: $sig" \
+  --data "$body"
+
+
+Success check: Response {"ok": true, "incident": {"status":"acknowledged", ...}} and the DB row shows acknowledged_at + acknowledged_by.
+
+Next: wait for user
+
+(Then we’ll add the Slack /incident-ack slash command that signs requests with your HMAC and passes id, giving you “functions” UX without more backend heaviness.)
