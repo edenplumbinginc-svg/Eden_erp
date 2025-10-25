@@ -9,3 +9,4 @@ node_modules/
 /tmp/logs/
 dist/
 apps/coordination_ui/dist/
+coverage/storageState.json

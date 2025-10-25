@@ -1,4 +1,10 @@
 const { defineConfig, devices } = require('@playwright/test');
+const fs = require('fs');
+const path = require('path');
+
+// Check if authenticated storage state exists
+const storagePath = path.join(__dirname, 'coverage', 'storageState.json');
+const useStorage = fs.existsSync(storagePath);
 
 module.exports = defineConfig({
   testDir: 'tests',
@@ -8,12 +14,14 @@ module.exports = defineConfig({
     ['list'],
     ['html', { outputFolder: 'coverage/playwright-report', open: 'never' }],
   ],
+  globalSetup: require.resolve('./tests/global-setup.cjs'),
   use: {
     baseURL: process.env.BASE_URL || 'http://localhost:5000',
     headless: true,
     trace: 'retain-on-failure',
     video: 'off',
     screenshot: 'only-on-failure',
+    storageState: useStorage ? storagePath : undefined,
     launchOptions: { 
       args: ['--no-sandbox', '--disable-setuid-sandbox'] 
     },
