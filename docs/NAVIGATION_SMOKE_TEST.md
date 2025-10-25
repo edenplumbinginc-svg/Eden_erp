@@ -34,11 +34,13 @@ The smoke test **validates the entire user journey** by actually loading each pa
   testDir: 'tests',
   timeout: 30_000,
   retries: process.env.CI ? 1 : 0,
+  globalSetup: require.resolve('./tests/global-setup.cjs'), // Auth setup
   use: {
     baseURL: 'http://localhost:5000',  // Eden ERP frontend
     headless: true,
     trace: 'retain-on-failure',
-    screenshot: 'only-on-failure'
+    screenshot: 'only-on-failure',
+    storageState: 'coverage/storageState.json' // If auth successful
   },
   webServer: {
     command: 'npm run dev:web',  // Auto-starts Vite server
@@ -47,6 +49,26 @@ The smoke test **validates the entire user journey** by actually loading each pa
   }
 }
 ```
+
+### Global Setup (`tests/global-setup.cjs`)
+
+Authenticates before running tests if `PW_EMAIL` and `PW_PASSWORD` are provided:
+
+```javascript
+// Logs in via Supabase authentication
+// Saves browser storage state with JWT token
+// Tests reuse this authenticated state
+```
+
+**With credentials:**
+- ✅ Tests run authenticated
+- ✅ Protected routes render actual content
+- ✅ Full validation of all features
+
+**Without credentials:**
+- ✅ Tests run unauthenticated  
+- ✅ Protected routes redirect to `/login`
+- ✅ Tests verify login form renders
 
 ### Smoke Test Spec (`tests/smoke-nav.spec.cjs`)
 
@@ -83,11 +105,28 @@ Routes pass if they render ANY of these:
 ### Local Testing (Development Server)
 
 ```bash
-# Run against local dev server (port 5000)
+# Run without authentication (accept /login redirects)
 npm run test:smoke:headed
+
+# Run with authentication (test protected routes)
+PW_EMAIL=test@edenplumbing.com PW_PASSWORD=yourpassword npm run test:smoke:headed
 ```
 
 This runs tests against your running dev server without building.
+
+**Authenticated Testing:**
+```bash
+# Set credentials and run
+export PW_EMAIL="test@edenplumbing.com"
+export PW_PASSWORD="EdenPlumbing2025!"
+npm run test:smoke
+```
+
+**Unauthenticated Testing:**
+```bash
+# Just run without credentials
+npm run test:smoke
+```
 
 ### CI/CD Testing (Production Build)
 
@@ -114,50 +153,22 @@ Opens Playwright's interactive UI for debugging.
 
 ### GitHub Actions Workflow
 
-Add to `.github/workflows/smoke-test.yml`:
+See `docs/github-actions-smoke-test.yml` for the complete workflow.
 
-```yaml
-name: Navigation Smoke Test
+**Key features:**
+- ✅ Automatically installs Playwright browsers
+- ✅ Optionally authenticates if `PW_EMAIL`/`PW_PASSWORD` secrets exist
+- ✅ Uploads HTML reports on failure
+- ✅ Fails build if any route breaks
 
-on:
-  pull_request:
-    branches: [ main ]
-  push:
-    branches: [ main ]
+**Setup Repository Secrets:**
 
-jobs:
-  smoke-test:
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-          cache: 'npm'
-      
-      - name: Install dependencies
-        run: |
-          npm ci
-          cd apps/coordination_ui && npm ci
-      
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps
-      
-      - name: Run navigation smoke test
-        run: npm run test:smoke
-      
-      - name: Upload Playwright report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: coverage/playwright-report
-          retention-days: 7
-```
+1. Go to: **Repository Settings → Secrets → Actions**
+2. Add secret: `PW_EMAIL` = `test@edenplumbing.com`
+3. Add secret: `PW_PASSWORD` = `<your test user password>`
+
+**Without secrets:** Tests verify auth redirects work  
+**With secrets:** Tests verify protected content renders
 
 ### Quality Gates
 
