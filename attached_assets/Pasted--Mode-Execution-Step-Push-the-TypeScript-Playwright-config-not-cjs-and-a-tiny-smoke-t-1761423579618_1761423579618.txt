@@ -1,0 +1,50 @@
+[Mode: Execution]
+
+Step: Push the **TypeScript** Playwright config (not `.cjs`) and a tiny smoke test to GitHub so Actions can run `--project=chromium` cleanly.
+
+Why it matters: GitHub Actions has its own environment. Until the config **and at least one test file** exist in the repo, CI will keep failing.
+
+Inputs needed: Your Replit shell (or GitHub web UI).
+
+Command:
+
+**A) From Replit shell (preferred):**
+
+```bash
+# 1) Make sure the config is at repo root:
+ls -la | grep 'playwright.config.ts'
+
+# 2) Create a tiny smoke test if you don’t have one yet:
+mkdir -p tests
+cat > tests/smoke-contract-routes.spec.ts <<'TS'
+import { test, expect } from '@playwright/test';
+
+test('contract routes page renders', async ({ page }) => {
+  // Base URL comes from playwright.config.ts (4173 by default or BASE_URL env)
+  await page.goto('/');
+  // Adjust this selector to something guaranteed to exist on your app shell:
+  await expect(page.getByRole('link', { name: /velocity|leaderboard|home/i })).toBeVisible();
+});
+TS
+
+# 3) Stage, commit, push
+git add playwright.config.ts tests/smoke-contract-routes.spec.ts
+git commit -m "test(ci): add Playwright config (chromium project) and minimal smoke test"
+git push origin main
+```
+
+**B) If using GitHub web UI instead:**
+
+1. In the repo root, click **Add file → Create new file** → name it `playwright.config.ts`.
+   Paste the full config you set earlier (with the `chromium` project and `baseURL` defaulting to `http://localhost:4173`).
+2. Create `tests/smoke-contract-routes.spec.ts` with the snippet above.
+3. Commit both directly to `main`.
+
+Success check:
+
+* GitHub Actions runs and no longer prints `Project(s) "chromium" not found`.
+* The job produces an HTML report under `coverage/playwright-report/` (your artifact upload step stops warning “No files were found”).
+
+Next: wait for user
+
+Training nudge: CI can’t see files that only live in Replit. Always push the **config + at least one test** so the pipeline has something real to execute. After this passes, we’ll wire a second test that asserts `/velocity` is auth-protected and auto-refreshes.
