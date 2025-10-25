@@ -95,19 +95,29 @@ function AppContent() {
     navigate(`/tasks/${project.id}`, { state: { project } });
   };
 
-  const pageVariants = {
-    initial: { opacity: 0, y: 6 },
-    enter: { 
-      opacity: 1, 
-      y: 0, 
-      transition: { duration: 0.18, ease: [0.2, 0.8, 0.2, 1] } 
-    },
-    exit: { 
-      opacity: 0, 
-      y: -6, 
-      transition: { duration: 0.15, ease: [0.2, 0.8, 0.2, 1] } 
-    },
-  };
+  const prefersReduced = typeof window !== 'undefined'
+    ? window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
+    : false;
+
+  const pageVariants = prefersReduced
+    ? {
+        initial: { opacity: 1, y: 0 },
+        enter: { opacity: 1, y: 0, transition: { duration: 0 } },
+        exit: { opacity: 1, y: 0, transition: { duration: 0 } },
+      }
+    : {
+        initial: { opacity: 0, y: 6 },
+        enter: { 
+          opacity: 1, 
+          y: 0, 
+          transition: { duration: 0.18, ease: [0.2, 0.8, 0.2, 1] } 
+        },
+        exit: { 
+          opacity: 0, 
+          y: -6, 
+          transition: { duration: 0.15, ease: [0.2, 0.8, 0.2, 1] } 
+        },
+      };
 
   return (
     <div className="min-h-screen bg-background">

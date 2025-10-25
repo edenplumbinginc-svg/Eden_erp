@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 const ThemeCtx = createContext({ theme: 'auto', setTheme: () => {} });
 
@@ -9,6 +9,7 @@ function getInitialTheme() {
 
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(() => getInitialTheme());
+  const mediaRef = useRef(null);
 
   useEffect(() => {
     localStorage.setItem('eden.theme', theme);
@@ -20,6 +21,41 @@ export function ThemeProvider({ children }) {
       root.setAttribute('data-theme', 'light');
     }
   }, [theme]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!window.matchMedia) return;
+    if (theme !== 'auto') return;
+    
+    mediaRef.current = window.matchMedia('(prefers-color-scheme: dark)');
+    const applyOSTheme = (e) => {
+      const root = document.documentElement;
+      if (e.matches) {
+        root.setAttribute('data-theme', 'dark');
+      } else {
+        root.removeAttribute('data-theme');
+      }
+    };
+    
+    applyOSTheme(mediaRef.current);
+    mediaRef.current.addEventListener?.('change', applyOSTheme);
+    return () => mediaRef.current?.removeEventListener?.('change', applyOSTheme);
+  }, [theme]);
+
+  useEffect(() => {
+    const handler = (e) => {
+      const isMod = e.ctrlKey || e.metaKey;
+      if (!isMod || (e.key?.toLowerCase() !== 'j')) return;
+      e.preventDefault();
+      setTheme((prev) => {
+        if (prev === 'light') return 'dark';
+        if (prev === 'dark') return 'auto';
+        return 'light';
+      });
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   const value = useMemo(() => ({ theme, setTheme }), [theme]);
   return <ThemeCtx.Provider value={value}>{children}</ThemeCtx.Provider>;
@@ -51,6 +87,9 @@ export function ThemeToggle() {
         <option value="light">Light</option>
         <option value="dark">Dark</option>
       </select>
+      <span className="muted" style={{ fontSize: '0.75rem' }} title="Keyboard shortcut">
+        ⌘/Ctrl + J
+      </span>
     </div>
   );
 }
