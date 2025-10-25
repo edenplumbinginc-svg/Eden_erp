@@ -14,6 +14,7 @@ const yaml = require("js-yaml");
 
 const root = process.cwd();
 const pagesDir = path.join(root, "apps/coordination_ui/src/pages");
+const componentsDir = path.join(root, "apps/coordination_ui/src/components");
 
 /**
  * Convert route path to possible file paths
@@ -133,10 +134,19 @@ function pagePaths(route) {
 function exists(route) {
   const candidates = pagePaths(route);
   
+  // Check pages directory first
   for (const candidate of candidates) {
     const fullPath = path.join(pagesDir, candidate);
     if (fs.existsSync(fullPath)) {
-      return { exists: true, path: candidate };
+      return { exists: true, path: `pages/${candidate}` };
+    }
+  }
+  
+  // Also check components directory (for views like AllTasksView)
+  for (const candidate of candidates) {
+    const fullPath = path.join(componentsDir, candidate);
+    if (fs.existsSync(fullPath)) {
+      return { exists: true, path: `components/${candidate}` };
     }
   }
   

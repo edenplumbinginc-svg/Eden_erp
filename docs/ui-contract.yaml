@@ -50,11 +50,10 @@ resources:
       - GET  /api/projects/:id
       - PATCH /api/projects/:id
     required_pages:
-      - /
-      - /projects-delta
+      - /projects-delta  # Maps to SimpleProjectsPage.jsx
       - /project/[id]
     required_states: [loading, empty, error, unauthorized]
-    notes: "Projects list and detail views"
+    notes: "Projects list and detail views (root / uses ProjectList component)"
 
   - name: tasks
     routes:
@@ -63,8 +62,8 @@ resources:
       - GET  /api/tasks/:id
       - PATCH /api/tasks/:id
     required_pages:
-      - /alltasks
-      - /tasks-delta
+      - /alltasks        # Maps to AllTasksView component
+      - /tasks-delta     # Maps to SimpleTasksPage.jsx
       - /tasks/new
       - /task/[id]
     required_states: [loading, empty, error, unauthorized, not_found]
@@ -167,6 +166,6 @@ resources:
     routes:
       - POST /api/projects/request
     required_pages:
-      - /request-project
+      - /request-project  # Maps to ProjectRequestForm.jsx
     required_states: [loading, error, unauthorized]
     notes: "Project request form"
