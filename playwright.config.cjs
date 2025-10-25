@@ -8,8 +8,8 @@ const useStorage = fs.existsSync(storagePath);
 
 module.exports = defineConfig({
   testDir: 'tests',
-  testMatch: '**/*.spec.cjs',  // Only match Playwright tests, not Jest
-  testIgnore: ['**/__tests__/**', '**/*.test.js'],  // Ignore Jest tests
+  testMatch: '**/*.spec.cjs',
+  testIgnore: ['**/__tests__/**', '**/*.test.js'],
   timeout: 30_000,
   retries: process.env.CI ? 1 : 0,
   reporter: [
