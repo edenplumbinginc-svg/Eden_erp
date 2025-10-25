@@ -1,0 +1,86 @@
+Step: Add the /profile route so users can open the new Profile page from the app.
+
+Why it matters: You already built the profile API + UI; this wires it into navigation so testers can reach it.
+
+Inputs needed: Frontend repo (React app), existing auth wrapper/component names (adjust if different).
+
+Command (copy–paste):
+
+Register the route in your UI router
+
+// apps/coordination_ui/src/App.tsx  (or routes file)
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import ProfilePage from "./pages/ProfilePage";
+import Dashboard from "./pages/Dashboard";
+import RequireAuth from "./components/RequireAuth"; // adjust path/name if needed
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route
+          path="/profile"
+          element={
+            <RequireAuth>
+              <ProfilePage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <RequireAuth>
+              <Dashboard />
+            </RequireAuth>
+          }
+        />
+        {/* keep existing routes here */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+
+Add a nav link (so it’s discoverable)
+
+// apps/coordination_ui/src/components/TopNav.tsx (or Sidebar)
+import { Link, useLocation } from "react-router-dom";
+
+export function TopNav() {
+  const { pathname } = useLocation();
+  return (
+    <nav className="flex items-center gap-4">
+      {/* ...existing links... */}
+      <Link
+        to="/profile"
+        className={pathname === "/profile" ? "font-semibold underline" : "hover:underline"}
+      >
+        Profile
+      </Link>
+    </nav>
+  );
+}
+
+
+(If you serve a SPA from the backend) ensure unknown paths fall back to index.html
+
+// server.js (after API routes, before app.listen)
+const path = require("path");
+const clientDir = path.join(__dirname, "apps/coordination_ui/dist"); // adjust if different
+app.use(express.static(clientDir));
+app.get("*", (_req, res) => {
+  res.sendFile(path.join(clientDir, "index.html"));
+});
+
+
+Success check:
+
+Start the app, log in, visit /profile directly and via the nav link.
+
+Page loads; GET /api/me/profile populates fields; PATCH saves and reloads with updated values.
+
+Direct refresh on /profile works (no 404) if using the SPA fallback.
+
+Next: wait for user

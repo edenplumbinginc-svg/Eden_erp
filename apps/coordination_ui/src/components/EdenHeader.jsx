@@ -117,6 +117,16 @@ export default function EdenHeader() {
                 </NavLink>
               </div>
             )}
+            <NavLink 
+              to="/profile" 
+              className={({ isActive }) => isActive ? 'text-body font-medium' : 'text-body text-link hover:underline'}
+              style={({ isActive }) => ({
+                color: isActive ? 'var(--md-primary)' : undefined,
+                fontWeight: isActive ? 500 : undefined
+              })}
+            >
+              Profile
+            </NavLink>
             <RoleBadge />
             <NotificationsBell />
           </nav>
