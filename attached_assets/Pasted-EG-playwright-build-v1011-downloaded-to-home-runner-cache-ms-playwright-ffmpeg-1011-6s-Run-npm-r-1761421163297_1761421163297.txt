@@ -1,0 +1,51 @@
+EG playwright build v1011 downloaded to /home/runner/.cache/ms-playwright/ffmpeg-1011
+6s
+Run npm run preview &
+
+> coordination-ui@0.1.0 prepreview
+> node ../../scripts/generate-showcase.js
+
+✅ Wrote /home/runner/work/Eden_erp/Eden_erp/apps/coordination_ui/src/showcase/routes.json with 24 routes.
+
+> coordination-ui@0.1.0 preview
+> vite preview
+
+The CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.
+  ➜  Local:   http://localhost:4173/
+  ➜  Network: http://10.1.0.38:4173/
+1s
+Run npm run test:smoke
+
+> eden_erp@0.1.0 test:smoke
+> playwright test --project=chromium -g 'contract routes'
+
+Error: Project(s) "chromium" not found. Available projects: ""
+    at filterProjects (/home/runner/work/Eden_erp/Eden_erp/node_modules/playwright/lib/runner/projectUtils.js:80:11)
+    at runTests (/home/runner/work/Eden_erp/Eden_erp/node_modules/playwright/lib/program.js:217:42)
+    at i.<anonymous> (/home/runner/work/Eden_erp/Eden_erp/node_modules/playwright/lib/program.js:71:7)
+Error: Process completed with exit code 1.
+1s
+Run actions/upload-artifact@v4
+  
+Warning: No files were found with the provided path: coverage/playwright-report. No artifacts will be uploaded.
+0s
+0s
+1s
+Post job cleanup.
+/usr/bin/git version
+git version 2.51.0
+Temporarily overriding HOME='/home/runner/work/_temp/99448a58-51e2-4b23-9339-48fa5f74162e' before making global git config changes
+Adding repository directory to the temporary git global config as a safe directory
+/usr/bin/git config --global --add safe.directory /home/runner/work/Eden_erp/Eden_erp
+/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+http.https://github.com/.extraheader
+/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+0s
+Cleaning up orphan processes
+Terminate orphan process: pid (5848) (npm run preview)
+Terminate orphan process: pid (5872) (sh)
+Terminate orphan process: pid (5873) (node)
+Terminate orphan process: pid (5884) (esbuild)
