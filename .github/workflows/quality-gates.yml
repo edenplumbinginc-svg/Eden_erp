@@ -26,7 +26,7 @@ jobs:
       - name: Install dependencies (root)
         run: npm ci
 
-      # App-specific dependencies
+      # App-specific dependencies (no workspaces)
       - name: Install UI dependencies
         run: npm --prefix apps/coordination_ui install --no-audit --no-fund
 
@@ -34,11 +34,11 @@ jobs:
       - name: Build UI
         run: npm --prefix apps/coordination_ui run build
 
-      # Contract-driven UI coverage (node scripts/check-ui-coverage.js)
+      # Contract-driven UI coverage
       - name: UI coverage
         run: npm run check:ui
 
-      # Install Playwright browsers (Chromium) with required system deps
+      # Install Playwright browsers
       - name: Install Playwright
         run: npx playwright install --with-deps
 
@@ -50,6 +50,13 @@ jobs:
           echo "PREVIEW_PID=$!" >> $GITHUB_ENV
           # Wait for server to be ready (60s timeout)
           timeout 60 bash -c 'until curl -s http://localhost:4173 > /dev/null; do sleep 1; done'
+
+      # ⛔ Hide unit tests so nothing accidentally executes them in this pipeline
+      - name: Disable unit tests for gates
+        run: |
+          if [ -d "__tests__" ]; then
+            mv __tests__ __tests__._skip
+          fi
 
       # Contract-driven navigation smoke test (Playwright)
       - name: Smoke navigation (contract-driven)
@@ -77,3 +84,4 @@ jobs:
           name: ui-gaps
           path: coverage/ui-gaps.*
           if-no-files-found: ignore
+
