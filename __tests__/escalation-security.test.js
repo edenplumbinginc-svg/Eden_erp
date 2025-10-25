@@ -3,19 +3,28 @@
 
 const crypto = require('crypto');
 const { pool } = require('../services/database');
-const { runEscalationTick, inCanary, generateEventHash } = require('../lib/escalation');
-const { verifyHmac } = require('../lib/hmac');
-const { requireOpsAdmin } = require('../lib/rbac');
+
+// Mock logger to avoid Pino errors in tests
+jest.mock('../lib/logger', () => ({
+  info: jest.fn(),
+  error: jest.fn(),
+  warn: jest.fn(),
+  debug: jest.fn(),
+  security: jest.fn(),
+  query: jest.fn(),
+}));
 
 describe('Escalation Security - Idempotency Tests', () => {
   let testIncidentId;
   let testIncidentKey;
 
   beforeEach(async () => {
-    // Create a test incident (next_due_at is generated automatically)
+    // Create a test incident with first_seen far enough in past to be due
     testIncidentKey = `TEST::idempotency_${Date.now()}`;
-    const firstSeen = new Date(Date.now() - 10 * 60 * 1000);
+    const firstSeen = new Date(Date.now() - 30 * 60 * 1000); // 30 minutes ago
     
+    // For critical incident at L0, next_due_at = first_seen + 5 minutes
+    // So it will be due after 5 minutes
     const result = await pool.query(
       `INSERT INTO incidents (
         incident_key, route, kind, severity, status,
@@ -30,7 +39,7 @@ describe('Escalation Security - Idempotency Tests', () => {
         'open',
         firstSeen,
         new Date(),
-        0,
+        0, // L0, so next_due_at = first_seen + 5 min = 25 min ago (DUE)
       ]
     );
     testIncidentId = result.rows[0].id;
@@ -52,6 +61,9 @@ describe('Escalation Security - Idempotency Tests', () => {
     process.env.ESC_DRY_RUN = 'false';
     process.env.ESC_SNOOZE_MIN = '0'; // Disable snooze for this test
 
+    // Import after setting env vars
+    const { runEscalationTick, generateEventHash } = require('../lib/escalation');
+
     // First escalation - should succeed
     const firstCount = await runEscalationTick();
     expect(firstCount).toBeGreaterThan(0);
@@ -72,6 +84,8 @@ describe('Escalation Security - Idempotency Tests', () => {
     expect(incident.rows[0].escalation_level).toBe(1);
 
     // Second escalation attempt - should detect duplicate and skip
+    // (next_due_at is recalculated to first_seen + (1+1)*5min = first_seen + 10min)
+    // which is 20 minutes ago, so still due
     const secondCount = await runEscalationTick();
     
     // Should still only have 1 event for L1 (idempotency working)
@@ -94,6 +108,13 @@ describe('Escalation Security - Idempotency Tests', () => {
 
 describe('Escalation Security - Canary Rollout Tests', () => {
   test('should consistently select same incidents for canary', () => {
+    // Set a known percentage before importing
+    process.env.ESC_CANARY_PCT = '50';
+    
+    // Clear module cache and re-import
+    delete require.cache[require.resolve('../lib/escalation')];
+    const { inCanary } = require('../lib/escalation');
+    
     const testKey = 'TEST::canary_consistency';
     
     // Call inCanary() 10 times with same key
@@ -108,33 +129,23 @@ describe('Escalation Security - Canary Rollout Tests', () => {
   });
 
   test('should respect canary percentage boundaries', () => {
-    const testKeys = ['TEST::boundary_1', 'TEST::boundary_2', 'TEST::boundary_3'];
-    const originalPct = process.env.ESC_CANARY_PCT;
+    const testKeys = ['TEST::boundary_1', 'TEST::boundary_2', 'TEST::boundary_3', 'TEST::boundary_4', 'TEST::boundary_5'];
 
     // Test with ESC_CANARY_PCT=0 - no incidents should be in canary
     process.env.ESC_CANARY_PCT = '0';
-    
-    // Need to re-require the module to pick up new env variable
     delete require.cache[require.resolve('../lib/escalation')];
     const { inCanary: inCanary0 } = require('../lib/escalation');
     
-    testKeys.forEach(key => {
-      expect(inCanary0(key)).toBe(false);
-    });
+    const canary0Results = testKeys.map(key => inCanary0(key));
+    expect(canary0Results.every(result => result === false)).toBe(true);
 
     // Test with ESC_CANARY_PCT=100 - all incidents should be in canary
     process.env.ESC_CANARY_PCT = '100';
-    
     delete require.cache[require.resolve('../lib/escalation')];
     const { inCanary: inCanary100 } = require('../lib/escalation');
     
-    testKeys.forEach(key => {
-      expect(inCanary100(key)).toBe(true);
-    });
-
-    // Restore original value
-    process.env.ESC_CANARY_PCT = originalPct;
-    delete require.cache[require.resolve('../lib/escalation')];
+    const canary100Results = testKeys.map(key => inCanary100(key));
+    expect(canary100Results.every(result => result === true)).toBe(true);
   });
 });
 
@@ -149,13 +160,6 @@ describe('Escalation Security - Snooze Window Tests', () => {
   });
 
   test('should skip escalation within snooze window', async () => {
-    // Save original values
-    const originalWorkerEnabled = process.env.ESCALATION_WORKER_ENABLED;
-    const originalV1 = process.env.ESCALATION_V1;
-    const originalSnooze = process.env.ESC_SNOOZE_MIN;
-    const originalCanary = process.env.ESC_CANARY_PCT;
-    const originalDryRun = process.env.ESC_DRY_RUN;
-
     // Set feature flags
     process.env.ESCALATION_WORKER_ENABLED = 'true';
     process.env.ESCALATION_V1 = 'true';
@@ -163,13 +167,14 @@ describe('Escalation Security - Snooze Window Tests', () => {
     process.env.ESC_CANARY_PCT = '100';
     process.env.ESC_DRY_RUN = 'false';
 
-    // Re-require module to pick up new env vars
+    // Clear cache and import
     delete require.cache[require.resolve('../lib/escalation')];
     const { runEscalationTick } = require('../lib/escalation');
 
-    // Create incident with escalated_at = 1 minute ago (within snooze window)
+    // Create incident at L1 with escalated_at = 1 minute ago (within snooze window)
+    // first_seen = 60 minutes ago, so next_due_at = first_seen + (1+1)*5min = -50 minutes (DUE)
     const testKey = `TEST::snooze_${Date.now()}`;
-    const firstSeen = new Date(Date.now() - 60 * 60 * 1000); // 1 hour ago
+    const firstSeen = new Date(Date.now() - 60 * 60 * 1000); // 60 minutes ago
     const escalatedAt = new Date(Date.now() - 1 * 60 * 1000); // 1 minute ago
 
     const result = await pool.query(
@@ -186,13 +191,13 @@ describe('Escalation Security - Snooze Window Tests', () => {
         'open',
         firstSeen,
         new Date(),
-        1, // Already at L1
+        1, // L1, so next_due_at = first_seen + 10min = -50 min (DUE)
         escalatedAt,
       ]
     );
     testIncidentId = result.rows[0].id;
 
-    // Run escalation tick - should NOT escalate (within snooze window)
+    // Run escalation tick - should NOT escalate (within 30 min snooze window)
     await runEscalationTick();
     
     // Verify incident is still at L1
@@ -219,14 +224,6 @@ describe('Escalation Security - Snooze Window Tests', () => {
       [testIncidentId]
     );
     expect(incidentAfterSnooze.rows[0].escalation_level).toBe(2);
-
-    // Restore original values
-    process.env.ESCALATION_WORKER_ENABLED = originalWorkerEnabled;
-    process.env.ESCALATION_V1 = originalV1;
-    process.env.ESC_SNOOZE_MIN = originalSnooze;
-    process.env.ESC_CANARY_PCT = originalCanary;
-    process.env.ESC_DRY_RUN = originalDryRun;
-    delete require.cache[require.resolve('../lib/escalation')];
   });
 });
 
@@ -236,11 +233,13 @@ describe('Escalation Security - HMAC Verification Tests', () => {
   let mockNext;
   let originalSecret;
 
-  beforeEach(() => {
+  beforeAll(() => {
     // Set up HMAC secret for testing
     originalSecret = process.env.OPS_HMAC_SECRET;
     process.env.OPS_HMAC_SECRET = 'test-secret-key-for-hmac';
+  });
 
+  beforeEach(() => {
     mockReq = {
       headers: {},
       body: { test: 'data' },
@@ -263,12 +262,16 @@ describe('Escalation Security - HMAC Verification Tests', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  afterAll(() => {
     if (originalSecret) {
       process.env.OPS_HMAC_SECRET = originalSecret;
     }
   });
 
   test('should reject request with invalid HMAC signature', () => {
+    const { verifyHmac } = require('../lib/hmac');
     mockReq.headers['x-signature'] = 'invalid-signature';
 
     verifyHmac(mockReq, mockRes, mockNext);
@@ -284,7 +287,8 @@ describe('Escalation Security - HMAC Verification Tests', () => {
   });
 
   test('should reject request with missing signature', () => {
-    // No x-signature header
+    const { verifyHmac } = require('../lib/hmac');
+    
     verifyHmac(mockReq, mockRes, mockNext);
 
     expect(mockRes.status).toHaveBeenCalledWith(401);
@@ -298,6 +302,7 @@ describe('Escalation Security - HMAC Verification Tests', () => {
   });
 
   test('should accept request with valid HMAC signature', () => {
+    const { verifyHmac } = require('../lib/hmac');
     const body = JSON.stringify(mockReq.body);
     const validSignature = crypto
       .createHmac('sha256', process.env.OPS_HMAC_SECRET)
@@ -314,6 +319,7 @@ describe('Escalation Security - HMAC Verification Tests', () => {
   });
 
   test('should handle empty body correctly', () => {
+    const { verifyHmac } = require('../lib/hmac');
     mockReq.body = {};
     const body = JSON.stringify(mockReq.body);
     const validSignature = crypto
@@ -361,6 +367,7 @@ describe('Escalation Security - RBAC Tests', () => {
   });
 
   test('should deny access to non-ops users', () => {
+    const { requireOpsAdmin } = require('../lib/rbac');
     mockReq.rbac.roles = ['user'];
 
     requireOpsAdmin(mockReq, mockRes, mockNext);
@@ -376,6 +383,7 @@ describe('Escalation Security - RBAC Tests', () => {
   });
 
   test('should deny access to users with no roles', () => {
+    const { requireOpsAdmin } = require('../lib/rbac');
     mockReq.rbac.roles = [];
 
     requireOpsAdmin(mockReq, mockRes, mockNext);
@@ -385,6 +393,7 @@ describe('Escalation Security - RBAC Tests', () => {
   });
 
   test('should allow access to ops_admin users', () => {
+    const { requireOpsAdmin } = require('../lib/rbac');
     mockReq.rbac.roles = ['ops_admin'];
 
     requireOpsAdmin(mockReq, mockRes, mockNext);
@@ -395,6 +404,7 @@ describe('Escalation Security - RBAC Tests', () => {
   });
 
   test('should allow access to users with ops_admin among multiple roles', () => {
+    const { requireOpsAdmin } = require('../lib/rbac');
     mockReq.rbac.roles = ['user', 'ops_admin', 'other_role'];
 
     requireOpsAdmin(mockReq, mockRes, mockNext);
@@ -404,6 +414,7 @@ describe('Escalation Security - RBAC Tests', () => {
   });
 
   test('should deny access to users with similar but incorrect role names', () => {
+    const { requireOpsAdmin } = require('../lib/rbac');
     mockReq.rbac.roles = ['ops', 'admin', 'ops-admin', 'opsadmin'];
 
     requireOpsAdmin(mockReq, mockRes, mockNext);
