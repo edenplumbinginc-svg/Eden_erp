@@ -728,6 +728,82 @@ app.get("/ops/slo", (_req, res) => {
   });
 });
 
+// Velocity → Release Guard: automated deploy safety validation
+app.get("/ops/release-guard", async (req, res) => {
+  // Query flags (all optional):
+  // ?allow_warn=true  -> ignore "warning" alarms (default true)
+  // ?check_regress=false -> ignore p95_regress alarms (default true, i.e., ignored)
+  // ?min_samples=5    -> only consider routes with >= N samples in 1m (default 5)
+  // ?hard_error_pct=20 -> treat error_rate >= this as automatic FAIL (default 20)
+  const allowWarn     = (req.query.allow_warn ?? "true") !== "false";
+  const checkRegress  = (req.query.check_regress ?? "false") === "true";
+  const minSamples    = Number.isFinite(+req.query.min_samples) ? Math.max(0, +req.query.min_samples) : 5;
+  const hardErrPct    = Number.isFinite(+req.query.hard_error_pct) ? Math.max(0, +req.query.hard_error_pct) : 20;
+
+  const snap   = metrics.snapshot();
+  const report = metrics.alarms();
+
+  const consider = new Set(Object.entries(snap.routes || {})
+    .filter(([_, wins]) => (wins["1m"]?.count ?? 0) >= minSamples)
+    .map(([route]) => route));
+
+  const violations = [];
+  for (const a of report.alarms || []) {
+    if (!consider.has(a.route)) continue;
+
+    // Always fail on SLO violations (business-impacting)
+    if (a.kind === "slo_violation") {
+      violations.push({ reason: "slo_violation", route: a.route, evidence: a.evidence });
+      continue;
+    }
+
+    // Fail on critical error-rate alarms
+    if (a.kind === "error_rate" && a.severity === "critical") {
+      violations.push({ reason: "error_rate_critical", route: a.route, evidence: a.evidence });
+      continue;
+    }
+
+    // Optional: fail on regressions if caller requests it
+    if (checkRegress && a.kind === "p95_regress" && a.severity === "critical") {
+      violations.push({ reason: "p95_regression_critical", route: a.route, evidence: a.evidence });
+      continue;
+    }
+
+    // Optionally ignore warnings
+    if (!allowWarn && (a.severity === "warning")) {
+      violations.push({ reason: "warning_alarm", route: a.route, kind: a.kind, evidence: a.evidence });
+    }
+  }
+
+  // Extra hard-stop: if any route's 1m error% >= hardErrPct with enough samples, fail even if no alarm fired yet.
+  for (const [route, wins] of Object.entries(snap.routes || {})) {
+    if (!consider.has(route)) continue;
+    const one = wins["1m"] || {};
+    if ((one.err_rate ?? 0) >= hardErrPct) {
+      violations.push({ reason: "hard_error_threshold", route, evidence: { err_rate_1m: one.err_rate, samples_1m: one.count } });
+    }
+  }
+
+  const payload = {
+    service: "eden-erp-backend",
+    env: snap.env,
+    generated_at: new Date().toISOString(),
+    release: process.env.RELEASE_SHA || null,
+    guard: {
+      allow_warn: allowWarn,
+      check_regress: checkRegress,
+      min_samples: minSamples,
+      hard_error_pct: hardErrPct,
+    },
+    pass: violations.length === 0,
+    violations,
+  };
+
+  res.setHeader("Cache-Control", "no-store");
+  if (payload.pass) return res.status(200).json(payload);
+  return res.status(503).json(payload);
+});
+
 // Velocity → Sentry correlation: deep link to filtered Discover view
 app.get('/ops/sentry-link', (req, res) => {
   const org = process.env.SENTRY_ORG_SLUG || "";
