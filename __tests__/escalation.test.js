@@ -1,16 +1,31 @@
 const { runEscalationTick } = require('../lib/escalation');
 const { pool } = require('../services/database');
 
+/**
+ * Helper: Calculate next escalation due time for tests
+ */
+function calculateNextDueAt(firstSeen, severity, escalationLevel) {
+  const CRIT_SLA_MIN = 5;
+  const WARN_SLA_MIN = 15;
+  const slaMinutes = severity === 'critical' ? CRIT_SLA_MIN : WARN_SLA_MIN;
+  const totalMinutes = slaMinutes * (escalationLevel + 1);
+  const firstSeenDate = new Date(firstSeen);
+  return new Date(firstSeenDate.getTime() + totalMinutes * 60 * 1000);
+}
+
 describe('Incident Escalation', () => {
   let testIncidentId;
 
   beforeAll(async () => {
     // Create a test incident that should be escalated
+    const firstSeen = new Date(Date.now() - 10 * 60 * 1000);
+    const nextDue = calculateNextDueAt(firstSeen, 'critical', 0);
+    
     const result = await pool.query(
       `INSERT INTO incidents (
         incident_key, route, kind, severity, status,
-        first_seen, last_seen, escalation_level, acknowledged_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        first_seen, last_seen, escalation_level, acknowledged_at, next_due_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING id`,
       [
         'TEST::escalation_test',
@@ -18,10 +33,11 @@ describe('Incident Escalation', () => {
         'test',
         'critical',
         'open',
-        new Date(Date.now() - 10 * 60 * 1000), // 10 minutes ago
+        firstSeen,
         new Date(),
         0,
         null, // Not acknowledged
+        nextDue,
       ]
     );
     testIncidentId = result.rows[0].id;
@@ -80,11 +96,14 @@ describe('Incident Escalation', () => {
 
   test('should escalate to higher levels based on time since first_seen', async () => {
     // Create an incident that's been open for a long time and already at L2
+    const firstSeen = new Date(Date.now() - 60 * 60 * 1000); // 60 minutes ago
+    const nextDue = calculateNextDueAt(firstSeen, 'warning', 2); // L2 -> L3
+    
     const oldIncidentResult = await pool.query(
       `INSERT INTO incidents (
         incident_key, route, kind, severity, status,
-        first_seen, last_seen, escalation_level, acknowledged_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        first_seen, last_seen, escalation_level, acknowledged_at, next_due_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING id`,
       [
         'TEST::old_incident',
@@ -92,10 +111,11 @@ describe('Incident Escalation', () => {
         'test',
         'warning',
         'open',
-        new Date(Date.now() - 60 * 60 * 1000), // 60 minutes ago
+        firstSeen,
         new Date(),
         2, // Already at L2
         null,
+        nextDue,
       ]
     );
     const oldIncidentId = oldIncidentResult.rows[0].id;
@@ -121,11 +141,14 @@ describe('Incident Escalation', () => {
     const now = new Date();
     
     // Create a critical incident just past 5-minute SLA
+    const criticalFirstSeen = new Date(now.getTime() - 6 * 60 * 1000);
+    const criticalNextDue = calculateNextDueAt(criticalFirstSeen, 'critical', 0);
+    
     const criticalResult = await pool.query(
       `INSERT INTO incidents (
         incident_key, route, kind, severity, status,
-        first_seen, last_seen, escalation_level, acknowledged_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        first_seen, last_seen, escalation_level, acknowledged_at, next_due_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING id`,
       [
         'TEST::critical_sla',
@@ -133,19 +156,23 @@ describe('Incident Escalation', () => {
         'test',
         'critical',
         'open',
-        new Date(now.getTime() - 6 * 60 * 1000), // 6 minutes ago
+        criticalFirstSeen,
         new Date(),
         0,
         null,
+        criticalNextDue,
       ]
     );
 
     // Create a warning incident just past 15-minute SLA
+    const warningFirstSeen = new Date(now.getTime() - 16 * 60 * 1000);
+    const warningNextDue = calculateNextDueAt(warningFirstSeen, 'warning', 0);
+    
     const warningResult = await pool.query(
       `INSERT INTO incidents (
         incident_key, route, kind, severity, status,
-        first_seen, last_seen, escalation_level, acknowledged_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        first_seen, last_seen, escalation_level, acknowledged_at, next_due_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING id`,
       [
         'TEST::warning_sla',
@@ -153,10 +180,11 @@ describe('Incident Escalation', () => {
         'test',
         'warning',
         'open',
-        new Date(now.getTime() - 16 * 60 * 1000), // 16 minutes ago
+        warningFirstSeen,
         new Date(),
         0,
         null,
+        warningNextDue,
       ]
     );
 
