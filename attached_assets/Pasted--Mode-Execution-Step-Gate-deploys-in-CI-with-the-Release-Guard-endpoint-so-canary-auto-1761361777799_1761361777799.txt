@@ -1,0 +1,57 @@
+[Mode: Execution]
+
+**Step:** Gate deploys in CI with the **Release Guard** endpoint so canary auto-rollbacks on active incidents. *(Ops/CI layer → safety brake)*
+
+**Why it matters:** If there’s any **open critical L≥1** incident in the last 10 minutes, promotion stops and your pipeline rolls back canary automatically.
+
+**Inputs needed:** GitHub Actions access, your staging URL (same app you just validated).
+
+**Command (copy–paste):** Add this step to your canary job in `.github/workflows/deploy.yml` **after** smoke tests and before promote:
+
+```yaml
+      - name: Release Guard (incident gate)
+        env:
+          GUARD_URL: "https://<STAGING_HOST>/ops/release-guard"
+          GUARD_LOOKBACK_MIN: "10"     # only incidents started in last 10m
+          GUARD_MIN_ESC_LEVEL: "1"     # block if L1+
+          GUARD_INCLUDE_WARNING: "false"
+        run: |
+          set -euo pipefail
+          code=$(curl -s -o guard.json -w "%{http_code}" \
+            -H "GUARD_LOOKBACK_MIN:${GUARD_LOOKBACK_MIN}" \
+            -H "GUARD_MIN_ESC_LEVEL:${GUARD_MIN_ESC_LEVEL}" \
+            -H "GUARD_INCLUDE_WARNING:${GUARD_INCLUDE_WARNING}" \
+            "$GUARD_URL" || true)
+          echo "Guard HTTP: $code"
+          cat guard.json || true
+          test "$code" = "200" || (echo "❌ Release Guard failed"; exit 1)
+
+      - name: Auto-rollback on guard fail
+        if: failure()
+        run: |
+          echo "Rolling back canary…"
+          ./scripts/rollback-staging.sh
+          exit 1
+```
+
+**Success check:**
+
+1. Create a blocker:
+
+```bash
+psql "$DATABASE_URL" -c "
+UPDATE incidents
+SET status='open', acknowledged_at=NULL, severity='critical', escalation_level=1,
+    first_seen=now() - interval '6 minutes'
+WHERE id IN (SELECT id FROM incidents ORDER BY random() LIMIT 1);
+"
+```
+
+2. Re-run the canary workflow. It should:
+
+* Call `/ops/release-guard` → get **409** (logged in `guard.json`)
+* Execute **Auto-rollback on guard fail** step
+
+3. Acknowledge/resolve that incident (or wait until it’s not within lookback), re-run pipeline → guard returns **200** and promotion proceeds.
+
+**Next:** wait for user
