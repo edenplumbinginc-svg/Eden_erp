@@ -1,0 +1,154 @@
+Step: Define a “Route → Page Coverage System” so every backend resource and action maps to a real frontend page (no placeholders) and is enforced by CI.
+
+Why it matters: You stop guessing; the app refuses to ship if any required page is missing.
+
+Inputs needed:
+
+Your backend route inventory (OpenAPI openapi.json or your Express routers).
+
+Your permissions matrix (roles → actions).
+
+Your module list (Projects, Tasks, RFQs, Inventory, Timesheets, etc.).
+
+Command:
+
+Create a coverage spec file that becomes the contract:
+
+mkdir -p docs
+cat > docs/ui-contract.yaml << 'YAML'
+# For each API resource, declare the pages the UI must ship with.
+resources:
+  - name: projects
+    routes:
+      - GET   /api/projects
+      - POST  /api/projects
+      - GET   /api/projects/:id
+      - PATCH /api/projects/:id
+    required_pages:
+      - /projects              # list + filters + empty-state
+      - /projects/new          # create form
+      - /projects/[id]         # detail + tabs
+      - /projects/[id]/edit    # edit form
+    required_states:
+      - loading
+      - empty
+      - error
+      - unauthorized
+      - not_found
+    roles:
+      - viewer:   [list, read]
+      - fieldops: [list, read, create]
+      - ops:      [list, read, create, edit]
+      - admin:    [*]
+YAML
+
+
+Add an automated checker that reads your backend and fails CI if a required page is missing. Create scripts/check-ui-coverage.ts:
+
+// scripts/check-ui-coverage.ts
+import fs from "fs";
+import path from "path";
+
+type Contract = {
+  resources: Array<{
+    name: string;
+    required_pages: string[];
+    required_states?: string[];
+  }>;
+};
+
+const root = process.cwd();
+const pagesDir = path.join(root, "apps/ui/src/pages"); // adjust if using /app router
+const appDir = path.join(root, "apps/ui/src/app");     // Next.js App Router
+
+function pageExists(route: string): boolean {
+  // Supports both Pages Router and App Router patterns
+  const pagesRouterPath = path.join(pagesDir, routeToFile(route));
+  const appRouterPath   = path.join(appDir, routeToAppRoute(route));
+  return fs.existsSync(pagesRouterPath) || fs.existsSync(appRouterPath);
+}
+
+function routeToFile(route: string) {
+  // e.g. /projects -> projects/index.tsx; /projects/new -> projects/new.tsx
+  const clean = route.replace(/^\//, "");
+  if (!clean) return "index.tsx";
+  const parts = clean.split("/");
+  const last  = parts[parts.length - 1];
+  if (last.startsWith("[")) {
+    // dynamic: map to directory/index.tsx for pages router
+    return path.join(...parts, "index.tsx");
+  }
+  // if last is folder, add index.tsx
+  return parts.length === 1 ? path.join(parts[0], "index.tsx") : `${clean}.tsx`;
+}
+
+function routeToAppRoute(route: string) {
+  // App Router: /projects -> projects/page.tsx; /projects/[id] -> projects/[id]/page.tsx
+  const clean = route.replace(/^\//, "");
+  if (!clean) return "page.tsx";
+  const file = path.join(clean, "page.tsx");
+  return file;
+}
+
+function main() {
+  const contractPath = path.join(root, "docs/ui-contract.yaml");
+  if (!fs.existsSync(contractPath)) {
+    console.error("❌ Missing docs/ui-contract.yaml");
+    process.exit(1);
+  }
+  const yaml = require("js-yaml");
+  const doc = fs.readFileSync(contractPath, "utf8");
+  const contract = yaml.load(doc) as Contract;
+
+  const missing: Array<{resource: string; route: string}> = [];
+
+  for (const res of contract.resources) {
+    for (const route of res.required_pages) {
+      if (!pageExists(route)) missing.push({ resource: res.name, route });
+    }
+  }
+
+  if (missing.length) {
+    console.error("❌ UI coverage check failed. Missing pages:");
+    for (const m of missing) console.error(`   - ${m.resource}: ${m.route}`);
+    process.exit(1);
+  }
+  console.log("✅ UI coverage satisfied for all declared resources.");
+}
+
+main();
+
+
+Wire it to npm scripts and CI:
+
+npm i -w apps/ui js-yaml --save-dev
+jq '.scripts["check:ui"]="tsx scripts/check-ui-coverage.ts"' package.json | sponge package.json
+# or manually add:
+#  "scripts": { "check:ui": "tsx scripts/check-ui-coverage.ts" }
+
+
+In your GitHub Actions (or Replit CI), add a step:
+
+- name: UI coverage
+  run: npm run check:ui
+
+
+Generate the resources section automatically from your backend so the contract stays honest. If you already expose OpenAPI:
+
+# export your openapi.json to ./docs/openapi.json (Swagger/Redoc setup)
+node scripts/generate-ui-contract-from-openapi.js
+
+
+If not, add a quick Express route-dumper and feed it into the contract (I’ll tailor this once I see your apps/api/src/routes/*.ts).
+
+Success check:
+
+Running npm run check:ui prints “✅ UI coverage satisfied…”.
+
+Breaking it (delete a page) turns CI red with a list of exactly which pages are missing.
+
+Next: wait for user
+
+—
+
+Small training nugget: Treat pages as “obligations” derived from API and roles. When obligations are executable (CI-enforced), the system polices itself and dummies can’t sneak in. If you paste your routes folder (or openapi.json), I’ll auto-generate the first ui-contract.yaml and the exact required page list for EDEN’s modules.
