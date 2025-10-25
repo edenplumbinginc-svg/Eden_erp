@@ -28,6 +28,8 @@ Core modules include `coordination` (projects, tasks, comments, attachments) and
 
 **Incident Escalation Worker**: Runs every 60 seconds to automatically bump escalation levels for unacknowledged incidents based on SLA thresholds; sends Slack notifications with incident details and Velocity Dashboard deep links for each escalation event.
 
+**Release Guard API** (`/ops/release-guard`): Automated deployment gating endpoint for CI/CD pipelines that blocks deployments (returns HTTP 503) when critical incidents at escalation level ≥1 are detected within a configurable time window (default: 10 minutes). Integrated into GitHub Actions workflow with auto-rollback on failure, preventing bad releases from reaching production.
+
 ### System Design Choices
 The project adopts a monolithic architecture with a scalable PostgreSQL database. It emphasizes observability through monitoring, logging, and health checks, and is designed for security with enforced authentication and multi-layered database validation. An `autosync.sh` script automates Git commits and pushes.
 
