@@ -455,34 +455,55 @@ export const taskChecklistItems = pgTable("task_checklist_items", {
 ]);
 
 export const performanceEvents = pgTable("performance_events", {
-	id: uuid().defaultRandom().primaryKey().notNull(),
-	actorId: uuid("actor_id").notNull(),
-	actorEmail: text("actor_email"),
-	taskId: uuid("task_id").notNull(),
-	checklistItemId: uuid("checklist_item_id").notNull(),
-	action: text().notNull(),
-	startedAt: timestamp("started_at", { withTimezone: true, mode: 'string' }).notNull(),
-	finishedAt: timestamp("finished_at", { withTimezone: true, mode: 'string' }).notNull(),
-	durationMs: bigint("duration_ms", { mode: "number" }).notNull(),
-	department: text(),
-	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+        id: uuid().defaultRandom().primaryKey().notNull(),
+        actorId: uuid("actor_id").notNull(),
+        actorEmail: text("actor_email"),
+        taskId: uuid("task_id").notNull(),
+        checklistItemId: uuid("checklist_item_id").notNull(),
+        action: text().notNull(),
+        startedAt: timestamp("started_at", { withTimezone: true, mode: 'string' }).notNull(),
+        finishedAt: timestamp("finished_at", { withTimezone: true, mode: 'string' }).notNull(),
+        durationMs: bigint("duration_ms", { mode: "number" }).notNull(),
+        department: text(),
+        createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 }, (table) => [
-	foreignKey({
-			columns: [table.actorId],
-			foreignColumns: [users.id],
-			name: "performance_events_actor_id_fkey"
-	}),
-	foreignKey({
-			columns: [table.taskId],
-			foreignColumns: [tasks.id],
-			name: "performance_events_task_id_fkey"
-	}),
-	foreignKey({
-			columns: [table.checklistItemId],
-			foreignColumns: [taskChecklistItems.id],
-			name: "performance_events_checklist_item_id_fkey"
-	}).onDelete("cascade"),
-	index("perf_events_actor_time_idx").using("btree", table.actorId.asc().nullsLast(), table.createdAt.desc().nullsFirst()),
-	index("perf_events_task_idx").using("btree", table.taskId.asc().nullsLast()),
-	index("perf_events_action_idx").using("btree", table.action.asc().nullsLast()),
+        foreignKey({
+                        columns: [table.actorId],
+                        foreignColumns: [users.id],
+                        name: "performance_events_actor_id_fkey"
+        }),
+        foreignKey({
+                        columns: [table.taskId],
+                        foreignColumns: [tasks.id],
+                        name: "performance_events_task_id_fkey"
+        }),
+        foreignKey({
+                        columns: [table.checklistItemId],
+                        foreignColumns: [taskChecklistItems.id],
+                        name: "performance_events_checklist_item_id_fkey"
+        }).onDelete("cascade"),
+        index("perf_events_actor_time_idx").using("btree", table.actorId.asc().nullsLast(), table.createdAt.desc().nullsFirst()),
+        index("perf_events_task_idx").using("btree", table.taskId.asc().nullsLast()),
+        index("perf_events_action_idx").using("btree", table.action.asc().nullsLast()),
+]);
+
+export const incidents = pgTable("incidents", {
+        id: uuid().defaultRandom().primaryKey().notNull(),
+        incidentKey: text("incident_key").notNull(),
+        route: text().notNull(),
+        kind: text().notNull(),
+        severity: text().notNull(),
+        status: text().default('open').notNull(),
+        firstSeen: timestamp("first_seen", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+        lastSeen: timestamp("last_seen", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+        acknowledgedBy: text("acknowledged_by"),
+        acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true, mode: 'string' }),
+        escalationLevel: integer("escalation_level").default(0).notNull(),
+        escalatedAt: timestamp("escalated_at", { withTimezone: true, mode: 'string' }),
+        owner: jsonb().default(null),
+        metadata: jsonb().default({}).notNull(),
+}, (table) => [
+        index("idx_incidents_key").using("btree", table.incidentKey.asc().nullsLast()),
+        index("idx_incidents_status").using("btree", table.status.asc().nullsLast()),
+        index("idx_incidents_route_kind").using("btree", table.route.asc().nullsLast(), table.kind.asc().nullsLast()),
 ]);
