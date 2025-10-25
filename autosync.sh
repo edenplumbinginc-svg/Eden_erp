@@ -36,17 +36,33 @@ fi
 while true; do
   cd ~/workspace 2>/dev/null || cd .
   
+  # Re-fetch token each cycle (in case it expires)
+  GITHUB_TOKEN=$(node ~/workspace/get-github-token.js 2>/dev/null)
+  
+  if [[ -z "$GITHUB_TOKEN" ]]; then
+    echo "[AUTOSYNC] ⚠️ GitHub token unavailable — skipping this cycle"
+    sleep 300
+    continue
+  fi
+  
+  # Get current remote URL and branch
+  REPO_URL=$(git config --get remote.origin.url | sed 's|https://||' | sed 's|\.git$||')
+  BRANCH=$(git branch --show-current)
+  
+  # Construct authenticated URL (GitHub format with token only)
+  AUTH_URL="https://${GITHUB_TOKEN}@${REPO_URL}.git"
+  
   # Pull first to sync any remote changes
   echo "[AUTOSYNC] 🔃 Checking for remote changes..."
-  git fetch origin main 2>/dev/null || git fetch origin master 2>/dev/null || true
+  git fetch "$AUTH_URL" "$BRANCH" 2>/dev/null || true
   
   # Check if we're behind remote
-  LOCAL=$(git rev-parse @)
+  LOCAL=$(git rev-parse @ 2>/dev/null || echo "")
   REMOTE=$(git rev-parse @{u} 2>/dev/null || echo "$LOCAL")
   
-  if [ "$LOCAL" != "$REMOTE" ]; then
+  if [[ -n "$LOCAL" && "$LOCAL" != "$REMOTE" ]]; then
     echo "[AUTOSYNC] ⬇️ Pulling changes from GitHub..."
-    git pull --rebase || echo "[AUTOSYNC] ⚠️ Pull failed (may have conflicts)"
+    git pull --rebase "$AUTH_URL" "$BRANCH" 2>/dev/null || echo "[AUTOSYNC] ⚠️ Pull failed (may have conflicts)"
   fi
   
   # Detect uncommitted changes
@@ -54,7 +70,13 @@ while true; do
     echo "[AUTOSYNC] 🔄 Changes detected — committing and pushing to GitHub..."
     git add -A
     git commit -m "Auto-sync from Replit $(date '+%Y-%m-%d %H:%M:%S')" || true
-    git push origin main || git push origin master || echo "[AUTOSYNC] ⚠️ Push failed — check auth."
+    
+    echo "[AUTOSYNC] 📤 Pushing to GitHub..."
+    if git push "$AUTH_URL" "$BRANCH" 2>&1; then
+      echo "[AUTOSYNC] ✅ Successfully pushed to GitHub!"
+    else
+      echo "[AUTOSYNC] ⚠️ Push failed — check repository access or token permissions"
+    fi
   else
     echo "[AUTOSYNC] ✅ No changes to sync at $(date '+%H:%M:%S')"
   fi
