@@ -1,0 +1,694 @@
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 8
+
+    - Array []
+    + Array [
+    +   "Error loading projects: ue",
+    +   "Error response: {data: , status: 500, statusText: Internal Server Error, headers: hr, config: Object}",
+    +   "Failed to load users: ue",
+    +   "Failed to load permissions: ue",
+    +   "Failed to load permissions: ue",
+    +   "Failed to load permissions: ue",
+    + ]
+
+      162 |         !e.includes('status of 503')
+      163 |       );
+    > 164 |       expect(realConsoleErrors, `JS/React errors on ${urlPath}`).toEqual([]);
+          |                                                                  ^
+      165 |       
+      166 |       // Network failures (DNS, connection refused) are always bad
+      167 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:164:66
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--29932--Smoke-Test-renders-reports-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/smoke-nav-Contract-Routes--29932--Smoke-Test-renders-reports-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--29932--Smoke-Test-renders-reports-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--29932--Smoke-Test-renders-reports-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: JS/React errors on /reports
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 8
+
+    - Array []
+    + Array [
+    +   "Error loading projects: ue",
+    +   "Error response: {data: , status: 500, statusText: Internal Server Error, headers: hr, config: Object}",
+    +   "Failed to load users: ue",
+    +   "Failed to load permissions: ue",
+    +   "Failed to load permissions: ue",
+    +   "Failed to load permissions: ue",
+    + ]
+
+      162 |         !e.includes('status of 503')
+      163 |       );
+    > 164 |       expect(realConsoleErrors, `JS/React errors on ${urlPath}`).toEqual([]);
+          |                                                                  ^
+      165 |       
+      166 |       // Network failures (DNS, connection refused) are always bad
+      167 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:164:66
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--29932--Smoke-Test-renders-reports-chromium-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/smoke-nav-Contract-Routes--29932--Smoke-Test-renders-reports-chromium-retry1/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--29932--Smoke-Test-renders-reports-chromium-retry1/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--29932--Smoke-Test-renders-reports-chromium-retry1/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  18) [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /request-project 
+
+    Error: JS/React errors on /request-project
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 8
+
+    - Array []
+    + Array [
+    +   "Error loading projects: ue",
+    +   "Error response: {data: , status: 500, statusText: Internal Server Error, headers: hr, config: Object}",
+    +   "Failed to load users: ue",
+    +   "Failed to load permissions: ue",
+    +   "Failed to load permissions: ue",
+    +   "Failed to load permissions: ue",
+    + ]
+
+      162 |         !e.includes('status of 503')
+      163 |       );
+    > 164 |       expect(realConsoleErrors, `JS/React errors on ${urlPath}`).toEqual([]);
+          |                                                                  ^
+      165 |       
+      166 |       // Network failures (DNS, connection refused) are always bad
+      167 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:164:66
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--15381-est-renders-request-project-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/smoke-nav-Contract-Routes--15381-est-renders-request-project-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--15381-est-renders-request-project-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--15381-est-renders-request-project-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: JS/React errors on /request-project
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 8
+
+    - Array []
+    + Array [
+    +   "Error loading projects: ue",
+    +   "Error response: {data: , status: 500, statusText: Internal Server Error, headers: hr, config: Object}",
+    +   "Failed to load users: ue",
+    +   "Failed to load permissions: ue",
+    +   "Failed to load permissions: ue",
+    +   "Failed to load permissions: ue",
+    + ]
+
+      162 |         !e.includes('status of 503')
+      163 |       );
+    > 164 |       expect(realConsoleErrors, `JS/React errors on ${urlPath}`).toEqual([]);
+          |                                                                  ^
+      165 |       
+      166 |       // Network failures (DNS, connection refused) are always bad
+      167 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:164:66
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--15381-est-renders-request-project-chromium-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/smoke-nav-Contract-Routes--15381-est-renders-request-project-chromium-retry1/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--15381-est-renders-request-project-chromium-retry1/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--15381-est-renders-request-project-chromium-retry1/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  19) [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /signup 
+
+    Error: console errors on /signup -> http://localhost:4173/signup
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 17
+
+    - Array []
+    + Array [
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Error loading projects: ue",
+    +   "Error response: {data: , status: 500, statusText: Internal Server Error, headers: hr, config: Object}",
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Failed to load users: ue",
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Failed to load permissions: ue",
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Failed to load permissions: ue",
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    + ]
+
+      127 |           .first()).toBeVisible();
+      128 |         // Still check there were no console errors loading the login page
+    > 129 |         expect(consoleErrors, `console errors on ${urlPath} -> ${finalUrl}`).toEqual([]);
+          |                                                                              ^
+      130 |         // 401/403 are expected when redirected to login, so filter them out
+      131 |         const httpErrorsFiltered = httpErrors.filter(e => e.status !== 401 && e.status !== 403);
+      132 |         expect(httpErrorsFiltered, `HTTP errors on ${urlPath} (excluding auth)`).toEqual([]);
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:129:78
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--64787-n-Smoke-Test-renders-signup-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/smoke-nav-Contract-Routes--64787-n-Smoke-Test-renders-signup-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--64787-n-Smoke-Test-renders-signup-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--64787-n-Smoke-Test-renders-signup-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: console errors on /signup -> http://localhost:4173/signup
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 13
+
+    - Array []
+    + Array [
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Error loading projects: ue",
+    +   "Error response: {data: , status: 500, statusText: Internal Server Error, headers: hr, config: Object}",
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Failed to load users: ue",
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Failed to load permissions: ue",
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    +   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+    + ]
+
+      127 |           .first()).toBeVisible();
+      128 |         // Still check there were no console errors loading the login page
+    > 129 |         expect(consoleErrors, `console errors on ${urlPath} -> ${finalUrl}`).toEqual([]);
+          |                                                                              ^
+      130 |         // 401/403 are expected when redirected to login, so filter them out
+      131 |         const httpErrorsFiltered = httpErrors.filter(e => e.status !== 401 && e.status !== 403);
+      132 |         expect(httpErrorsFiltered, `HTTP errors on ${urlPath} (excluding auth)`).toEqual([]);
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:129:78
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--64787-n-Smoke-Test-renders-signup-chromium-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/smoke-nav-Contract-Routes--64787-n-Smoke-Test-renders-signup-chromium-retry1/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--64787-n-Smoke-Test-renders-signup-chromium-retry1/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--64787-n-Smoke-Test-renders-signup-chromium-retry1/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  20) [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /task/123 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('h1, h2, h3, [role="heading"], [data-state="loading"], [data-state="error"], [data-state="unauthorized"], [data-state="empty"], [data-state="not_found"]').first()
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for locator('h1, h2, h3, [role="heading"], [data-state="loading"], [data-state="error"], [data-state="unauthorized"], [data-state="empty"], [data-state="not_found"]').first()
+
+
+      137 |       // Otherwise, the route must render something meaningful and stable.
+      138 |       const firstMatch = page.locator(selectors).first();
+    > 139 |       await expect(firstMatch).toBeVisible();
+          |                                ^
+      140 |
+      141 |       // If an explicit heading expectation exists, assert it (prefix match allowed).
+      142 |       const exp = EXPECT.get(route);
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:139:32
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--34fc0-Smoke-Test-renders-task-123-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/smoke-nav-Contract-Routes--34fc0-Smoke-Test-renders-task-123-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--34fc0-Smoke-Test-renders-task-123-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--34fc0-Smoke-Test-renders-task-123-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('h1, h2, h3, [role="heading"], [data-state="loading"], [data-state="error"], [data-state="unauthorized"], [data-state="empty"], [data-state="not_found"]').first()
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for locator('h1, h2, h3, [role="heading"], [data-state="loading"], [data-state="error"], [data-state="unauthorized"], [data-state="empty"], [data-state="not_found"]').first()
+
+
+      137 |       // Otherwise, the route must render something meaningful and stable.
+      138 |       const firstMatch = page.locator(selectors).first();
+    > 139 |       await expect(firstMatch).toBeVisible();
+          |                                ^
+      140 |
+      141 |       // If an explicit heading expectation exists, assert it (prefix match allowed).
+      142 |       const exp = EXPECT.get(route);
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:139:32
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--34fc0-Smoke-Test-renders-task-123-chromium-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/smoke-nav-Contract-Routes--34fc0-Smoke-Test-renders-task-123-chromium-retry1/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--34fc0-Smoke-Test-renders-task-123-chromium-retry1/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--34fc0-Smoke-Test-renders-task-123-chromium-retry1/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  21) [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /tasks-delta 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('h1, h2, h3, [role="heading"], [data-state="loading"], [data-state="error"], [data-state="unauthorized"], [data-state="empty"], [data-state="not_found"]').first()
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for locator('h1, h2, h3, [role="heading"], [data-state="loading"], [data-state="error"], [data-state="unauthorized"], [data-state="empty"], [data-state="not_found"]').first()
+
+
+      137 |       // Otherwise, the route must render something meaningful and stable.
+      138 |       const firstMatch = page.locator(selectors).first();
+    > 139 |       await expect(firstMatch).toBeVisible();
+          |                                ^
+      140 |
+      141 |       // If an explicit heading expectation exists, assert it (prefix match allowed).
+      142 |       const exp = EXPECT.get(route);
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:139:32
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--bf14c-ke-Test-renders-tasks-delta-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/smoke-nav-Contract-Routes--bf14c-ke-Test-renders-tasks-delta-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--bf14c-ke-Test-renders-tasks-delta-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--bf14c-ke-Test-renders-tasks-delta-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('h1, h2, h3, [role="heading"], [data-state="loading"], [data-state="error"], [data-state="unauthorized"], [data-state="empty"], [data-state="not_found"]').first()
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for locator('h1, h2, h3, [role="heading"], [data-state="loading"], [data-state="error"], [data-state="unauthorized"], [data-state="empty"], [data-state="not_found"]').first()
+
+
+      137 |       // Otherwise, the route must render something meaningful and stable.
+      138 |       const firstMatch = page.locator(selectors).first();
+    > 139 |       await expect(firstMatch).toBeVisible();
+          |                                ^
+      140 |
+      141 |       // If an explicit heading expectation exists, assert it (prefix match allowed).
+      142 |       const exp = EXPECT.get(route);
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:139:32
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--bf14c-ke-Test-renders-tasks-delta-chromium-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/smoke-nav-Contract-Routes--bf14c-ke-Test-renders-tasks-delta-chromium-retry1/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--bf14c-ke-Test-renders-tasks-delta-chromium-retry1/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--bf14c-ke-Test-renders-tasks-delta-chromium-retry1/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  22) [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /tasks/new 
+
+    Error: JS/React errors on /tasks/new
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 8
+
+    - Array []
+    + Array [
+    +   "Error loading projects: ue",
+    +   "Error response: {data: , status: 500, statusText: Internal Server Error, headers: hr, config: Object}",
+    +   "Failed to load users: ue",
+    +   "Failed to load permissions: ue",
+    +   "Failed to load permissions: ue",
+    +   "Failed to load permissions: ue",
+    + ]
+
+      162 |         !e.includes('status of 503')
+      163 |       );
+    > 164 |       expect(realConsoleErrors, `JS/React errors on ${urlPath}`).toEqual([]);
+          |                                                                  ^
+      165 |       
+      166 |       // Network failures (DNS, connection refused) are always bad
+      167 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:164:66
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--967ef-moke-Test-renders-tasks-new-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/smoke-nav-Contract-Routes--967ef-moke-Test-renders-tasks-new-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--967ef-moke-Test-renders-tasks-new-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--967ef-moke-Test-renders-tasks-new-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: JS/React errors on /tasks/new
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 8
+
+    - Array []
+    + Array [
+    +   "Error loading projects: ue",
+    +   "Error response: {data: , status: 500, statusText: Internal Server Error, headers: hr, config: Object}",
+    +   "Failed to load users: ue",
+    +   "Failed to load permissions: ue",
+    +   "Failed to load permissions: ue",
+    +   "Failed to load permissions: ue",
+    + ]
+
+      162 |         !e.includes('status of 503')
+      163 |       );
+    > 164 |       expect(realConsoleErrors, `JS/React errors on ${urlPath}`).toEqual([]);
+          |                                                                  ^
+      165 |       
+      166 |       // Network failures (DNS, connection refused) are always bad
+      167 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:164:66
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--967ef-moke-Test-renders-tasks-new-chromium-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/smoke-nav-Contract-Routes--967ef-moke-Test-renders-tasks-new-chromium-retry1/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--967ef-moke-Test-renders-tasks-new-chromium-retry1/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--967ef-moke-Test-renders-tasks-new-chromium-retry1/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  23) [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /team 
+
+    Error: JS/React errors on /team
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 9
+
+    - Array []
+    + Array [
+    +   "Error loading projects: ue",
+    +   "Error response: {data: , status: 500, statusText: Internal Server Error, headers: hr, config: Object}",
+    +   "Failed to load users: ue",
+    +   "Failed to load permissions: ue",
+    +   "Failed to load permissions: ue",
+    +   "Failed to load permissions: ue",
+    +   "Failed to fetch users: ue",
+    + ]
+
+      162 |         !e.includes('status of 503')
+      163 |       );
+    > 164 |       expect(realConsoleErrors, `JS/React errors on ${urlPath}`).toEqual([]);
+          |                                                                  ^
+      165 |       
+      166 |       // Network failures (DNS, connection refused) are always bad
+      167 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:164:66
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--cf7e9-ion-Smoke-Test-renders-team-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/smoke-nav-Contract-Routes--cf7e9-ion-Smoke-Test-renders-team-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--cf7e9-ion-Smoke-Test-renders-team-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--cf7e9-ion-Smoke-Test-renders-team-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: JS/React errors on /team
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 9
+
+    - Array []
+    + Array [
+    +   "Error loading projects: ue",
+    +   "Error response: {data: , status: 500, statusText: Internal Server Error, headers: hr, config: Object}",
+    +   "Failed to load users: ue",
+    +   "Failed to load permissions: ue",
+    +   "Failed to load permissions: ue",
+    +   "Failed to load permissions: ue",
+    +   "Failed to fetch users: ue",
+    + ]
+
+      162 |         !e.includes('status of 503')
+      163 |       );
+    > 164 |       expect(realConsoleErrors, `JS/React errors on ${urlPath}`).toEqual([]);
+          |                                                                  ^
+      165 |       
+      166 |       // Network failures (DNS, connection refused) are always bad
+      167 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:164:66
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--cf7e9-ion-Smoke-Test-renders-team-chromium-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/smoke-nav-Contract-Routes--cf7e9-ion-Smoke-Test-renders-team-chromium-retry1/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--cf7e9-ion-Smoke-Test-renders-team-chromium-retry1/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--cf7e9-ion-Smoke-Test-renders-team-chromium-retry1/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  24) [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /velocity 
+
+    Error: JS/React errors on /velocity
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 8
+
+    - Array []
+    + Array [
+    +   "Error loading projects: ue",
+    +   "Error response: {data: , status: 500, statusText: Internal Server Error, headers: hr, config: Object}",
+    +   "Failed to load users: ue",
+    +   "Failed to load permissions: ue",
+    +   "Failed to load permissions: ue",
+    +   "Failed to load permissions: ue",
+    + ]
+
+      162 |         !e.includes('status of 503')
+      163 |       );
+    > 164 |       expect(realConsoleErrors, `JS/React errors on ${urlPath}`).toEqual([]);
+          |                                                                  ^
+      165 |       
+      166 |       // Network failures (DNS, connection refused) are always bad
+      167 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:164:66
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--4cb53-Smoke-Test-renders-velocity-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/smoke-nav-Contract-Routes--4cb53-Smoke-Test-renders-velocity-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--4cb53-Smoke-Test-renders-velocity-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--4cb53-Smoke-Test-renders-velocity-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: JS/React errors on /velocity
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 8
+
+    - Array []
+    + Array [
+    +   "Error loading projects: ue",
+    +   "Error response: {data: , status: 500, statusText: Internal Server Error, headers: hr, config: Object}",
+    +   "Failed to load users: ue",
+    +   "Failed to load permissions: ue",
+    +   "Failed to load permissions: ue",
+    +   "Failed to load permissions: ue",
+    + ]
+
+      162 |         !e.includes('status of 503')
+      163 |       );
+    > 164 |       expect(realConsoleErrors, `JS/React errors on ${urlPath}`).toEqual([]);
+          |                                                                  ^
+      165 |       
+      166 |       // Network failures (DNS, connection refused) are always bad
+      167 |       const hardFailures = failedRequests.filter(fr => !/ (net::ERR|blocked)/i.test(fr.errorText || ''));
+        at /home/runner/work/Eden_erp/Eden_erp/tests/smoke-nav.spec.cjs:164:66
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--4cb53-Smoke-Test-renders-velocity-chromium-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/smoke-nav-Contract-Routes--4cb53-Smoke-Test-renders-velocity-chromium-retry1/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/smoke-nav-Contract-Routes--4cb53-Smoke-Test-renders-velocity-chromium-retry1/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/smoke-nav-Contract-Routes--4cb53-Smoke-Test-renders-velocity-chromium-retry1/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  24 failed
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /admin/court-flow 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /admin/decisions 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /admin/rbac 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /alltasks 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /archive 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /audit-log 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /dashboard 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /guest 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /incidents 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /incidents/123 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /intake 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /leaderboard 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /login 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /profile 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /project/123 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /projects-delta 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /reports 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /request-project 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /signup 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /task/123 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /tasks-delta 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /tasks/new 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /team 
+    [chromium] › tests/smoke-nav.spec.cjs:63:5 › Contract Routes - Navigation Smoke Test › renders /velocity 
+  2 passed (1.9m)
+Error: Process completed with exit code 1.
+0s
+2s

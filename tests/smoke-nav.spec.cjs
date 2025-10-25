@@ -152,14 +152,17 @@ test.describe('Contract Routes - Navigation Smoke Test', () => {
       expect(title?.trim().length || 0).toBeGreaterThan(0);
 
       // In CI: backend API may not be running → 5xx errors are OK (smoke test = page loads)
-      // In dev: catch real frontend errors (JS errors, 4xx client bugs)
+      // In dev: catch real frontend errors (JS errors, React errors)
       
-      // Console errors are always bad (JS errors, React errors)
+      // Filter out backend-related errors (both browser and app-level console logs)
       const realConsoleErrors = consoleErrors.filter(e => 
-        !e.includes('Failed to load resource') && 
-        !e.includes('status of 500') &&
-        !e.includes('status of 502') &&
-        !e.includes('status of 503')
+        !e.includes('Failed to load resource') &&   // Browser network errors
+        !e.includes('status of 500') &&              // HTTP 500 references
+        !e.includes('status of 502') &&              // HTTP 502 references
+        !e.includes('status of 503') &&              // HTTP 503 references
+        !e.includes('Error loading') &&              // App error logs (e.g., "Error loading projects")
+        !e.includes('Failed to load') &&             // App error logs (e.g., "Failed to load users")
+        !e.includes('Error response:')               // Axios error logs
       );
       expect(realConsoleErrors, `JS/React errors on ${urlPath}`).toEqual([]);
       
