@@ -1,9 +1,9 @@
-const { runEscalationTick } = require('../lib/escalation');
-const { pool } = require('../services/database');
-
 process.env.ESCALATION_WORKER_ENABLED = 'true';
 process.env.ESCALATION_V1 = 'true';
 process.env.ESC_CANARY_PCT = '100';
+
+const { runEscalationTick } = require('../lib/escalation');
+const { pool } = require('../services/database');
 
 describe('Incident Escalation', () => {
   let testIncidentId;
@@ -16,7 +16,7 @@ describe('Incident Escalation', () => {
         incident_key, route, kind, severity, status,
         first_seen, last_seen, escalation_level, acknowledged_at
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      RETURNING id, next_due_at`,
+      RETURNING id`,
       [
         'TEST::escalation_test',
         'TEST /escalation',
@@ -30,9 +30,6 @@ describe('Incident Escalation', () => {
       ]
     );
     testIncidentId = result.rows[0].id;
-    console.log('[TEST] Created incident with next_due_at:', result.rows[0].next_due_at);
-    console.log('[TEST] Current time:', new Date().toISOString());
-    console.log('[TEST] first_seen:', firstSeen.toISOString());
   });
 
   afterAll(async () => {
@@ -42,16 +39,7 @@ describe('Incident Escalation', () => {
   });
 
   test('should escalate unacknowledged critical incident after SLA breach', async () => {
-    const debugQuery = await pool.query(
-      `SELECT id, incident_key, severity, escalation_level, acknowledged_at, next_due_at, 
-              now() as current_time, now() >= next_due_at as should_escalate
-       FROM incidents WHERE id = $1`,
-      [testIncidentId]
-    );
-    console.log('[TEST] Before escalation:', debugQuery.rows[0]);
-    
     const escalatedCount = await runEscalationTick();
-    console.log('[TEST] Escalated count:', escalatedCount);
     
     expect(escalatedCount).toBeGreaterThan(0);
 
