@@ -13,9 +13,19 @@ echo "[AUTOSYNC] Will check for changes every 5 minutes"
 git config --global user.email "eden-erp-bot@edenplumbing.com"
 git config --global user.name "Eden ERP Auto-Sync"
 
-# Fetch GitHub token from Replit integration
-echo "[AUTOSYNC] 🔑 Fetching GitHub token from Replit integration..."
-GITHUB_TOKEN=$(node ~/workspace/get-github-token.js 2>/dev/null)
+# Fetch GitHub token from secrets or Replit integration
+echo "[AUTOSYNC] 🔑 Fetching GitHub token..."
+
+# Try secret first, then fall back to Replit integration
+if [[ -n "$GITHUB_AUTO_SYNC_TOKEN" ]]; then
+  GITHUB_TOKEN="$GITHUB_AUTO_SYNC_TOKEN"
+  echo "[AUTOSYNC] ✓ Using GitHub token from secrets"
+else
+  GITHUB_TOKEN=$(node ~/workspace/get-github-token.js 2>/dev/null)
+  if [[ -n "$GITHUB_TOKEN" ]]; then
+    echo "[AUTOSYNC] ✓ Using GitHub token from Replit integration"
+  fi
+fi
 
 # Configure Git to use token authentication
 if [[ -n "$GITHUB_TOKEN" ]]; then
@@ -26,18 +36,22 @@ if [[ -n "$GITHUB_TOKEN" ]]; then
   echo "https://oauth2:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
   chmod 600 ~/.git-credentials
   
-  echo "[AUTOSYNC] ✓ GitHub token configured from Replit integration"
+  echo "[AUTOSYNC] ✓ GitHub token configured successfully"
 else
   echo "[AUTOSYNC] ⚠️ GitHub token not available — pushes may fail"
-  echo "[AUTOSYNC] ⚠️ Make sure GitHub integration is connected"
+  echo "[AUTOSYNC] ⚠️ Add GITHUB_AUTO_SYNC_TOKEN secret or connect GitHub integration"
   echo "[AUTOSYNC] ⚠️ Auto-sync will continue but pushes will fail"
 fi
 
 while true; do
   cd ~/workspace 2>/dev/null || cd .
   
-  # Re-fetch token each cycle (in case it expires)
-  GITHUB_TOKEN=$(node ~/workspace/get-github-token.js 2>/dev/null)
+  # Re-fetch token each cycle (in case it expires or changes)
+  if [[ -n "$GITHUB_AUTO_SYNC_TOKEN" ]]; then
+    GITHUB_TOKEN="$GITHUB_AUTO_SYNC_TOKEN"
+  else
+    GITHUB_TOKEN=$(node ~/workspace/get-github-token.js 2>/dev/null)
+  fi
   
   if [[ -z "$GITHUB_TOKEN" ]]; then
     echo "[AUTOSYNC] ⚠️ GitHub token unavailable — skipping this cycle"
