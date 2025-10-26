@@ -36,6 +36,7 @@ import IncidentsPage from './pages/IncidentsPage';
 import IncidentDetail from './pages/IncidentDetail';
 import ShowcasePage from './pages/ShowcasePage';
 import AboutEden from './pages/AboutEden';
+import StyleguidePage from './pages/StyleguidePage';
 import { ThemeProvider } from './components/ThemeProvider';
 
 const queryClient = new QueryClient();
@@ -340,6 +341,14 @@ function AppContent() {
                   element={
                     <RequireAuth>
                       <ShowcasePage />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/styleguide" 
+                  element={
+                    <RequireAuth>
+                      <StyleguidePage />
                     </RequireAuth>
                   } 
                 />

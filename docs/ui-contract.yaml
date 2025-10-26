@@ -180,3 +180,24 @@ resources:
       - /request-project  # Maps to ProjectRequestForm.jsx
     required_states: [loading, error, unauthorized]
     notes: "Project request form"
+
+  - name: styleguide
+    routes: []
+    required_pages:
+      - /styleguide
+    required_states: []
+    notes: "Design system documentation with tokens, components, and theming guide"
+
+  - name: showcase
+    routes: []
+    required_pages:
+      - /showcase
+    required_states: []
+    notes: "Auto-generated route showcase for QA and demos"
+
+  - name: about_eden
+    routes: []
+    required_pages:
+      - /about/eden
+    required_states: []
+    notes: "Product documentation and differentiation guide"

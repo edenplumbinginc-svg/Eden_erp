@@ -1,0 +1,119 @@
+[Mode: Execution]
+
+Step: Prioritize the **in-app Styleguide + design tokens** now; keep Uizard for later ideation. Add theme tokens so one change beautifies the whole ERP.
+
+Why it matters: A live design system (Tailwind + shadcn + tokens) stays in sync with code, tests, and CI. Uizard is great for mockups, but exported code often fights your components. Use it later, constrained by your tokens.
+
+Inputs needed: Replit editor, Tailwind config path, global CSS.
+
+Command:
+
+1. Define CSS variables (theme tokens).
+   **File:** `apps/coordination_ui/src/app/globals.css` (or your global stylesheet). Append:
+
+```css
+:root {
+  --background: 255 255 255;
+  --foreground: 17 24 39;
+
+  --primary: 34 197 94;      /* emerald-500 */
+  --primary-foreground: 255 255 255;
+
+  --secondary: 15 23 42;     /* slate-900 */
+  --secondary-foreground: 255 255 255;
+
+  --accent: 59 130 246;      /* blue-500 */
+  --accent-foreground: 255 255 255;
+
+  --muted: 241 245 249;      /* slate-100 */
+  --muted-foreground: 71 85 105;
+
+  --destructive: 239 68 68;  /* red-500 */
+  --destructive-foreground: 255 255 255;
+
+  --radius: 14px;            /* global rounded */
+  --shadow: 0 6px 20px rgba(0,0,0,.06);
+}
+
+/* dark mode (optional) */
+.dark {
+  --background: 15 23 42;
+  --foreground: 226 232 240;
+  --muted: 30 41 59;
+  --muted-foreground: 148 163 184;
+}
+```
+
+2. Map Tailwind colors to those tokens.
+   **File:** `tailwind.config.ts` (repo root or app-level). Ensure theme uses CSS vars:
+
+```ts
+import type { Config } from 'tailwindcss';
+
+export default {
+  content: [
+    './apps/coordination_ui/src/**/*.{ts,tsx,js,jsx}',
+  ],
+  theme: {
+    extend: {
+      colors: {
+        background: 'rgb(var(--background) / <alpha-value>)',
+        foreground: 'rgb(var(--foreground) / <alpha-value>)',
+        primary: {
+          DEFAULT: 'rgb(var(--primary) / <alpha-value>)',
+          foreground: 'rgb(var(--primary-foreground) / <alpha-value>)',
+        },
+        secondary: {
+          DEFAULT: 'rgb(var(--secondary) / <alpha-value>)',
+          foreground: 'rgb(var(--secondary-foreground) / <alpha-value>)',
+        },
+        accent: {
+          DEFAULT: 'rgb(var(--accent) / <alpha-value>)',
+          foreground: 'rgb(var(--accent-foreground) / <alpha-value>)',
+        },
+        muted: {
+          DEFAULT: 'rgb(var(--muted) / <alpha-value>)',
+          foreground: 'rgb(var(--muted-foreground) / <alpha-value>)',
+        },
+        destructive: {
+          DEFAULT: 'rgb(var(--destructive) / <alpha-value>)',
+          foreground: 'rgb(var(--destructive-foreground) / <alpha-value>)',
+        },
+      },
+      borderRadius: {
+        lg: 'var(--radius)',
+        xl: 'calc(var(--radius) + 4px)',
+        '2xl': 'calc(var(--radius) + 10px)',
+      },
+      boxShadow: {
+        soft: 'var(--shadow)',
+      },
+      maxWidth: {
+        shell: '1100px',
+      },
+    },
+  },
+  plugins: [],
+} satisfies Config;
+```
+
+3. Apply tokens to the app shell (you already added a layout).
+   **File:** `apps/coordination_ui/src/app/layout.tsx` — ensure body uses tokenized classes:
+
+```tsx
+<body className="min-h-screen bg-background text-foreground">
+  <Header />
+  <main className="mx-auto max-w-shell p-4 md:p-8">{children}</main>
+</body>
+```
+
+4. Use the tokens on your **Styleguide** components (already done in the page code: `bg-primary`, `bg-muted`, etc.). Run the app and visit `/styleguide`.
+
+Success check:
+
+* Changing `--primary` or `--radius` in `globals.css` instantly updates buttons/cards across the app.
+* `/styleguide` shows cohesive colors, spacing, and rounded corners; the rest of your pages inherit the same look.
+
+Next: wait for user
+
+Quick clarity: Uizard isn’t “wrong”; it’s best as a **creative accelerator** once your tokens exist. When you do use it, export to Figma, then rebuild with your shadcn components and Tailwind tokens so visuals stay consistent and maintainable.

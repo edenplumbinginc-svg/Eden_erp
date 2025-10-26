@@ -1,6 +1,10 @@
 {
   "routes": [
     {
+      "route": "/about/eden",
+      "label": "/about/eden"
+    },
+    {
       "route": "/admin/court-flow",
       "label": "/admin/court-flow"
     },
@@ -73,8 +77,16 @@
       "label": "/request-project"
     },
     {
+      "route": "/showcase",
+      "label": "/showcase"
+    },
+    {
       "route": "/signup",
       "label": "/signup"
+    },
+    {
+      "route": "/styleguide",
+      "label": "/styleguide"
     },
     {
       "route": "/task/123",
