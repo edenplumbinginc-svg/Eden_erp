@@ -58,9 +58,6 @@ author = "agent"
 task = "shell.exec"
 args = "./autosync.sh"
 
-[workflows.workflow.metadata]
-outputType = "console"
-
 [[ports]]
 localPort = 3000
 externalPort = 3000
