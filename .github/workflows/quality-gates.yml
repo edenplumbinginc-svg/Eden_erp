@@ -72,6 +72,15 @@ jobs:
           BASE_URL: http://localhost:4173
         run: npm run test:smoke
 
+      # Button functionality tests
+      - name: Button click and navigation tests
+        env:
+          PW_EMAIL: ${{ secrets.PW_EMAIL }}
+          PW_PASSWORD: ${{ secrets.PW_PASSWORD }}
+          PW_SKIP_WEBSERVER: 1
+          BASE_URL: http://localhost:4173
+        run: npm run test:buttons
+
       # Restore quarantined unit tests regardless of outcome
       - name: Restore unit test folders
         if: always()
