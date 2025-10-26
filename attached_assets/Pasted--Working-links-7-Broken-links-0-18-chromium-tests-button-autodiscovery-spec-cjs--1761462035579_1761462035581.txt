@@ -1,0 +1,195 @@
+  ✓ Working links: 7
+  ✗ Broken links: 0
+  ✓  18 [chromium] › tests/button-autodiscovery.spec.cjs:21:5 › Auto-Discovery - All Buttons and Links › discover and test all links on Leaderboard (11.7s)
+🔘 Leaderboard (/leaderboard): Found 1 buttons
+  ✓ Clickable: "🔔 Notifications"  (type: button)
+📊 Leaderboard Button Summary:
+  Total buttons: 1
+  Clickable: 1
+  Disabled: 0
+  Missing labels: 0
+  ✓  19 [chromium] › tests/button-autodiscovery.spec.cjs:112:5 › Auto-Discovery - All Buttons and Links › discover and test all buttons on Leaderboard (1.0s)
+📋 Task Detail (/task/123): Found 7 links
+  ✓ "Dashboard" → /dashboard (200)
+  ✓ "All Tasks" → /alltasks (200)
+  ✓ "Projects" → / (200)
+  ✓ "Reports" → /reports (200)
+  ✓ "⚡ Leaderboard" → /leaderboard (200)
+  ✓ "⚡ Velocity" → /velocity (200)
+  ✓ "Profile" → /profile (200)
+📊 Task Detail Summary:
+  ✓ Working links: 7
+  ✗ Broken links: 0
+  ✓  20 [chromium] › tests/button-autodiscovery.spec.cjs:21:5 › Auto-Discovery - All Buttons and Links › discover and test all links on Task Detail (11.8s)
+🔘 Task Detail (/task/123): Found 1 buttons
+  ✓ Clickable: "🔔 Notifications"  (type: button)
+📊 Task Detail Button Summary:
+  Total buttons: 1
+  Clickable: 1
+  Disabled: 0
+  Missing labels: 0
+  ✓  21 [chromium] › tests/button-autodiscovery.spec.cjs:112:5 › Auto-Discovery - All Buttons and Links › discover and test all buttons on Task Detail (983ms)
+🔍 Hunting for 404 errors across all known paths...
+  ✓ /dashboard → 200
+  ✓ /alltasks → 200
+  ✓ / → 200
+  ✓ /reports → 200
+  ✓ /leaderboard → 200
+  ✓ /velocity → 200
+  ✓ /profile → 200
+  ✓ /task/123 → 200
+  ✓ /project/123 → 200
+  ✓ /admin/decisions → 200
+  ✓ /admin/court-flow → 200
+  ✓ /admin/rbac → 200
+  ✓ /showcase → 200
+  ✓ /about/eden → 200
+📊 404 Hunt Summary:
+  ✓ Successful: 14/14
+  ✗ Errors/404s: 0/14
+  ✓  22 [chromium] › tests/button-autodiscovery.spec.cjs:176:3 › Auto-Discovery - All Buttons and Links › hunt for 404 errors across all navigation paths (10.7s)
+🔄 Testing critical user flows...
+Testing flow: View Tasks
+  ✓ View Tasks - PASS
+Testing flow: View Task Detail
+  ✓ View Task Detail - PASS
+Testing flow: Return from Task to List
+  ⊘ Element not found: button "back to all tasks"
+  ✗ Return from Task to List - FAIL: expect(page).toHaveURL(expected) failed
+Expected pattern: /alltasks/
+Received string:  "http://localhost:4173/task/123"
+Timeout: 5000ms
+Call log:
+  - Expect "toHaveURL" with timeout 5000ms
+    9 × unexpected value "http://localhost:4173/task/123"
+  ✘  23 [chromium] › tests/button-autodiscovery.spec.cjs:234:3 › Auto-Discovery - All Buttons and Links › verify all critical user flows have working buttons (8.1s)
+🔄 Testing critical user flows...
+Testing flow: View Tasks
+  ✓ View Tasks - PASS
+Testing flow: View Task Detail
+  ✓ View Task Detail - PASS
+Testing flow: Return from Task to List
+  ⊘ Element not found: button "back to all tasks"
+  ✗ Return from Task to List - FAIL: expect(page).toHaveURL(expected) failed
+Expected pattern: /alltasks/
+Received string:  "http://localhost:4173/task/123"
+Timeout: 5000ms
+Call log:
+  - Expect "toHaveURL" with timeout 5000ms
+    9 × unexpected value "http://localhost:4173/task/123"
+  ✘  24 [chromium] › tests/button-autodiscovery.spec.cjs:234:3 › Auto-Discovery - All Buttons and Links › verify all critical user flows have working buttons (retry #1) (8.3s)
+✓ Navigation to /dashboard successful
+  ✓  25 [chromium] › tests/button-navigation.spec.cjs:28:5 › Header Navigation - Button Click Tests › clicking "dashboard" navigates to /dashboard (1.3s)
+✓ Navigation to /alltasks successful
+  ✓  26 [chromium] › tests/button-navigation.spec.cjs:28:5 › Header Navigation - Button Click Tests › clicking "all tasks" navigates to /alltasks (1.2s)
+✓ Navigation to / successful
+  ✓  27 [chromium] › tests/button-navigation.spec.cjs:28:5 › Header Navigation - Button Click Tests › clicking "^projects$" navigates to / (1.2s)
+✓ Navigation to /reports successful
+  ✓  28 [chromium] › tests/button-navigation.spec.cjs:28:5 › Header Navigation - Button Click Tests › clicking "reports" navigates to /reports (1.2s)
+✓ Navigation to /leaderboard successful
+  ✓  29 [chromium] › tests/button-navigation.spec.cjs:28:5 › Header Navigation - Button Click Tests › clicking "leaderboard" navigates to /leaderboard (1.1s)
+✓ Navigation to /velocity successful
+  ✓  30 [chromium] › tests/button-navigation.spec.cjs:28:5 › Header Navigation - Button Click Tests › clicking "velocity" navigates to /velocity (1.2s)
+✓ Navigation to /profile successful
+  ✓  31 [chromium] › tests/button-navigation.spec.cjs:28:5 › Header Navigation - Button Click Tests › clicking "profile" navigates to /profile (1.2s)
+⊘ Admin links not visible (user may not have admin role)
+  ✓  32 [chromium] › tests/button-navigation.spec.cjs:45:3 › Header Navigation - Button Click Tests › admin links visible only for admin users (1.1s)
+⊘ Theme toggle button not found
+  ✓  33 [chromium] › tests/button-navigation.spec.cjs:69:3 › Header Navigation - Button Click Tests › theme toggle button works (1.1s)
+Found 7 navigation links in header
+  ✓ Link 1: "Dashboard" → /dashboard
+  ✓ Link 2: "All Tasks" → /alltasks
+  ✓ Link 3: "Projects" → /
+  ✓ Link 4: "Reports" → /reports
+  ✓ Link 5: "⚡ Leaderboard" → /leaderboard
+  ✓ Link 6: "⚡ Velocity" → /velocity
+  ✓ Link 7: "Profile" → /profile
+  ✓  34 [chromium] › tests/button-navigation.spec.cjs:88:3 › Header Navigation - Button Click Tests › all header navigation links are visible and clickable (1.4s)
+✓ Mobile navigation is scrollable
+  ✓  35 [chromium] › tests/button-navigation.spec.cjs:111:3 › Header Navigation - Button Click Tests › mobile navigation scrollable on small screens (1.1s)
+  1) [chromium] › tests/button-autodiscovery.spec.cjs:234:3 › Auto-Discovery - All Buttons and Links › verify all critical user flows have working buttons 
+    Error: expect(page).toHaveURL(expected) failed
+    Expected pattern: /alltasks/
+    Received string:  "http://localhost:4173/task/123"
+    Timeout: 5000ms
+    Call log:
+      - Expect "toHaveURL" with timeout 5000ms
+        9 × unexpected value "http://localhost:4173/task/123"
+      282 |             }
+      283 |           } else if (step.action === 'expectURL') {
+    > 284 |             await expect(page).toHaveURL(step.pattern);
+          |                                ^
+      285 |           }
+      286 |         }
+      287 |         console.log(`  ✓ ${flow.name} - PASS`);
+        at /home/runner/work/Eden_erp/Eden_erp/tests/button-autodiscovery.spec.cjs:284:32
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/button-autodiscovery-Auto--52801--flows-have-working-buttons-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/button-autodiscovery-Auto--52801--flows-have-working-buttons-chromium/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/button-autodiscovery-Auto--52801--flows-have-working-buttons-chromium/trace.zip
+    Usage:
+        npx playwright show-trace test-results/button-autodiscovery-Auto--52801--flows-have-working-buttons-chromium/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+    Error: expect(page).toHaveURL(expected) failed
+    Expected pattern: /alltasks/
+    Received string:  "http://localhost:4173/task/123"
+    Timeout: 5000ms
+    Call log:
+      - Expect "toHaveURL" with timeout 5000ms
+        9 × unexpected value "http://localhost:4173/task/123"
+      282 |             }
+      283 |           } else if (step.action === 'expectURL') {
+    > 284 |             await expect(page).toHaveURL(step.pattern);
+          |                                ^
+      285 |           }
+      286 |         }
+      287 |         console.log(`  ✓ ${flow.name} - PASS`);
+        at /home/runner/work/Eden_erp/Eden_erp/tests/button-autodiscovery.spec.cjs:284:32
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/button-autodiscovery-Auto--52801--flows-have-working-buttons-chromium-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/button-autodiscovery-Auto--52801--flows-have-working-buttons-chromium-retry1/error-context.md
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/button-autodiscovery-Auto--52801--flows-have-working-buttons-chromium-retry1/trace.zip
+    Usage:
+        npx playwright show-trace test-results/button-autodiscovery-Auto--52801--flows-have-working-buttons-chromium-retry1/trace.zip
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+  1 failed
+    [chromium] › tests/button-autodiscovery.spec.cjs:234:3 › Auto-Discovery - All Buttons and Links › verify all critical user flows have working buttons 
+  33 passed (2.4m)
+Error: Process completed with exit code 1.
+0s
+Run if [ -d "__tests__.ci_hold" ]; then mv __tests__.ci_hold __tests__; fi
+2s
+Run actions/upload-artifact@v4
+With the provided path, there will be 20 files uploaded
+Artifact name is valid!
+Root directory input is valid!
+Beginning upload of artifact content to blob storage
+Uploaded bytes 2196362
+Finished uploading artifact content to blob storage!
+SHA256 digest of uploaded artifact zip is da792525e65f5e6717381c99dd477fd4556870e8f718dad46994aa9e13da4fea
+Finalizing artifact upload
+Artifact playwright-report.zip successfully finalized. Artifact ID 4373608319
+Artifact playwright-report has been successfully uploaded! Final size is 2196362 bytes. Artifact ID is 4373608319
+Artifact download URL: https://github.com/edenplumbinginc-svg/Eden_erp/actions/runs/18814407386/artifacts/4373608319
+0s
+Run actions/upload-artifact@v4
+No files were found with the provided path: coverage/ui-gaps.*. No artifacts will be uploaded.
+0s
+0s
+Post job cleanup.
+/usr/bin/git version
+git version 2.51.0
+Temporarily overriding HOME='/home/runner/work/_temp/b75141a1-f116-4317-b251-9ae44faf66eb' before making global git config changes
+Adding repository directory to the temporary git global config as a safe directory
+/usr/bin/git config --global --add safe.directory /home/runner/work/Eden_erp/Eden_erp
+/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+http.https://github.com/.extraheader
+/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
