@@ -1,0 +1,90 @@
+[Mode: Execution]
+
+Step: Polish the theme tokens for a premium look (brand colors, contrast, focus ring) and apply them app-wide.
+
+Why it matters: One pass on tokens upgrades every page, button, and card—beauty with zero per-component rewrites.
+
+Inputs needed: Replit editor open at `apps/coordination_ui/src/app/globals.css` and your UI running.
+
+Command:
+
+1. Update your CSS tokens (paste/replace this block in `globals.css`):
+
+```css
+:root {
+  /* Surfaces */
+  --background: 248 250 252;   /* slate-50 */
+  --foreground: 15 23 42;      /* slate-900 */
+
+  /* Brand */
+  --primary: 16 185 129;       /* emerald-500 → slightly deeper for premium */
+  --primary-foreground: 255 255 255;
+
+  /* Secondary / Shell */
+  --secondary: 2 6 23;         /* slate-950 */
+  --secondary-foreground: 241 245 249;
+
+  /* Accents / Links */
+  --accent: 59 130 246;        /* blue-500 */
+  --accent-foreground: 255 255 255;
+
+  /* Muted blocks */
+  --muted: 241 245 249;        /* slate-100 */
+  --muted-foreground: 71 85 105;
+
+  /* Status */
+  --destructive: 239 68 68;    /* red-500 */
+  --destructive-foreground: 255 255 255;
+
+  /* Focus & radii */
+  --focus: 59 130 246;         /* blue-500 ring */
+  --radius: 14px;
+  --shadow: 0 8px 24px rgba(2, 6, 23, .06);
+}
+
+/* Dark mode */
+.dark {
+  --background: 2 6 23;        /* slate-950 */
+  --foreground: 226 232 240;   /* slate-200 */
+  --muted: 15 23 42;           /* slate-900 */
+  --muted-foreground: 148 163 184;
+  --primary: 20 184 166;       /* teal-ish pop in dark */
+  --secondary: 248 250 252;    /* slate-50 */
+  --secondary-foreground: 2 6 23;
+}
+```
+
+2. Add a universal focus ring (append to the same file):
+
+```css
+@layer base {
+  :focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgb(var(--focus) / 0.2), 0 0 0 6px rgb(var(--focus) / 0.12);
+    border-radius: var(--radius);
+  }
+}
+```
+
+3. Ensure your layout uses the token classes (already done, just confirm):
+
+```tsx
+<body className="min-h-screen bg-background text-foreground font-sans antialiased">
+```
+
+4. Optional (nice upgrade): on primary buttons, add a subtle ring on hover.
+
+* If you use shadcn `<Button>`, you’re set; otherwise, for any plain button add:
+
+```tsx
+className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-2xl shadow-soft transition ring-offset-2 ring-offset-background focus-visible:ring-2 focus-visible:ring-[rgb(var(--focus))]"
+```
+
+Success check:
+
+* Visit `/styleguide`: primary buttons are a richer emerald, pages have a lighter background, text contrast is crisp, and Tab focus shows a soft blue ring.
+* Flip dark mode (if you have a toggle): colors remain balanced and readable.
+
+Next: wait for user
+
+Training note: Polishing **tokens > components > pages** is leverage. If you like this palette but want a different vibe (trust blue, energetic violet, etc.), we’ll only change `--primary`, `--focus`, and `--shadow` to retheme the entire ERP in under a minute.
