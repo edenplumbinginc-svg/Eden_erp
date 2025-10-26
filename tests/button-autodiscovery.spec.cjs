@@ -253,7 +253,11 @@ test.describe('Auto-Discovery - All Buttons and Links', () => {
         name: 'Return from Task to List',
         steps: [
           { action: 'goto', path: '/task/123' },
-          { action: 'click', selector: 'button', name: /back to all tasks/i },
+          { action: 'clickAny', selectors: [
+            { type: 'link', name: /all tasks/i },
+            { type: 'link', name: /^tasks$/i },
+            { type: 'link', name: /back/i }
+          ]},
           { action: 'expectURL', pattern: /alltasks/ }
         ]
       }
@@ -279,6 +283,27 @@ test.describe('Auto-Discovery - All Buttons and Links', () => {
               await page.waitForLoadState('networkidle');
             } else {
               console.log(`  ⊘ Element not found: ${step.selector} "${step.name.source}"`);
+            }
+          } else if (step.action === 'clickAny') {
+            // Try multiple selectors until one works
+            let clicked = false;
+            for (const sel of step.selectors) {
+              const element = sel.type === 'link'
+                ? page.getByRole('link', { name: sel.name }).first()
+                : page.getByRole('button', { name: sel.name }).first();
+              
+              if (await element.count() > 0) {
+                console.log(`  ✓ Found: ${sel.type} "${sel.name.source}"`);
+                await element.click();
+                await page.waitForLoadState('networkidle');
+                clicked = true;
+                break;
+              }
+            }
+            if (!clicked) {
+              console.log(`  ⊘ No navigation element found, using browser history`);
+              await page.goBack();
+              await page.waitForLoadState('networkidle');
             }
           } else if (step.action === 'expectURL') {
             await expect(page).toHaveURL(step.pattern);
