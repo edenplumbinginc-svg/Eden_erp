@@ -1,0 +1,62 @@
+[Mode: Execution]
+
+Step: Apply premium typography + rhythm (Inter font + base heading styles) so everything instantly looks cleaner across the app.
+
+Why it matters: Beautiful type does 80% of the visual lift. One change at the layout + base layer upgrades every screen without touching individual components.
+
+Inputs needed: Replit editor (Next.js + Tailwind).
+
+Command:
+
+1. In `apps/coordination_ui/src/app/layout.tsx`, import Inter and apply it to `<html>`:
+
+```tsx
+import type { ReactNode } from 'react';
+import Header from '../components/Header';
+import { Inter } from 'next/font/google';
+
+const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
+
+export const metadata = { title: 'EDEN ERP', description: 'Internal tools for EDEN' };
+
+export default function RootLayout({ children }: { children: ReactNode }) {
+  return (
+    <html lang="en" className={inter.variable}>
+      <body className="min-h-screen bg-background text-foreground font-sans antialiased">
+        <Header />
+        <main className="mx-auto max-w-shell p-4 md:p-8">{children}</main>
+      </body>
+    </html>
+  );
+}
+```
+
+2. In `tailwind.config.ts`, extend the font family (keep other config as-is):
+
+```ts
+extend: {
+  fontFamily: {
+    sans: ['var(--font-sans)', 'system-ui', 'ui-sans-serif', 'Segoe UI', 'Roboto', 'Inter', 'Helvetica', 'Arial', 'sans-serif'],
+  },
+  // …your existing colors, radius, shadow, etc.
+}
+```
+
+3. In your global CSS (`apps/coordination_ui/src/app/globals.css` or equivalent), add base heading rhythm:
+
+```css
+@layer base {
+  h1 { @apply text-3xl md:text-4xl font-semibold tracking-tight; }
+  h2 { @apply text-2xl md:text-3xl font-semibold tracking-tight; }
+  h3 { @apply text-xl md:text-2xl font-semibold; }
+  p  { @apply leading-7; }
+  small { @apply text-sm opacity-80; }
+}
+```
+
+Success check:
+
+* Reload `/styleguide`: headings and body copy render with Inter; spacing/weight feel balanced.
+* Any page using `<h1>/<h2>` now looks sharper without per-page tweaks.
+
+Next: wait for user
