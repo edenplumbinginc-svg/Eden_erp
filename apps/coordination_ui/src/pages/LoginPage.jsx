@@ -89,6 +89,23 @@ export default function LoginPage() {
           </button>
         </form>
 
+        <div style={{ marginTop: 'var(--space-3)' }}>
+          <Link 
+            to="/guest" 
+            className="btn"
+            style={{ 
+              width: '100%', 
+              display: 'block', 
+              textAlign: 'center',
+              backgroundColor: 'var(--md-surface-variant)',
+              color: 'var(--md-on-surface-variant)',
+              textDecoration: 'none'
+            }}
+          >
+            Continue as Guest
+          </Link>
+        </div>
+
         <div style={{ marginTop: 'var(--space-3)', textAlign: 'center' }}>
           <p className="text-caption" style={{ color: 'var(--md-on-surface-variant)' }}>
             Don't have an account?{' '}
