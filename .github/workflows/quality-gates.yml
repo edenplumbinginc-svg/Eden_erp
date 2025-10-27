@@ -45,6 +45,7 @@ jobs:
 
       # Install Playwright browsers & system deps
       - name: Install Playwright
+      if: ${{ false }}
         run: npx playwright install --with-deps
 
       # Start preview server for the built UI (vite preview on 4173)
