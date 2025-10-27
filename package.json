@@ -13,7 +13,7 @@
     "diag:db:json": "curl -sS http://localhost:3000/diag/db || true",
     "dev:web": "npm --prefix apps/coordination_ui run dev",
     "smoke:api": "node scripts/smoke-api.js",
-    "test": "jest --runInBand",
+    "test": "npm --prefix Eden_erp test --",
     "check:ui": "node scripts/check-ui-coverage.js",
     "test:smoke": "playwright test -g 'contract routes'",
     "test:smoke:headed": "PW_SKIP_WEBSERVER=1 BASE_URL=http://localhost:4173 playwright test -g 'contract routes' --headed",
@@ -34,7 +34,7 @@
     "test:all": "playwright test",
     "test:lint:h1": "node tests/lint-empty-headings.cjs",
     "prebuild": "node -e \"process.exit(0)\"",
-    "postinstall": "node -e \"process.exit(0)\"",
+    "postinstall": "npm ci --prefix Eden_erp",
     "prepare": "node -e \"process.exit(0)\""
   },
   "description": "Monolithic shell.",
