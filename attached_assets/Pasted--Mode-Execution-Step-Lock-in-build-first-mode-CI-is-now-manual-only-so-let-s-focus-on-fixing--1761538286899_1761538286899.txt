@@ -1,0 +1,86 @@
+[Mode: Execution]
+Step: Lock in “build-first” mode: CI is now manual-only, so let’s focus on fixing the app with a tight internal checklist. When you’re ready, I’ll flip CI back to auto and blocking in one shot.
+Why it matters: You avoid merge friction while you stabilize; you still have a one-click “Run workflow” for spot checks.
+
+Here’s a short, punchy repair plan you can execute right now:
+
+Route & 404 sanity (10 min)
+
+Open your manifest file and your router and verify these exist and mount: /dashboard, /tasks, /velocity, /admin/rbac, /about/eden.
+
+Quick local smoke (bypassing auth):
+
+VITE_E2E=true npm run dev
+# hit: /dashboard, /tasks, /about/eden
+
+
+Success check: each page renders a visible heading (<h1>/<h2>) and no red console errors.
+
+A11y fast-pass on shared templates (20 min)
+
+Add/confirm <main role="main"> on your primary layout wrapper(s).
+
+Ensure buttons/inputs have accessible names (text or aria-label).
+
+Confirm focus outline: the “focus-ring” class or your tokenized focus style appears on keyboard Tab.
+
+Success check (local):
+
+npm run test:a11y
+
+
+Expect either 0 violations, or specific actionable ones (contrast/labels). Fix the templates once; it cascades.
+
+Visual baseline creation (10–15 min)
+
+Freeze motion already set—good. Now generate baselines locally so later diffs are signal, not noise:
+
+npm run test:visual
+# If UI changed intentionally:
+npx playwright test tests/visual-routes.spec.ts --update-snapshots
+git add tests/**/__screenshots__/
+git commit -m "chore(visual): establish baselines"
+
+
+Success check: re-run npm run test:visual and see zero diffs.
+
+When you want a CI spot check (no auto-runs now):
+
+Go to GitHub → Actions → Quality Gates → Run workflow.
+
+You’ll get route, a11y, visual reports without blocking merges.
+
+Re-enabling later (bookmark these exact edits):
+
+A) Turn CI back on for pushes/PRs (replace the on: block):
+
+on:
+  pull_request:
+  push:
+    branches: [ main, master ]
+
+
+B) Make the gates “hard” (remove softening if you added it):
+
+Delete any continue-on-error: true from:
+
+Route coverage smoke tests
+
+Accessibility tests (axe-core)
+
+Visual regression tests
+
+C) (Optional) Enforce on PRs:
+
+GitHub → Settings → Branches → Branch protection rules → main
+
+Require status checks to pass → select Quality Gates / gates
+
+Success check:
+
+Manual runs work today without blocking.
+
+After you flip A/B/C later, PRs are blocked unless all 6 gates pass.
+
+Next: wait for user.
+If you want, paste today’s top two errors (route or a11y) and I’ll give you one-line fixes + exact diffs.
