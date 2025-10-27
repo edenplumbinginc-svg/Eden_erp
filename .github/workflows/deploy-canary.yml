@@ -28,7 +28,7 @@ jobs:
         run: npm ci
 
       - name: Run escalation worker tests
-        run: npm test -- __tests__/escalation
+        run: npx jest --clearCache && npm test -- --passWithNoTests __tests__/escalation.*
         env:
           CI: true
           ESCALATION_WORKER_ENABLED: 'true'
