@@ -11,10 +11,6 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(() => {
-    const saved = localStorage.getItem('edenRememberMe');
-    return saved !== 'false';
-  });
   const [emailError, setEmailError] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -47,16 +43,6 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // Save remember-me preference
-      localStorage.setItem('edenRememberMe', rememberMe.toString());
-      
-      // If not remember-me, set a flag to auto-logout after browser session
-      if (!rememberMe) {
-        sessionStorage.setItem('edenTemporarySession', 'true');
-      } else {
-        sessionStorage.removeItem('edenTemporarySession');
-      }
-      
       await signIn(email, password);
       navigate(from, { replace: true });
     } catch (err) {
@@ -208,24 +194,6 @@ export default function LoginPage() {
                 )}
               </button>
             </div>
-          </div>
-
-          <div style={{ marginTop: 'var(--space-2)', display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
-            <input
-              id="rememberMe"
-              type="checkbox"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-              disabled={isLoading}
-              style={{ cursor: 'pointer', width: '16px', height: '16px' }}
-            />
-            <label 
-              htmlFor="rememberMe" 
-              className="text-caption" 
-              style={{ cursor: 'pointer', color: 'var(--md-on-surface-variant)', marginBottom: 0 }}
-            >
-              Remember me for 30 days
-            </label>
           </div>
 
           <button
