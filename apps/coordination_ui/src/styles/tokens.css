@@ -42,13 +42,13 @@
   --fs-2xl:  1.5rem;
   --fs-3xl:  1.875rem;
 
-  /* ========== SPACING ========== */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
+  /* ========== SPACING (Premium: tighter, more refined) ========== */
+  --space-1: 6px;
+  --space-2: 10px;
+  --space-3: 14px;
+  --space-4: 18px;
+  --space-5: 24px;
+  --space-6: 32px;
 
   /* ========== RADIUS (Premium, softer) ========== */
   --radius-xs: 6px;
@@ -144,4 +144,88 @@ html[data-theme='dark'] {
 /* Respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
   :root { --dur-fast: 0ms; --dur-med: 0ms; --ease: linear; }
+}
+
+/* === Premium Visuals: Glass + Gradient + Spacing === */
+
+/* Translucent surfaces (glass morphism) */
+:root {
+  --glass-bg: color-mix(in hsl, var(--panel) 70%, transparent);
+  --glass-border: color-mix(in hsl, var(--border) 70%, transparent);
+  --glass-blur: 10px;
+
+  /* Gradient accent (emerald brand → soft blue accent) */
+  --grad-accent: linear-gradient(
+    90deg,
+    hsl(var(--brand-h) var(--brand-s) calc(var(--brand-l) + 8%)) 0%,
+    var(--accent) 100%
+  );
+}
+
+/* Dark mode glass tuning (more translucent) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --glass-bg: color-mix(in hsl, var(--panel) 55%, transparent);
+    --glass-border: color-mix(in hsl, var(--border) 65%, transparent);
+    --glass-blur: 12px;
+  }
+}
+
+html[data-theme='dark'] {
+  --glass-bg: color-mix(in hsl, var(--panel) 55%, transparent);
+  --glass-border: color-mix(in hsl, var(--border) 65%, transparent);
+  --glass-blur: 12px;
+}
+
+/* === Premium Utility Classes === */
+
+/* Glass effect utility */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-2);
+}
+
+/* Sticky glass header shell */
+.glass-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  padding: var(--space-4) var(--space-6);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  border-radius: 0 0 var(--radius-2xl) var(--radius-2xl);
+  box-shadow: 0 8px 20px rgba(0,0,0,.06);
+}
+
+/* Gradient accent bar for headers */
+.header-accent {
+  height: 3px;
+  border-radius: var(--radius-xl);
+  background: var(--grad-accent);
+  box-shadow: 0 0 24px color-mix(in hsl, var(--accent) 50%, transparent);
+}
+
+/* Container spacing utilities */
+.container-xl {
+  padding-inline: clamp(16px, 3vw, 48px);
+}
+
+.section {
+  padding-block: var(--space-5);
+}
+
+.section-tight {
+  padding-block: var(--space-4);
+}
+
+/* Fallback for browsers without backdrop-filter */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass, .glass-header {
+    background: color-mix(in hsl, var(--panel) 95%, transparent);
+  }
 }

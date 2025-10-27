@@ -1,0 +1,173 @@
+[Mode: Execution]
+Step: Add a premium “glass” header with gradient accent and refined spacing, using token-driven utilities.
+Layer: Frontend layer → Premium visuals (active).
+Why it matters: A translucent, blurred header with a restrained gradient gives instant “premium SaaS” vibes and sets the visual hierarchy for dashboards—no component refactor required.
+
+Inputs needed: Your global CSS tokens file (where you added colors/shadows/radii), and your top-level layout (e.g., `src/layouts/AppShell.tsx` or `src/App.tsx` header region).
+
+Command (copy–paste):
+
+1. Extend tokens + utilities in your global CSS (append to the same file where colors/radius/motion live):
+
+```css
+/* === Premium Visuals: Glass + Gradient + Spacing === */
+
+/* Spacing scale for denser dashboards (unitless → clamp later if you wish) */
+:root {
+  --space-1: 6px;
+  --space-2: 10px;
+  --space-3: 14px;
+  --space-4: 18px;
+  --space-5: 24px;
+  --space-6: 32px;
+}
+
+/* Translucent surfaces */
+:root {
+  /* tune alpha to taste; dark mode overrides below */
+  --glass-bg: color-mix(in hsl, var(--color-surface) 70%, transparent);
+  --glass-border: color-mix(in hsl, var(--color-border) 70%, transparent);
+  --glass-blur: 10px;
+
+  /* Gradient accent (brand → accent) */
+  --grad-accent: linear-gradient(
+    90deg,
+    hsl(var(--brand-h) var(--brand-s) calc(var(--brand-l) + 8%)) 0%,
+    var(--color-accent) 100%
+  );
+}
+
+/* Dark tune */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --glass-bg: color-mix(in hsl, var(--color-surface) 55%, transparent);
+    --glass-border: color-mix(in hsl, var(--color-border) 65%, transparent);
+    --glass-blur: 12px;
+  }
+}
+
+/* Glass utility */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-2);
+}
+
+/* Sticky glass header shell */
+.glass-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  padding: var(--space-4) var(--space-6);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  border-radius: 0 0 var(--radius-2xl) var(--radius-2xl);
+  /* use a subtler shadow for headers so it doesn’t float too much */
+  box-shadow: 0 8px 20px rgba(0,0,0,.06);
+}
+
+/* Gradient accent bar for header */
+.header-accent {
+  height: 3px;
+  border-radius: var(--radius-xl);
+  background: var(--grad-accent);
+  /* subtle glow */
+  box-shadow: 0 0 24px color-mix(in hsl, var(--color-accent) 50%, transparent);
+}
+
+/* Container spacing utilities */
+.container-xl { padding-inline: clamp(16px, 3vw, 48px); }
+.section { padding-block: var(--space-5); }
+.section-tight { padding-block: var(--space-4); }
+
+/* Fallback: browsers without backdrop-filter */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass, .glass-header {
+    background: color-mix(in hsl, var(--color-surface) 95%, transparent);
+  }
+}
+```
+
+2. Create a tiny header component and drop it into your app shell.
+   `src/ui/GlassHeader.tsx`
+
+```tsx
+import { MButton } from "./MotionPrimitives"; // optional if you wired Step 3
+import React from "react";
+
+type Props = {
+  title?: string;
+  children?: React.ReactNode; // right-side actions
+};
+
+export default function GlassHeader({ title = "Dashboard", children }: Props) {
+  return (
+    <header className="glass glass-header">
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <h1 style={{
+          margin: 0,
+          fontSize: "clamp(18px, 2vw, 22px)",
+          fontWeight: 600,
+          letterSpacing: "-0.01em",
+          color: "var(--color-text)"
+        }}>
+          {title}
+        </h1>
+        <p style={{
+          margin: "6px 0 0 0",
+          fontSize: "0.92rem",
+          color: "var(--color-muted)"
+        }}>
+          Welcome back. Here’s what changed since your last visit.
+        </p>
+        <div className="header-accent" style={{ marginTop: "12px" }} />
+      </div>
+
+      {/* Right-side actions (example) */}
+      {children ?? (
+        <MButton
+          className="btn-primary focus-ring"
+          whileTap="tap"
+          style={{ padding: "10px 14px" }}
+        >
+          New Task
+        </MButton>
+      )}
+    </header>
+  );
+}
+```
+
+3. Use the header in your layout (example).
+   In your app shell or page:
+
+```tsx
+import GlassHeader from "./ui/GlassHeader";
+
+export default function DashboardPage() {
+  return (
+    <div className="container-xl">
+      <GlassHeader title="Operations Overview" />
+      <section className="section">
+        {/* your cards/sections */}
+      </section>
+    </div>
+  );
+}
+```
+
+Success check:
+
+1. Reload the app. The header should stick to the top, with subtle translucency and blur over scrollable content.
+2. A thin gradient accent bar appears beneath the title, shifting from emerald → soft blue.
+3. Spacing feels tighter but orderly: header uses `--space-4/6`, sections use `--space-5`.
+4. Toggle OS dark mode: header translucency and borders adapt without harsh contrast.
+5. With reduced-motion enabled, you still see the visual style, no jittery transitions.
+
+Next: wait for user.
+
+Mini-lesson (design physics): premium visuals work when they’re governed by the same constants as the rest of the system. Translucency borrows background color tokens; gradients respect brand hues; spacing comes from a scale, not guesses. If you paste your current layout file (where the header lives), I’ll align class names and spacing exactly, and we can decide where to sprinkle glass cards vs. solid cards for the main dashboard grid.
