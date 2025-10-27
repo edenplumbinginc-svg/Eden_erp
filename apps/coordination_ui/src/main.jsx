@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import * as Sentry from '@sentry/react'
+import '@fontsource-variable/inter'
 import App from './App.jsx'
 import './index.css'
 

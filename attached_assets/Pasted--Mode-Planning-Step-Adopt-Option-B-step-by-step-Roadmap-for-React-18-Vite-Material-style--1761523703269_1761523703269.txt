@@ -1,0 +1,76 @@
+[Mode: Planning]
+Step: Adopt Option B (step-by-step). Roadmap for React 18 + Vite + Material-style tokens:
+
+1. Typography upgrade to Inter (variable font) + global smoothing;
+2. Token pass (colors, elevation, radius, focus rings) without breaking your existing CSS variables;
+3. Cohesive motion with Framer Motion (route transitions, card hovers, button micro-interactions);
+4. Premium visuals (glass cards, blurred headers, gradient accents) gated behind tokens/util classes.
+   Why it matters: Sequencing prevents churn—type → tokens → motion → flair keeps the design coherent and reversible.
+   Inputs needed: Repo access (local), ability to edit global CSS and root layout.
+   Command: N/A (planning only).
+   Success check: Each stage lands with a minimal, shippable change and zero regressions in existing pages.
+   Next: Proceed to first execution step.
+
+[Mode: Execution]
+Step: Install and switch the app to Inter (variable) as the default UI font.
+Layer: Frontend layer → Theme/typography tokens (starting).
+Why it matters: Typography sets the visual voice; a variable Inter family gives tighter metrics, better weight ramp, and cleaner rendering across platforms.
+
+Inputs needed: Your Vite React project open; permission to modify global CSS and root component.
+
+Command:
+
+1. Install Inter (variable) locally:
+
+```bash
+npm i @fontsource-variable/inter
+```
+
+2. Import the font once (e.g., in `src/main.tsx` or your global CSS entry):
+
+```ts
+// src/main.tsx (top of file, before app render)
+import "@fontsource-variable/inter";
+```
+
+—or—if you centralize styles, in `src/styles/global.css`:
+
+```css
+@import "@fontsource-variable/inter";
+```
+
+3. Define/align your font token and apply globally (keep your existing token names, just upgrade the stack). In your root CSS (where your tokens live), add or update:
+
+```css
+:root {
+  /* tokens – keep your names if they already exist */
+  --font-sans: "Inter Variable", Inter, system-ui, -apple-system, "Segoe UI",
+               Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji",
+               "Segoe UI Emoji", "Segoe UI Symbol";
+}
+
+/* global text rendering polish */
+html { text-rendering: optimizeLegibility; }
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+```
+
+4. (Optional, Google Fonts instead of local package) Add to `index.html` head:
+
+```html
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&display=swap" rel="stylesheet">
+```
+
+…and keep the same `--font-sans` stack.
+
+Success check:
+• Run `npm run dev`, open any page, and verify in DevTools → Computed → `font-family` resolves to “Inter Variable”.
+• Visual: headings and body text should render slightly tighter with smoother weight interpolation. No layout shifts beyond minor line-height adjustments.
+
+Next: wait for user.
+—When you confirm, we’ll do the Token Pass (colors/elevation/radius/focus rings) with copy-paste CSS that slots into your current variable map, then wire up motion primitives with Framer Motion. If you can, paste your current `global.css` (or wherever your tokens live) and `App.tsx` so I can tailor the next diffs exactly to your structure.
