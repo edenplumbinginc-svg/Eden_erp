@@ -19,6 +19,7 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import { ToasterProvider } from './components/Toaster';
 import GuestView from './pages/GuestView';
+import GuestDashboard from './pages/GuestDashboard';
 import AllTasksView from './components/AllTasksView';
 import SimpleTasksPage from './pages/SimpleTasksPage';
 import SimpleProjectsPage from './pages/SimpleProjectsPage';
@@ -138,7 +139,8 @@ function AppContent() {
               <Routes location={location}>
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/signup" element={<SignupPage />} />
-                <Route path="/guest" element={<GuestView />} />
+                <Route path="/guest" element={<GuestDashboard />} />
+                <Route path="/shared" element={<GuestView />} />
                 
                 <Route
                   path="/"
