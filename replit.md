@@ -1,7 +1,7 @@
-# EDEN MEP INC - Project Documentation
+# EDEN - Project Documentation
 
 ## Overview
-EDEN MEP INC ERP is a monolithic ERP system for EDEN MEP INC (rebranded from Eden Plumbing Inc.), designed to streamline business operations, initially focusing on coordination and procurement. It provides a robust backend with a defined database schema and a basic REST API. The business vision is to create a comprehensive, scalable platform that integrates various operational aspects, improving efficiency and coordination.
+EDEN ERP is a monolithic ERP system for EDEN (formerly Eden Plumbing Inc.), designed to streamline business operations, initially focusing on coordination and procurement. It provides a robust backend with a defined database schema and a basic REST API. The business vision is to create a comprehensive, scalable platform that integrates various operational aspects, improving efficiency and coordination.
 
 ## User Preferences
 I prefer iterative development, with a focus on delivering functional increments. Please ask before making major architectural changes or introducing new dependencies. I appreciate clear and concise explanations for complex topics. Ensure the codebase remains clean, well-documented, and adheres to established patterns.
