@@ -58,7 +58,6 @@ jobs:
           else
             echo "ℹ️ No recognizable UI build target; skipping"
           fi
-
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -86,7 +85,7 @@ jobs:
       - name: Deploy to staging (canary 10%)
         run: |
           echo "Deploying canary to staging..."
-          # TODO: your real deploy command(s)
+          # TODO: add real deployment commands here
           echo "✅ Canary deployed"
       - name: Smoke test (basic health)
         if: ${{ env.STAGING_URL != '' && !contains(env.STAGING_URL, 'your-staging-host') }}
@@ -175,7 +174,7 @@ jobs:
       - name: Promote to production
         run: |
           echo "Promoting to production (100%)..."
-          # TODO: your real prod deploy command(s)
+          # TODO: add real prod deployment commands
           echo "✅ Production deployment complete"
       - name: Production smoke test
         run: |
