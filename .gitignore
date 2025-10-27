@@ -2,6 +2,7 @@ node_modules/
 .pnpm-store/
 .env
 .env.*
+!.env.test.example
 .DS_Store
 .idea/
 .vscode/
