@@ -5,7 +5,7 @@ integrations = ["github:1.0.0", "notion:1.0.0"]
 
 [nix]
 channel = "stable-25_05"
-packages = ["jq", "nano-wallet"]
+packages = ["jq", "nano-wallet", "gh"]
 
 [workflows]
 runButton = "Project"
