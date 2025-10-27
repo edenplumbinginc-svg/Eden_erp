@@ -5,9 +5,9 @@ export default function AboutEdenPage() {
     <main role="main" className="container-xl section">
       <header className="glass glass-header" style={{ marginBottom: "var(--space-5)" }}>
         <div style={{ flex: 1 }}>
-          <h1 style={{ margin: 0, fontWeight: 600 }}>About Eden</h1>
+          <h1 style={{ margin: 0, fontWeight: 600 }}>About EDEN MEP INC</h1>
           <p style={{ margin: "6px 0 0 0", color: "var(--color-muted)" }}>
-            Overview of the Eden ERP vision, modules, and roadmap.
+            Overview of the EDEN MEP INC ERP vision, modules, and roadmap.
           </p>
           <div className="header-accent" style={{ marginTop: 12 }} />
         </div>
@@ -16,7 +16,7 @@ export default function AboutEdenPage() {
       <section className="card" style={{ padding: "var(--space-5)" }}>
         <h2 style={{ marginTop: 0 }}>Our Vision</h2>
         <p>
-          Eden ERP unifies operations, projects, and financial signals with a token-driven
+          EDEN MEP INC ERP unifies operations, projects, and financial signals with a token-driven
           design system. This page satisfies the UI coverage contract and provides a stable,
           accessible surface for tests.
         </p>

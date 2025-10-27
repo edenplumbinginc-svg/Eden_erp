@@ -321,7 +321,7 @@ export default function LoginPage() {
 
         <div style={{ marginTop: 'var(--space-3)', textAlign: 'center' }}>
           <p className="text-caption" style={{ color: 'var(--md-on-surface-variant)' }}>
-            New to Eden?{' '}
+            New to EDEN MEP INC?{' '}
             <Link to="/signup" className="text-link">
               Create an account
             </Link>
