@@ -33,15 +33,6 @@ export default function EdenHeader() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src="/eden-logo.png" alt="EDEN" style={{height: '32px', width: 'auto'}} />
-            <span className="text-caption" style={{ 
-              color: 'var(--md-on-surface-variant)', 
-              padding: '4px 12px',
-              borderRadius: 'var(--radius-full)',
-              border: '1px solid var(--md-divider)',
-              backgroundColor: 'var(--md-surface-variant)',
-              fontWeight: 500,
-              letterSpacing: '0.5px'
-            }}>COORDINATION · ALPHA</span>
           </div>
           
           <nav className="flex items-center gap-6" style={{
