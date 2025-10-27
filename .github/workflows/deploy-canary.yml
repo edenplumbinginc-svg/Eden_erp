@@ -112,7 +112,7 @@ jobs:
           echo "✅ Escalation worker health check passed"
       - name: Release Guard (incident gate)
         id: release-guard
-        if: ${{  env.STAGING_URL != '' && !contains(env.STAGING_URL, 'your-staging-host')  && env.RELEASE_GUARD_ENABLED == 'true' \}\}
+        if: ${{ env.STAGING_URL != '' && !contains(env.STAGING_URL, 'your-staging-host') && env.RELEASE_GUARD_ENABLED == 'true' }}
         env:
           GUARD_URL: ${{ env.STAGING_URL }}/ops/release-guard
           GUARD_LOOKBACK_MIN: '10'
