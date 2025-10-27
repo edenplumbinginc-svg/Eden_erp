@@ -26,6 +26,8 @@ A production-grade observability stack includes Sentry for error monitoring, Pin
 
 A TypeScript-based Route Coverage Map (`/routes`) provides a visual inventory of all 34 application routes with metadata (title, owner, criticality). The manifest (`src/routes.manifest.ts`) serves as a single source of truth for route documentation and automated smoke testing. Playwright tests verify each route mounts successfully, with stricter validation for critical routes.
 
+Quality gates include automated accessibility testing via axe-core (WCAG 2.0 Level A/AA compliance) and light/dark mode visual regression snapshots for all static routes. Tests run via `npm run test:a11y` for accessibility, `npm run test:visual` for visual regression, and `npm run test:quality` for the complete suite. The system ensures routes are not only present but also usable and visually stable.
+
 Production-grade environment variable validation with Zod schemas is implemented, along with a config health endpoint. User Profile Management is available via an API for optional user fields. An automated UI Coverage Gate enforces complete page coverage based on a contract (`docs/ui-contract.yaml`), preventing half-built features. A contract-driven Playwright test suite (`Navigation Smoke Test`) validates all routes, including authenticated ones, and integrates with CI/CD. CI Quality Gates (`.github/workflows/quality-gates.yml`) automate quality enforcement, including builds, UI coverage checks, and smoke tests, on every PR and push to main.
 
 ### System Design Choices

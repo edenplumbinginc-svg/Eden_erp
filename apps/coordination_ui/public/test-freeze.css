@@ -1,0 +1,18 @@
+/**
+ * Test-only CSS to freeze animations and transitions
+ * Reduces visual regression test flake by eliminating motion
+ * Load this in Playwright tests before taking snapshots
+ */
+
+* {
+  transition-duration: 1ms !important;
+  animation-duration: 1ms !important;
+  animation-delay: 0s !important;
+  transition-delay: 0s !important;
+}
+
+/* Disable Framer Motion animations */
+.motion-safe {
+  animation: none !important;
+  transition: none !important;
+}
