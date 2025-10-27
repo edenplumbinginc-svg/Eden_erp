@@ -1,0 +1,115 @@
+Thought for 8s
+
+[Mode: Planning]
+Step: Add two quality gates on top of your new Route Coverage Map — (A) automated accessibility smoke via axe-core across all non-dynamic routes, and (B) light/dark visual regression snapshots per route.
+Why it matters: You’ve proven routes exist; now we prove they’re usable (A11y) and visually stable (snapshots) so regressions can’t sneak in.
+Inputs needed: Playwright in CI; access to playwright.config.* and your src/routes.manifest.ts.
+Command: N/A (planning only).
+Success check: CI fails if (1) axe finds violations on any tested route, or (2) snapshots drift unexpectedly in light or dark mode.
+Next: proceed to the single execution step below.
+
+[Mode: Execution]
+Step: Wire automated A11y smoke tests (axe-core) and light/dark visual snapshots for all non-dynamic routes in ROUTES.
+Layer: Frontend layer → Quality gates (active).
+Why it matters: This converts “looks fine locally” into enforceable standards. Every route gets basic accessibility verification and pixel-baseline protection.
+
+Inputs needed: Your repo with Playwright; ability to add one dev dependency and two spec files.
+
+Command:
+
+Install axe-core for Playwright.
+
+npm i -D @axe-core/playwright
+
+
+A11y smoke test for all static routes.
+tests/a11y-smoke.spec.ts
+
+import { test, expect } from "@playwright/test";
+import { injectAxe, checkA11y } from "@axe-core/playwright";
+import { ROUTES } from "../src/routes.manifest";
+
+// Skip dynamic (":id") style routes to avoid needing fixtures.
+const STATIC_ROUTES = ROUTES.filter(r => !r.path.includes(":"));
+
+for (const r of STATIC_ROUTES) {
+  test.describe(`a11y: ${r.path}`, () => {
+    test(`no critical violations on ${r.path}`, async ({ page }) => {
+      await page.goto(`http://localhost:5173${r.path}`);
+      await injectAxe(page);
+      await checkA11y(page, undefined, {
+        detailedReport: true,
+        detailedReportOptions: { html: true },
+        // Tweak as needed; start strict to build good habits.
+        axeOptions: { runOnly: ["wcag2a", "wcag2aa"] },
+      });
+      // Minimal content sanity for "critical" routes
+      if (r.critical) {
+        await expect(page.locator("main, [role=main], body")).toBeVisible();
+      }
+    });
+  });
+}
+
+
+Light/dark snapshot tests (visual regression).
+tests/visual-routes.spec.ts
+
+import { test, expect } from "@playwright/test";
+import { ROUTES } from "../src/routes.manifest";
+
+const STATIC_ROUTES = ROUTES.filter(r => !r.path.includes(":"));
+
+for (const scheme of ["light", "dark"] as const) {
+  test.describe(`visual (${scheme})`, () => {
+    test.use({ colorScheme: scheme }); // emulates prefers-color-scheme
+
+    for (const r of STATIC_ROUTES) {
+      test(`route snapshot: ${r.path}`, async ({ page }) => {
+        await page.goto(`http://localhost:5173${r.path}`);
+        // Settle UI a bit for motion blur/animations; adjust to your tokens
+        await page.waitForTimeout(150);
+        await expect(page).toHaveScreenshot(`${scheme}${r.path.replace(/\W+/g, "_")}.png`, {
+          fullPage: true,
+          // Adjust thresholds if your UI has legitimate, tiny diffs (fonts/AA)
+          maxDiffPixelRatio: 0.01,
+        });
+      });
+    }
+  });
+}
+
+
+Add scripts to package.json (names are suggestions):
+
+{
+  "scripts": {
+    "test:a11y": "playwright test tests/a11y-smoke.spec.ts",
+    "test:visual": "playwright test tests/visual-routes.spec.ts",
+    "test:quality": "npm run test:routes && npm run test:a11y && npm run test:visual"
+  }
+}
+
+
+(Optional) Freeze motion during snapshots to reduce flake. Add this tiny CSS used only in tests:
+public/test-freeze.css
+
+* { transition-duration: 1ms !important; animation-duration: 1ms !important; }
+
+
+And preload it in the test before goto if needed:
+
+await page.addStyleTag({ path: "public/test-freeze.css" });
+
+
+Success check:
+
+npm run test:a11y runs axe and reports zero violations (or specific actionable ones).
+
+npm run test:visual creates baseline screenshots; subsequent runs fail if unintended visual changes occur.
+
+CI job test:quality goes red if any route has A11y violations or snapshot drift.
+
+Next: wait for user.
+
+Mini-lesson (quality physics): Your new gates sit one layer above route existence. The manifest is your contract; axe enforces usability norms; snapshots enforce visual integrity. Tweak strictness over time: start strict for A11y, loosen snapshot thresholds only where font rasterization or data variability truly requires it.
