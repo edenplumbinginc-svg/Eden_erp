@@ -1,0 +1,71 @@
+[Mode: Planning]
+Step: Do a 3–step “Stabilize-the-App” sprint before any fancier deploy logic.
+Why it matters: Your CI is baseline-green, but the app itself needs hardening; fixing crashes and guardrails first prevents noisy pipelines later.
+Inputs needed: Repo shell + GitHub Actions access.
+Command (outline):
+
+1. **Type & Lint Gate (fast)** — add `tsc --noEmit` + ESLint to the UI app and run them in CI’s `test` job.
+2. **Runtime Safety** — add a typesafe config loader (e.g., Zod-validated `process.env`), and a global React Error Boundary that logs and shows a friendly fallback.
+3. **Route Coverage & Smoke** — generate a route manifest (you already generate `/src/showcase/routes.json`) and add a Jest smoke test that renders key pages. Keep Playwright off until this passes consistently.
+   Success check: A fresh CI run fails on real issues (type/lint), not on flaky e2e; once clean, we re-enable Playwright later.
+   Next: move to Execution for step 1 (type+lint gate).
+
+---
+
+[Mode: Execution]
+Step: Add a **Type+Lint gate** to `apps/coordination_ui` and wire it into the `test` job.
+Why it matters: This catches most breakage in seconds, right where devs feel it.
+Inputs needed: repo shell.
+
+Command:
+
+```bash
+# 1) Create a working branch
+git checkout -b hardening/type-lint-gate
+
+# 2) Add UI app scripts (safe if they already exist; this overwrites just the scripts)
+npm --prefix apps/coordination_ui pkg set scripts.typecheck="tsc --noEmit"
+npm --prefix apps/coordination_ui pkg set scripts.lint="eslint src --ext .ts,.tsx --max-warnings=0"
+
+# 3) Ensure needed dev deps are present
+npm --prefix apps/coordination_ui i -D typescript @types/node eslint @typescript-eslint/parser @typescript-eslint/eslint-plugin
+
+# 4) Minimal ESLint config (only if one is missing)
+test -f apps/coordination_ui/.eslintrc.json || cat > apps/coordination_ui/.eslintrc.json <<'JSON'
+{
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint"],
+  "extends": ["eslint:recommended", "plugin:@typescript-eslint/recommended"],
+  "env": { "browser": true, "es2022": true, "node": true },
+  "ignorePatterns": ["dist", ".next", "node_modules"]
+}
+JSON
+
+# 5) Patch CI test job to run typecheck + lint (fast, before build)
+python - <<'PY'
+from pathlib import Path
+p = Path(".github/workflows/deploy-canary.yml")
+s = p.read_text()
+needle = "      - name: Install dependencies\n        run: npm ci || npm install --no-audit --no-fund\n"
+insert = needle + (
+"      - name: Typecheck UI\n"
+"        run: npm --prefix apps/coordination_ui run typecheck\n"
+"      - name: Lint UI\n"
+"        run: npm --prefix apps/coordination_ui run lint\n"
+)
+if needle in s and "Typecheck UI" not in s:
+    s = s.replace(needle, insert)
+    p.write_text(s)
+    print("patched:", p)
+else:
+    print("no-change")
+PY
+
+git add .
+git commit -m "hardening(ci+ui): add TypeScript no-emit + ESLint gate and run in test job"
+git push -u origin hardening/type-lint-gate
+```
+
+Success check: Open PR → merge → **Actions → Canary Deployment with Release Guard** on `main`. The **Run Tests** job now runs `typecheck` and `lint`; if there are issues, the job fails with clear diagnostics.
+Next: wait for user.
