@@ -41,7 +41,6 @@ import StyleguidePage from './pages/StyleguidePage';
 import RouteMap from './pages/RouteMap';
 import { ThemeProvider } from './components/ThemeProvider';
 
-import Main from "./ui/Main";
 const queryClient = new QueryClient();
 
 function AppContent() {
@@ -116,8 +115,7 @@ function AppContent() {
   const transition = prefersReduced ? { duration: 0 } : tPage;
 
   return (
-    <Main>
-<div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       <EdenHeader />
       
       <div className="container">
@@ -371,7 +369,6 @@ function AppContent() {
         )}
       </div>
     </div>
-    </Main>
   );
 }
 
