@@ -1,0 +1,97 @@
+[Mode: Execution]
+Step: Keep your workflow, but make it **non-blocking** while you fix the app. I’ll give you two “flip-a-switch” modes you can paste: (A) **Soft Gates** (run but never fail CI), and (B) **Manual-Only** (run only when you press a button).
+Why it matters: You don’t want to gate merges yet. These modes let you keep the safety net without slowing you down.
+
+Inputs needed: GitHub → `.github/workflows/quality-gates.yml` (edit rights).
+
+---
+
+### Option A — Soft Gates (recommended while stabilizing)
+
+CI still runs on every push/PR, but the three heavy suites (routes, a11y, visual) **won’t fail the job**. You still get reports/artifacts.
+
+**Copy–paste changes** (three tiny additions):
+
+1. In your existing steps, add `continue-on-error: true` to the three new gates:
+
+```yaml
+      - name: Route coverage smoke tests
+        continue-on-error: true
+        env:
+          VITE_E2E: true
+          PW_SKIP_WEBSERVER: 1
+          BASE_URL: http://localhost:4173
+        run: npm run test:routes
+
+      - name: Accessibility tests (axe-core)
+        continue-on-error: true
+        env:
+          VITE_E2E: true
+          PW_SKIP_WEBSERVER: 1
+          BASE_URL: http://localhost:4173
+        run: npm run test:a11y
+
+      - name: Visual regression tests
+        continue-on-error: true
+        env:
+          VITE_E2E: true
+          PW_SKIP_WEBSERVER: 1
+          BASE_URL: http://localhost:4173
+        run: npm run test:visual
+```
+
+2. Do **not** enable branch protection yet (or if you already did, just remove “Quality Gates / gates” from required checks for now).
+
+**Success check:** Actions still shows all steps, but even if those three fail, the overall job stays green. You can read artifacts to fix issues at your own pace.
+
+---
+
+### Option B — Manual-Only (press-to-run, nothing runs automatically)
+
+Runs only when you click “Run workflow” in the Actions tab. Great when you want CI out of the way entirely while refactoring.
+
+**Replace the top of your YAML** with this trigger block (leave the rest of your file unchanged):
+
+```yaml
+name: Quality Gates
+
+on:
+  workflow_dispatch: {}   # manual runs only
+  # schedule:
+  #   - cron: "0 7 * * *"   # (optional) daily 07:00 UTC run
+```
+
+Later, when you’re ready, restore your original `on: pull_request`/`push` block.
+
+**Success check:** No runs on push/PR. You’ll see a “Run workflow” button on the Actions page.
+
+---
+
+### Optional: Hybrid (only run on PRs to main; ignore push)
+
+If you still want PR signal but don’t want it on every push to feature branches:
+
+```yaml
+on:
+  pull_request:
+    branches: [ main ]
+  # push:   # <— comment out push to avoid double-runs
+  #   branches: [ main, master ]
+```
+
+---
+
+### What I recommend right now
+
+* Use **Option A (Soft Gates)** so you keep visibility (artifacts, logs) while your app is in surgery.
+* Skip branch protection until you’re ready to enforce.
+* When things are stable, remove `continue-on-error: true` and (optionally) turn on branch protection to require the job.
+
+Success check:
+
+* Your team can merge freely.
+* CI still produces route/a11y/visual reports for reference.
+* No red walls slowing you down.
+
+Next: wait for user.
+If you want, paste your current `quality-gates.yml` top and the three gate steps and I’ll return an exact, ready-to-paste, fully merged file for the mode you choose.
