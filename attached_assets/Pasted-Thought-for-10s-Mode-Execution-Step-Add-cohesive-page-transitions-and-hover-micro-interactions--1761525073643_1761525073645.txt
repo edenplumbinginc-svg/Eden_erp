@@ -1,0 +1,164 @@
+Thought for 10s
+
+[Mode: Execution]
+Step: Add cohesive page transitions and hover micro-interactions with Framer Motion (route fade/slide + card/button motion).
+Layer: Frontend layer → Motion system (active).
+Why it matters: Consistent motion creates spatial continuity, reduces surprise, and makes the UI feel “premium” without changing layouts.
+
+Inputs needed: React 18 + Vite app; Framer Motion already installed; routing via React Router v6 (common in Vite apps).
+
+Command (copy–paste; adjust paths to match your structure):
+
+Add motion tokens (durations/easing) to your global CSS (same file where your color/radius tokens live).
+
+:root {
+  /* Motion tokens */
+  --ease-standard: cubic-bezier(.2, .0, .2, 1);
+  --ease-emphasized: cubic-bezier(.2, .0, 0, 1);
+  --dur-xxs: 90ms;
+  --dur-xs: 140ms;
+  --dur-sm: 200ms;
+  --dur-md: 280ms;
+  --dur-lg: 360ms;
+}
+
+
+Create a motion utilities module.
+src/ui/motion.ts
+
+// Motion presets to keep transitions consistent across the app
+export const EASE = {
+  standard: [0.2, 0.0, 0.2, 1.0] as const,
+  emphasized: [0.2, 0.0, 0.0, 1.0] as const,
+};
+
+export const DUR = {
+  xxs: 0.09,  // 90ms
+  xs: 0.14,
+  sm: 0.20,
+  md: 0.28,
+  lg: 0.36,
+};
+
+// Shared transitions
+export const tPage = { duration: DUR.md, ease: EASE.standard };
+export const tUI =   { duration: DUR.sm, ease: EASE.standard };
+
+// Variants
+export const pageVariants = {
+  initial: { opacity: 0, y: 8, filter: 'blur(2px)' },
+  animate: { opacity: 1, y: 0, filter: 'blur(0px)' },
+  exit:    { opacity: 0, y: -8, filter: 'blur(2px)' },
+};
+
+export const hoverLift = {
+  rest:  { y: 0,        boxShadow: 'var(--shadow-1)' },
+  hover: { y: -2,       boxShadow: 'var(--shadow-2)' },
+};
+
+export const press = {
+  rest:  { scale: 1.0 },
+  tap:   { scale: 0.98 },
+};
+
+
+Add a reusable PageTransition wrapper.
+src/ui/PageTransition.tsx
+
+import { motion } from "framer-motion";
+import { pageVariants, tPage } from "./motion";
+
+type Props = { children: React.ReactNode };
+
+export default function PageTransition({ children }: Props) {
+  return (
+    <motion.div
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      variants={pageVariants}
+      transition={tPage}
+      style={{ willChange: "transform, opacity, filter" }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+
+Wire it into your router to animate route changes.
+src/App.tsx (React Router v6 example)
+
+import { Routes, Route, useLocation } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
+import PageTransition from "./ui/PageTransition";
+// import your pages...
+// import Dashboard from "./pages/Dashboard";
+// import Settings from "./pages/Settings";
+
+export default function App() {
+  const location = useLocation();
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route
+          path="/"
+          element={
+            <PageTransition>
+              {/* <Dashboard /> */}
+              {/* replace with your real component */}
+              <div>Home</div>
+            </PageTransition>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <PageTransition>
+              {/* <Settings /> */}
+              <div>Settings</div>
+            </PageTransition>
+          }
+        />
+        {/* ...other routes, each wrapped in <PageTransition> */}
+      </Routes>
+    </AnimatePresence>
+  );
+}
+
+
+Add micro-interactions for cards and buttons (opt-in, no refactor).
+src/ui/MotionPrimitives.tsx
+
+import { motion } from "framer-motion";
+import { hoverLift, tUI, press } from "./motion";
+
+export const MCard = motion.div;
+export const MButton = motion.button;
+
+// Usage example:
+// <MCard initial="rest" whileHover="hover" animate="rest" variants={hoverLift} transition={tUI} className="card">...</MCard>
+// <MButton whileTap="tap" variants={press} transition={tUI} className="btn-primary">Save</MButton>
+
+
+(Optional) Tiny polish for reduced motion users.
+Add to your global CSS:
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; scroll-behavior: auto !important; }
+}
+
+
+Success check:
+
+Start the app and navigate between routes: content should subtly fade/slide with a slight de-blur in ~280ms.
+
+Hover a .card using <MCard ... className="card"> → gentle lift and stronger shadow.
+
+Press a primary button wrapped with <MButton ... className="btn-primary"> → slight tap scale.
+
+No console errors; 401s remain only on protected endpoints when unauthenticated (expected).
+
+Next: wait for user.
+
+Micro-lesson: by centralizing variants (pageVariants, hoverLift, press) and transitions (tPage, tUI), motion becomes a tokenized system—consistent timing/easing you can tune in one place. When you reply, paste your current App.tsx and one example Card/Button so I can align wrappers exactly and, next, we’ll add premium touches (glass/blur headers + gradient accents) behind a theme toggle.

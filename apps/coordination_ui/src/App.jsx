@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
+import { pageVariants, tPage } from './ui/motion';
 import { apiService } from './services/api';
 import { AuthProvider } from './hooks/AuthProvider';
 import { useWarmBoot } from './hooks/useWarmBoot';
@@ -101,25 +102,16 @@ function AppContent() {
     ? window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
     : false;
 
-  const pageVariants = prefersReduced
+  // Use centralized motion tokens (premium page transitions with blur)
+  const variants = prefersReduced
     ? {
         initial: { opacity: 1, y: 0 },
-        enter: { opacity: 1, y: 0, transition: { duration: 0 } },
+        animate: { opacity: 1, y: 0, transition: { duration: 0 } },
         exit: { opacity: 1, y: 0, transition: { duration: 0 } },
       }
-    : {
-        initial: { opacity: 0, y: 6 },
-        enter: { 
-          opacity: 1, 
-          y: 0, 
-          transition: { duration: 0.18, ease: [0.2, 0.8, 0.2, 1] } 
-        },
-        exit: { 
-          opacity: 0, 
-          y: -6, 
-          transition: { duration: 0.15, ease: [0.2, 0.8, 0.2, 1] } 
-        },
-      };
+    : pageVariants;
+
+  const transition = prefersReduced ? { duration: 0 } : tPage;
 
   return (
     <div className="min-h-screen bg-background">
@@ -134,10 +126,12 @@ function AppContent() {
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
-              variants={pageVariants}
+              variants={variants}
               initial="initial"
-              animate="enter"
+              animate="animate"
               exit="exit"
+              transition={transition}
+              style={{ willChange: "transform, opacity, filter" }}
             >
               <Routes location={location}>
                 <Route path="/login" element={<LoginPage />} />

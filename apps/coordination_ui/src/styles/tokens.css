@@ -72,8 +72,15 @@
 
   /* ========== MOTION ========== */
   --ease: cubic-bezier(.2,.8,.2,1);
+  --ease-standard: cubic-bezier(.2, 0, .2, 1);
+  --ease-emphasized: cubic-bezier(.2, 0, 0, 1);
   --dur-fast: 120ms;
   --dur-med:  200ms;
+  --dur-xxs: 90ms;
+  --dur-xs: 140ms;
+  --dur-sm: 200ms;
+  --dur-md: 280ms;
+  --dur-lg: 360ms;
 }
 
 /* === Premium Token Set v2 (Dark Mode) === */
