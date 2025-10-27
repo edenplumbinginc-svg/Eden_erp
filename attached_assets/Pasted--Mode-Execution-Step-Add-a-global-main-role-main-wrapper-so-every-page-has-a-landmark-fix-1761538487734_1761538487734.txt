@@ -1,0 +1,60 @@
+[Mode: Execution]
+Step: Add a global `<main role="main">` wrapper so every page has a landmark (fixes many A11y violations at once).
+Why it matters: Axe often fails on missing landmarks. A single, shared wrapper resolves it across all routes and stabilizes your future a11y tests.
+
+Inputs needed: Repo shell.
+
+Command (copy–paste as one block):
+
+```bash
+# 1) Create a tiny Main wrapper
+cat > apps/coordination_ui/src/ui/Main.jsx <<'EOF'
+import React from "react";
+export default function Main({ children, className = "" }) {
+  return (
+    <main role="main" className={className || "container-xl section"}>
+      {children}
+    </main>
+  );
+}
+EOF
+
+# 2) Patch App.jsx to wrap the routed content in <Main>
+node - <<'NODE'
+const fs = require('fs');
+const p = 'apps/coordination_ui/src/App.jsx';
+if (!fs.existsSync(p)) { console.error('Missing', p); process.exit(0); }
+let s = fs.readFileSync(p,'utf8');
+
+// import Main if not present
+if (!/from\s+["']\.\/ui\/Main["']/.test(s)) {
+  const m = s.match(/(^\s*import.*;\s*)+/m);
+  s = m ? s.replace(m[0], m[0] + 'import Main from "./ui/Main";\n') : 'import Main from "./ui/Main";\n' + s;
+}
+
+// wrap <Routes> with <Main> if not already wrapped in a main landmark
+if (!/<main[^>]*role=("|')main\1/.test(s)) {
+  s = s.replace(/return\s*\(\s*\n?/, m => `${m}<Main>\n`);
+  // close before final );
+  const idx = s.lastIndexOf(')');
+  if (idx !== -1) {
+    s = s.slice(0, idx) + `\n</Main>\n` + s.slice(idx);
+  }
+}
+
+fs.writeFileSync(p, s);
+console.log("Patched", p);
+NODE
+
+# 3) Commit the change
+git add apps/coordination_ui/src/ui/Main.jsx apps/coordination_ui/src/App.jsx
+git commit -m "feat(a11y): add global <main role=\"main\"> landmark via Main wrapper"
+git push origin main || git push --no-verify origin main
+```
+
+Success check:
+
+* Local: `npm run test:a11y` shows fewer/no “missing landmark” violations.
+* Manual-only CI: you can click **Run workflow** in Actions to see axe results without blocking merges.
+
+Next: wait for user.
