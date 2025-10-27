@@ -27,7 +27,7 @@ if (import.meta.env.VITE_SENTRY_DSN) {
 }
 
 const Fallback = () => (
-  <div style={{ padding: 16, fontFamily: 'Roboto, sans-serif', textAlign: 'center', marginTop: '48px' }}>
+  <div style={{ padding: 16, fontFamily: 'var(--font-sans)', textAlign: 'center', marginTop: '48px' }}>
     <h2>Something went wrong</h2>
     <p>We've logged the issue and will fix it as soon as possible.</p>
   </div>
