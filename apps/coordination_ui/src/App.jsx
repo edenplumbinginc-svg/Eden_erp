@@ -17,6 +17,8 @@ import CreateTaskPage from './pages/CreateTaskPage';
 import DashboardPage from './pages/DashboardPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import { ToasterProvider } from './components/Toaster';
 import GuestView from './pages/GuestView';
 import GuestDashboard from './pages/GuestDashboard';
@@ -140,6 +142,8 @@ function AppContent() {
               <Routes location={location}>
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/signup" element={<SignupPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
                 <Route path="/guest" element={<GuestDashboard />} />
                 <Route path="/shared" element={<GuestView />} />
                 
