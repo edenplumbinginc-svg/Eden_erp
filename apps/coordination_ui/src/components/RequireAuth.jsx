@@ -6,10 +6,14 @@ export default function RequireAuth({ children }) {
   const loc = useLocation();
   const [state, setState] = React.useState({ loading: true, user: null });
 
-  
   const DEV_BYPASS = import.meta.env?.VITE_AUTH_DEV_BYPASS === 'true';
-  if (DEV_BYPASS) return <>{children}</>;
-React.useEffect(() => {
+  
+  React.useEffect(() => {
+    if (DEV_BYPASS) {
+      setState({ loading: false, user: { bypass: true } });
+      return;
+    }
+    
     let alive = true;
     (async () => {
       const { ok, user } = await me();
@@ -17,9 +21,15 @@ React.useEffect(() => {
       setState({ loading: false, user: ok ? user : null });
     })();
     return () => { alive = false; };
-  }, []);
+  }, [DEV_BYPASS]);
 
-  if (state.loading) return <div className="p-6">Loading…</div>;
-  if (!state.user) return <Navigate to="/login" replace state={{ from: loc }} />;
+  if (state.loading) {
+    return <div className="p-6">Loading…</div>;
+  }
+  
+  if (!state.user) {
+    return <Navigate to="/login" replace state={{ from: loc }} />;
+  }
+  
   return <>{children}</>;
 }
