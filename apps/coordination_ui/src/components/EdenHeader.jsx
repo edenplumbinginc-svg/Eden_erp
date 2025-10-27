@@ -50,7 +50,7 @@ export default function EdenHeader() {
           </div>
           
           {/* Center: Main Navigation */}
-          <nav className="flex items-center gap-6">
+          <nav style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
             <NavLink 
               to="/dashboard" 
               className={({ isActive }) => isActive ? 'text-body font-medium' : 'text-body text-link hover:underline'}
