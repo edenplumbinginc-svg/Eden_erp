@@ -1,12 +1,24 @@
 import React from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import NotificationsBell from "./NotificationsBell";
 import RoleBadge from "./RoleBadge";
 import { useHasPermission } from "../hooks/usePermissions";
+import { useAuth } from "../hooks/AuthProvider";
 import { ThemeToggle } from "./ThemeProvider";
 
 export default function EdenHeader() {
   const isAdmin = useHasPermission('admin:manage');
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
   
   return (
     <header className="w-full" style={{
@@ -133,6 +145,21 @@ export default function EdenHeader() {
             >
               Profile
             </NavLink>
+            <button
+              onClick={handleLogout}
+              className="text-body text-link hover:underline"
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 0,
+                fontFamily: 'inherit',
+                fontSize: 'inherit',
+                color: 'var(--md-error)'
+              }}
+            >
+              Logout
+            </button>
             <div style={{ paddingLeft: '12px', borderLeft: '1px solid var(--md-divider)' }}>
               <ThemeToggle />
             </div>
