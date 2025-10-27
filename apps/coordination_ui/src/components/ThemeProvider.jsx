@@ -68,28 +68,22 @@ export function useTheme() {
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
   return (
-    <div style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
-      <label className="muted" style={{ fontSize: '0.85rem' }}>Theme</label>
-      <select
-        value={theme}
-        onChange={(e) => setTheme(e.target.value)}
-        aria-label="Theme selection"
-        style={{
-          padding: '4px 8px',
-          borderRadius: '4px',
-          border: '1px solid var(--border)',
-          backgroundColor: 'var(--surface)',
-          color: 'var(--text)',
-          fontSize: '0.85rem'
-        }}
-      >
-        <option value="auto">Auto</option>
-        <option value="light">Light</option>
-        <option value="dark">Dark</option>
-      </select>
-      <span className="muted" style={{ fontSize: '0.75rem' }} title="Keyboard shortcut">
-        ⌘/Ctrl + J
-      </span>
-    </div>
+    <select
+      value={theme}
+      onChange={(e) => setTheme(e.target.value)}
+      aria-label="Theme selection"
+      style={{
+        padding: '4px 8px',
+        borderRadius: '4px',
+        border: '1px solid var(--border)',
+        backgroundColor: 'var(--surface)',
+        color: 'var(--text)',
+        fontSize: '0.85rem'
+      }}
+    >
+      <option value="auto">Auto</option>
+      <option value="light">Light</option>
+      <option value="dark">Dark</option>
+    </select>
   );
 }
