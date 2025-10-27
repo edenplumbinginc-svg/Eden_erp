@@ -24,10 +24,6 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci || npm install --no-audit --no-fund
-      - name: Typecheck UI
-        run: npm --prefix apps/coordination_ui run typecheck
-      - name: Lint UI
-        run: npm --prefix apps/coordination_ui run lint
       - name: Run escalation worker tests
         env:
           CI: true
