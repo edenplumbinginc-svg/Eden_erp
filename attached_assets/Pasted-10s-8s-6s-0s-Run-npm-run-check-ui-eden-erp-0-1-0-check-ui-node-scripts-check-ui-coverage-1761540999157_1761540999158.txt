@@ -1,0 +1,99 @@
+10s
+8s
+6s
+0s
+Run npm run check:ui
+
+> eden_erp@0.1.0 check:ui
+> node scripts/check-ui-coverage.js
+
+🔍 Checking UI coverage against contract...
+
+📦 Resource: incidents
+   ✅ /incidents → pages/IncidentsPage.jsx
+   ✅ /incidents/[id] → pages/IncidentDetail.jsx
+
+📦 Resource: velocity
+   ✅ /velocity → pages/Velocity.jsx
+
+📦 Resource: profile
+   ✅ /profile → pages/ProfilePage.jsx
+
+📦 Resource: dashboard
+   ✅ /dashboard → pages/DashboardPage.jsx
+
+📦 Resource: projects
+   ✅ /projects-delta → pages/SimpleProjectsPage.jsx
+   ✅ /project/[id] → pages/ProjectDetail.jsx
+
+📦 Resource: tasks
+   ✅ /alltasks → components/AllTasksView.jsx
+   ✅ /tasks-delta → pages/SimpleTasksPage.jsx
+   ✅ /tasks/new → pages/CreateTaskPage.jsx
+   ✅ /task/[id] → pages/TaskDetail.jsx
+
+📦 Resource: reports
+   ✅ /reports → pages/ReportsPage.tsx
+
+📦 Resource: leaderboard
+   ✅ /leaderboard → pages/PerformanceLeaderboardPage.jsx
+
+📦 Resource: admin_rbac
+   ✅ /admin/rbac → pages/AdminRbacPage.jsx
+
+📦 Resource: admin_decisions
+   ✅ /admin/decisions → pages/admin/DecisionsPage.jsx
+
+📦 Resource: admin_court_flow
+   ✅ /admin/court-flow → pages/admin/CourtFlowPage.jsx
+
+📦 Resource: auth
+   ✅ /login → pages/LoginPage.jsx
+   ✅ /signup → pages/SignupPage.jsx
+
+📦 Resource: guest
+   ✅ /guest → pages/GuestView.jsx
+
+📦 Resource: audit
+   ✅ /audit-log → pages/AuditLogViewer.jsx
+
+📦 Resource: team
+   ✅ /team → pages/TeamOverview.jsx
+
+📦 Resource: archive
+   ✅ /archive → pages/ArchiveView.jsx
+❌ UI coverage check FAILED
+
+Missing pages:
+
+
+📦 Resource: intake
+  Resource: about_eden
+  Route:    /about/eden
+  Expected: EdenPage.jsx (or similar)
+
+💡 Create these pages to pass the coverage check.
+
+   ✅ /intake → pages/IntakeQueue.jsx
+
+📦 Resource: request_project
+   ✅ /request-project → pages/ProjectRequestForm.jsx
+
+📦 Resource: styleguide
+   ✅ /styleguide → pages/StyleguidePage.jsx
+
+📦 Resource: showcase
+   ✅ /showcase → pages/ShowcasePage.jsx
+
+📦 Resource: about_eden
+   ❌ /about/eden → NOT FOUND
+      Tried: EdenPage.jsx, EdenPage.tsx, Eden.jsx, Eden.tsx, EdenView.jsx, EdenView.tsx, EdenViewer.jsx, EdenViewer.tsx, EdenQueue.jsx, EdenQueue.tsx, EdenForm.jsx, EdenForm.tsx, EdenOverview.jsx, EdenOverview.tsx, PerformanceEdenPage.jsx, PerformanceEdenPage.tsx, SimpleEdenPage.jsx, SimpleEdenPage.tsx, about/eden.jsx, about/eden.tsx
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 Coverage Summary:
+
+   ✅ Found:   26 pages
+   ❌ Missing: 1 pages
+
+Error: Process completed with exit code 1.
