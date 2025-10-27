@@ -1,0 +1,64 @@
+[Mode: Execution]
+Step: Log the checkpoint and move to a concrete notifications capability check using the debug endpoint.
+Layer: Backend layer → Observability/diagnostics (active).
+Why it matters: You just documented the day’s work in `replit.md`; now we turn notification talk into facts by enumerating which channels/providers are actually wired before we flip on phone/email alerts.
+
+Inputs needed: Server routes folder write access.
+
+Command (drop-in debug endpoint):
+
+```js
+// routes/notifications.debug.js
+import express from "express";
+import notifService from "../services/notifications.js"; // adjust import if named
+
+const router = express.Router();
+
+router.get("/debug", async (_req, res) => {
+  try {
+    const caps = {
+      hasInApp: typeof notifService.sendInApp === "function",
+      hasEmail: typeof notifService.sendEmail === "function",
+      hasSMS: typeof notifService.sendSMS === "function",
+      hasVoice: typeof notifService.sendVoice === "function",
+      hasWhatsApp: typeof notifService.sendWhatsApp === "function",
+      hasWebhook: typeof notifService.sendWebhook === "function",
+      escalation: typeof notifService.escalate === "function",
+      providerHints: {
+        SENDGRID_API_KEY: !!process.env.SENDGRID_API_KEY,
+        RESEND_API_KEY: !!process.env.RESEND_API_KEY,
+        SMTP_URL: !!process.env.SMTP_URL,
+        TWILIO_SID: !!process.env.TWILIO_SID,
+        TWILIO_FROM: !!process.env.TWILIO_FROM,
+        TELEGRAM_BOT_TOKEN: !!process.env.TELEGRAM_BOT_TOKEN,
+      },
+    };
+    res.json({ ok: true, caps });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e?.message || String(e) });
+  }
+});
+
+export default router;
+```
+
+Wire it:
+
+```js
+// server index (where routes mount)
+import notificationsDebug from "./routes/notifications.debug.js";
+app.use("/notifications", notificationsDebug);
+```
+
+Success check:
+
+* Hit `GET /notifications/debug` (dev mode) → JSON prints which methods exist and which provider envs are set.
+
+Next: wait for user.
+
+Mini-lesson (signal > vibes): your repo already shows a full notifications spine:
+
+* In-app feed (`NotificationsBell.jsx`), unread badge, mark-as-read.
+* Backend API (`routes/notifications.js`) + service orchestrator (`services/notifications.js`) with a thin caller (`lib/notify.js`).
+* Escalation logic (`lib/escalation.js`) and event-bus smoke scripts — meaning domain events can fan out to channels.
+* What’s left is selecting/confirming **adapters** (Email: Resend/SendGrid/SMTP; Phone: Twilio for SMS/WhatsApp/voice) and adding **user preferences** (per-event, per-channel, quiet hours, digests). After you run the debug endpoint, paste the JSON here and I’ll generate the exact provider wiring + a preferences schema (DB + UI toggle list) in one pass.
