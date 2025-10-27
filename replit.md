@@ -75,6 +75,66 @@ The endpoint returns a comprehensive capabilities report including:
 - Infrastructure status (queue, escalation worker)
 - Feature flags and recommended next steps
 
+### October 27, 2025 - SMS Notification Channel Implementation
+**Status**: SMS infrastructure deployed, ready for configuration
+
+**Key Accomplishments**:
+1. **Created Twilio SMS Provider Adapter** - Implemented `providers/sms.twilio.js` with feature flag support and comprehensive error handling.
+
+2. **Enhanced Notifications Service** - Added SMS capability to `services/notifications.js`:
+   - `sendSMSNotification({ to, body, template, data })` - Main SMS sending function
+   - Template rendering system for common notification types (task_assigned, task_overdue, ball_handoff, urgent_alert)
+   - Provider capabilities introspection for diagnostics
+
+3. **Added Test Endpoint** - Created `POST /api/notifications/test-sms` (Admin/System only) for testing SMS delivery with template support.
+
+4. **Updated Debug Endpoint** - Enhanced `/api/notifications/debug` to report SMS provider status, configuration, and feature flags.
+
+5. **Installed Dependencies** - Added `twilio` package to support SMS/MMS messaging.
+
+**Files Created/Modified**:
+- `providers/sms.twilio.js` (created) - Twilio adapter with feature flag
+- `services/notifications.js` (updated) - Added SMS methods and templates
+- `routes/notifications.js` (updated) - Added test-sms endpoint
+- `routes/notifications.debug.js` (updated) - SMS capability reporting
+- `package.json` (updated) - Added twilio dependency
+
+**How to Enable SMS**:
+```bash
+# Add to .env or configure as secrets:
+TWILIO_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TWILIO_AUTH_TOKEN=your_auth_token_here
+TWILIO_FROM=+1234567890
+FEATURE_SMS=true
+```
+
+**Test SMS Sending**:
+```bash
+# Using raw body:
+curl -X POST http://localhost:3000/api/notifications/test-sms \
+  -H "Authorization: Bearer <admin-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"to":"+1234567890","body":"Eden ERP: SMS channel online ✅"}'
+
+# Using template:
+curl -X POST http://localhost:3000/api/notifications/test-sms \
+  -H "Authorization: Bearer <admin-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"to":"+1234567890","template":"task_assigned","data":{"taskTitle":"Fix leak","projectName":"Main St Remodel"}}'
+```
+
+**Architecture Notes**:
+- SMS provider is feature-flagged (FEATURE_SMS=true) for safe rollout
+- Clean adapter pattern allows easy addition of WhatsApp/Voice channels
+- Template system prevents message duplication across codebase
+- All SMS operations return structured results: `{ ok, sid?, error? }`
+
+**Next Steps**:
+- Add Twilio credentials to enable SMS notifications
+- Implement user notification preferences (channel selection per event type)
+- Add quiet hours support (9 PM - 8 AM no notifications)
+- Enable WhatsApp channel via Twilio (requires WhatsApp Business Account)
+
 ## User Preferences
 I prefer iterative development, with a focus on delivering functional increments. Please ask before making major architectural changes or introducing new dependencies. I appreciate clear and concise explanations for complex topics. Ensure the codebase remains clean, well-documented, and adheres to established patterns.
 

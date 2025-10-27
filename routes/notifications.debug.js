@@ -4,9 +4,13 @@ const notifService = require('../services/notifications');
 const mailerService = require('../services/mailer');
 const queueService = require('../services/queue');
 const { authenticate, authorize } = require('../middleware/auth');
+const { providerCapabilities } = notifService;
 
 router.get('/debug', authenticate, authorize(['Admin', 'System']), async (req, res) => {
   try {
+    const providerCaps = providerCapabilities();
+    const smsCaps = providerCaps?.sms || {};
+    
     const caps = {
       channels: {
         inApp: {
@@ -22,18 +26,20 @@ router.get('/debug', authenticate, authorize(['Admin', 'System']), async (req, r
           from: mailerService.MAIL_FROM
         },
         sms: {
-          available: false,
-          provider: null,
-          configured: false
+          available: smsCaps.enabled || false,
+          provider: smsCaps.provider || null,
+          configured: smsCaps.configured || false,
+          from: smsCaps.from || null,
+          featureFlag: process.env.FEATURE_SMS === 'true'
         },
         voice: {
-          available: false,
-          provider: null,
+          available: smsCaps.hasVoice || false,
+          provider: smsCaps.hasVoice ? smsCaps.provider : null,
           configured: false
         },
         whatsapp: {
-          available: false,
-          provider: null,
+          available: smsCaps.hasWhatsApp || false,
+          provider: smsCaps.hasWhatsApp ? smsCaps.provider : null,
           configured: false
         },
         slack: {
@@ -112,9 +118,9 @@ router.get('/debug', authenticate, authorize(['Admin', 'System']), async (req, r
     if (!caps.channels.sms.available) {
       caps.recommendedNextSteps.push({
         priority: 'medium',
-        action: 'Add SMS notifications via Twilio',
-        envVars: ['TWILIO_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_FROM'],
-        implementation: 'Create services/twilio.js adapter'
+        action: 'Enable SMS notifications via Twilio',
+        envVars: ['TWILIO_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_FROM', 'FEATURE_SMS=true'],
+        note: 'SMS adapter is already implemented at providers/sms.twilio.js'
       });
     }
     

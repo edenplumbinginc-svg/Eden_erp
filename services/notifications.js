@@ -1,4 +1,5 @@
 const { pool } = require('./database');
+const { sendSMS, smsCapabilities } = require('../providers/sms.twilio');
 
 /**
  * Create an in-app notification
@@ -62,7 +63,88 @@ async function getDepartmentUsers(department) {
   }
 }
 
+/**
+ * Send SMS notification
+ * @param {Object} params
+ * @param {string} params.to - Phone number (E.164 format, e.g., +1234567890)
+ * @param {string} params.body - Message body
+ * @param {string} params.template - Optional template name
+ * @param {Object} params.data - Optional template data
+ * @returns {Promise<Object>} Result with ok, sid, error fields
+ */
+async function sendSMSNotification({ to, body, template, data }) {
+  try {
+    let messageBody = body;
+    
+    if (!messageBody && template && data) {
+      messageBody = renderSMSTemplate(template, data);
+    }
+    
+    if (!messageBody) {
+      throw new Error('Either body or (template + data) must be provided');
+    }
+    
+    const result = await sendSMS({ to, body: messageBody });
+    
+    if (result.ok) {
+      console.log('[SMS NOTIFICATION SENT]', {
+        to,
+        sid: result.sid,
+        length: messageBody.length
+      });
+    } else {
+      console.error('[SMS NOTIFICATION FAILED]', {
+        to,
+        error: result.error
+      });
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('[SMS NOTIFICATION ERROR]', error.message, { to });
+    return {
+      ok: false,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * Simple template renderer for SMS messages
+ * @private
+ */
+function renderSMSTemplate(template, data) {
+  const templates = {
+    task_assigned: ({ taskTitle, projectName }) => 
+      `Eden ERP: New task assigned - "${taskTitle}" in ${projectName}`,
+    task_overdue: ({ taskTitle }) => 
+      `Eden ERP: Task overdue - "${taskTitle}" needs attention`,
+    ball_handoff: ({ taskTitle, fromName }) => 
+      `Eden ERP: Ball handed to you - "${taskTitle}" from ${fromName}`,
+    urgent_alert: ({ message }) => 
+      `Eden ERP URGENT: ${message}`
+  };
+  
+  const renderer = templates[template];
+  if (!renderer) {
+    throw new Error(`Unknown SMS template: ${template}`);
+  }
+  
+  return renderer(data);
+}
+
+/**
+ * Get provider capabilities for diagnostics
+ */
+function providerCapabilities() {
+  return {
+    sms: smsCapabilities()
+  };
+}
+
 module.exports = {
   createNotification,
-  getDepartmentUsers
+  getDepartmentUsers,
+  sendSMSNotification,
+  providerCapabilities
 };

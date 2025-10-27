@@ -1,0 +1,147 @@
+[Mode: Execution]
+Step: Add an SMS channel (Twilio) as a provider-adapter, feature-flagged, and callable from your existing notifications service.
+Layer: Backend layer → Notifications providers (active).
+Why it matters: You already have in-app + email + Slack; SMS is the missing leg for phone notifications. A clean adapter keeps your service orchestration intact and lets you flip it on per-environment with env vars.
+
+Inputs needed: Twilio account (SID, Auth Token, From number). Server write access.
+
+Command (copy–paste exactly; adjust paths if your structure differs):
+
+1. Env: add Twilio secrets
+   `.env.local` (and CI secrets)
+
+```
+TWILIO_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TWILIO_AUTH_TOKEN=your_auth_token
+TWILIO_FROM=+1XXXXXXXXXX
+FEATURE_SMS=true
+```
+
+2. Provider adapter
+   `providers/sms.twilio.js`
+
+```js
+import Twilio from "twilio";
+
+const sid = process.env.TWILIO_SID;
+const token = process.env.TWILIO_AUTH_TOKEN;
+const from = process.env.TWILIO_FROM;
+const enabled = process.env.FEATURE_SMS === "true" && sid && token && from;
+
+let client = null;
+if (enabled) client = Twilio(sid, token);
+
+/**
+ * sendSMS({ to, body })
+ * Returns { ok: boolean, sid?: string, error?: string }
+ */
+export async function sendSMS({ to, body }) {
+  if (!enabled) return { ok: false, error: "SMS disabled (FEATURE_SMS=false or missing creds)" };
+  if (!to) return { ok: false, error: "Missing 'to' phone number" };
+
+  try {
+    const res = await client.messages.create({ to, from, body });
+    return { ok: true, sid: res.sid };
+  } catch (e) {
+    return { ok: false, error: e?.message || String(e) };
+  }
+}
+
+export function smsCapabilities() {
+  return {
+    enabled,
+    from,
+    provider: "twilio",
+    hasWhatsApp: false, // will wire later via 'from' like 'whatsapp:+1...'
+    hasVoice: false,    // separate adapter (calls) if desired
+  };
+}
+```
+
+3. Wire the adapter into your notifications service
+   `services/notifications.js` (add imports and a send method)
+
+```js
+import { sendSMS, smsCapabilities } from "../providers/sms.twilio.js";
+
+// existing exports...
+export async function sendInApp(/* ... */) { /* existing */ }
+export async function sendEmail(/* ... */) { /* existing */ }
+// etc.
+
+/**
+ * sendSMSNotification({ to, template, data, body })
+ * If 'body' not provided, you can render from template+data (optional).
+ */
+export async function sendSMSNotification({ to, body, template, data }) {
+  // Minimal version: direct pass-through. You can template later.
+  return await sendSMS({ to, body });
+}
+
+// Surface capability in your debug endpoint via this helper (optional)
+export function providerCapabilities() {
+  return {
+    sms: smsCapabilities(),
+    // include email/slack/webhook if you expose similar helpers
+  };
+}
+```
+
+4. Expose a test route (dev/admin only)
+   Add to `routes/notifications.js` (or a dedicated test router):
+
+```js
+import express from "express";
+import { sendSMSNotification } from "../services/notifications.js";
+const router = express.Router();
+
+// POST /api/notifications/test-sms { to, body }
+router.post("/test-sms", async (req, res) => {
+  try {
+    const { to, body } = req.body || {};
+    // TODO: enforce admin role here
+    const result = await sendSMSNotification({ to, body: body ?? "Test from Eden ERP" });
+    res.status(result.ok ? 200 : 400).json(result);
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e?.message || String(e) });
+  }
+});
+
+export default router;
+```
+
+…and ensure it’s mounted (if not already):
+
+```js
+import notificationsRouter from "./routes/notifications.js";
+app.use("/api/notifications", notificationsRouter);
+```
+
+5. Extend your **/api/notifications/debug** to report SMS capability (if not already):
+   Inside the debug handler you created:
+
+```js
+import { providerCapabilities } from "../services/notifications.js";
+
+const prov = providerCapabilities?.() ?? {};
+caps.hasSMS = !!prov.sms?.enabled;
+caps.providers = { ...(caps.providers || {}), sms: prov.sms };
+```
+
+Success check:
+
+* Start backend with env set.
+* `curl` test (replace number):
+
+```bash
+curl -X POST http://localhost:3000/api/notifications/test-sms \
+  -H "Content-Type: application/json" \
+  -d '{"to":"+1XXXXXXXXXX","body":"Eden ERP: SMS channel online ✅"}'
+```
+
+* Expect `{ ok: true, sid: "SM..." }` from Twilio.
+* Hit `GET /api/notifications/debug` → `hasSMS: true` and provider info shows `twilio` and your from number.
+
+Next: wait for user.
+
+Mini-lesson (notification architecture hygiene): keep channels as **adapters** (providers/sms.twilio.js) and let `services/notifications.js` orchestrate. This keeps call sites clean (`notify(user, event)`), lets you add WhatsApp/voice later as sibling adapters, and makes feature flags a one-line switch per environment. When you’re ready, we’ll do the **User Preferences** pass (per-event × per-channel matrix + quiet hours + digest) so nobody gets paged at 2am unless it’s truly on fire.

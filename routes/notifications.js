@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../services/database');
 const { authenticate, authorize } = require('../middleware/auth');
+const { sendSMSNotification } = require('../services/notifications');
 
 const debugRouter = require('./notifications.debug');
 
@@ -258,6 +259,39 @@ router.post('/weekly-digest', authenticate, authorize(['Admin', 'System']), asyn
     });
   } catch (e) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+/**
+ * POST /api/notifications/test-sms
+ * Test SMS notification sending (Admin/System only)
+ * Body: { to: "+1234567890", body: "Test message" }
+ * or: { to: "+1234567890", template: "task_assigned", data: { taskTitle: "...", projectName: "..." } }
+ */
+router.post('/test-sms', authenticate, authorize(['Admin', 'System']), async (req, res) => {
+  try {
+    const { to, body, template, data } = req.body || {};
+    
+    if (!to) {
+      return res.status(400).json({ 
+        ok: false, 
+        error: 'Missing required field: to (phone number in E.164 format, e.g., +1234567890)' 
+      });
+    }
+    
+    const result = await sendSMSNotification({ 
+      to, 
+      body: body || undefined,
+      template: template || undefined,
+      data: data || undefined
+    });
+    
+    res.status(result.ok ? 200 : 400).json(result);
+  } catch (error) {
+    res.status(500).json({ 
+      ok: false, 
+      error: error?.message || String(error) 
+    });
   }
 });
 
