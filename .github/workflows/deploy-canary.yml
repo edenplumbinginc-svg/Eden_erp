@@ -44,14 +44,24 @@ jobs:
         run: npm ci
       - name: Build frontend
         run: |-
-          npm ci || npm install --no-audit --no-fund
-          npm run build:ui
+          npm install --no-audit --no-fund
+          if jq -e ".scripts.build" package.json >/dev/null 2>&1; then
+            npm run build;
+          elif jq -e ".devDependencies.next // .dependencies.next" package.json >/dev/null 2>&1; then
+            npx next build;
+          elif jq -e ".devDependencies.vite // .dependencies.vite" package.json >/dev/null 2>&1; then
+            npx vite build;
+          else
+            echo "ℹ️ No recognizable UI build target; skipping";
+          fi
         working-directory: apps/coordination_ui
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: build-artifacts
-          path: apps/coordination_ui/dist
+          path: |-
+            apps/coordination_ui/dist
+            apps/coordination_ui/.next
           retention-days: 1
   deploy-canary:
     name: Deploy to Canary (10%)
