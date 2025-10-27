@@ -1,0 +1,209 @@
+Nice! Let’s lock this down so it actually exists in your repo and renders behind auth—no mystical “auto-sync” fairies, just concrete commits you can see.
+
+## Do it now (copy–paste in repo root)
+
+```bash
+# 0) Branch (if you’re not already on it)
+git switch -c ui/route-inventory-and-skeletons || git switch ui/route-inventory-and-skeletons
+
+# 1) Status badge
+mkdir -p apps/coordination_ui/src/components
+cat > apps/coordination_ui/src/components/StatusBadge.tsx <<'TS'
+import React from "react";
+export type Status = "ready" | "skeleton" | "missing";
+const classes: Record<Status, string> = {
+  ready: "bg-green-600/15 text-green-700 ring-1 ring-green-600/20",
+  skeleton: "bg-amber-500/15 text-amber-700 ring-1 ring-amber-500/20",
+  missing: "bg-rose-500/15 text-rose-700 ring-1 ring-rose-500/20",
+};
+export function StatusBadge({ status }: { status: Status }) {
+  return (
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${classes[status]}`}>
+      {status.toUpperCase()}
+    </span>
+  );
+}
+TS
+
+# 2) Route status map
+mkdir -p apps/coordination_ui/src/routes
+cat > apps/coordination_ui/src/routes/statusMap.ts <<'TS'
+import type { Status } from "../components/StatusBadge";
+export const routeStatus: Record<string, Status> = {
+  "/": "skeleton",
+  "/dashboard": "skeleton",
+  "/tasks": "missing",
+  "/projects": "missing",
+  "/teams": "missing",
+  "/messages": "missing",
+  "/settings": "skeleton",
+  "/styleguide": "ready",
+  "/ops/routes": "ready",
+};
+TS
+
+# 3) Routes Dashboard (no top-level await; lazy-load routes.json)
+mkdir -p apps/coordination_ui/src/pages/ops
+cat > apps/coordination_ui/src/pages/ops/RoutesDashboard.tsx <<'TS'
+import React from "react";
+import { StatusBadge } from "../../components/StatusBadge";
+import { routeStatus } from "../../routes/statusMap";
+
+export default function RoutesDashboard() {
+  const [showcase, setShowcase] = React.useState<string[]>([]);
+
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const mod = await import("../../showcase/routes.json");
+        setShowcase((mod as any).default as string[]);
+      } catch {
+        setShowcase([]);
+      }
+    })();
+  }, []);
+
+  const rows = Array.from(new Set([...showcase, ...Object.keys(routeStatus)])).sort();
+  const counts = rows.reduce(
+    (acc, path) => {
+      const s = routeStatus[path] ?? "missing";
+      acc.total++;
+      acc[s]++;
+      return acc;
+    },
+    { total: 0, ready: 0, skeleton: 0, missing: 0 } as any
+  );
+
+  return (
+    <div className="p-6 space-y-6">
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">Routes Dashboard</h1>
+          <p className="text-sm text-zinc-500">Inventory of app routes with implementation status.</p>
+        </div>
+        <div className="flex gap-2">
+          <StatusBadge status="ready" />
+          <StatusBadge status="skeleton" />
+          <StatusBadge status="missing" />
+        </div>
+      </header>
+
+      <div className="rounded-2xl border border-zinc-200 overflow-hidden shadow-sm">
+        <table className="w-full text-sm">
+          <thead className="bg-zinc-50">
+            <tr className="text-left">
+              <th className="p-3 font-medium text-zinc-600">Route</th>
+              <th className="p-3 font-medium text-zinc-600">Status</th>
+              <th className="p-3 font-medium text-zinc-600">Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((path) => {
+              const status = routeStatus[path] ?? "missing";
+              return (
+                <tr key={path} className="border-t border-zinc-100 hover:bg-zinc-50/50">
+                  <td className="p-3">
+                    <a href={path} className="text-blue-600 hover:underline">{path}</a>
+                  </td>
+                  <td className="p-3"><StatusBadge status={status} /></td>
+                  <td className="p-3 text-zinc-500">
+                    {status === "missing" ? "Needs skeleton page"
+                      : status === "skeleton" ? "Wire real data & interactions"
+                      : "Looks good — QA next"}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <footer className="text-sm text-zinc-600">
+        <b>Total:</b> {counts.total} · <b>Ready:</b> {counts.ready} · <b>Skeleton:</b> {counts.skeleton} · <b>Missing:</b> {counts.missing}
+      </footer>
+    </div>
+  );
+}
+TS
+
+# 4) Minimal skeleton pages so nothing 404s
+mkdir -p apps/coordination_ui/src/pages/{dashboard,tasks,projects,teams,messages,settings}
+for p in dashboard tasks projects teams messages settings; do
+cat > apps/coordination_ui/src/pages/$p/index.tsx <<TS
+import React from "react";
+export default function ${p^}Page() {
+  return (
+    <div className="p-6 space-y-2">
+      <h1 className="text-2xl font-semibold capitalize">${p}</h1>
+      <p className="text-zinc-500">Skeleton screen. Replace with real content.</p>
+      <div className="rounded-xl border border-dashed p-6 text-zinc-400">todo: design + data</div>
+    </div>
+  );
+}
+TS
+done
+
+# 5) Wire the route (App.jsx/tsx) — adjust path if your router file differs
+# Insert the import + route:
+applypatch <<'PATCH'
+*** Begin Patch
+*** Update File: apps/coordination_ui/src/App.jsx
+@@
+-import { BrowserRouter, Routes, Route } from "react-router-dom";
++import { BrowserRouter, Routes, Route } from "react-router-dom";
++import RoutesDashboard from "./pages/ops/RoutesDashboard";
++import RequireAuth from "./components/RequireAuth"; // adjust if your path/name differs
+@@
+         <Routes>
++          <Route
++            path="/ops/routes"
++            element={
++              <RequireAuth>
++                <RoutesDashboard />
++              </RequireAuth>
++            }
++          />
+           {/* ...your existing routes... */}
+         </Routes>
+*** End Patch
+PATCH
+
+# 6) Dev proxy safety: don’t forward *all* /ops to backend
+# If you currently proxy "/ops": "http://localhost:XXXX", replace it with specific back-end ops paths.
+# This keeps /ops/routes on the frontend.
+perl -0777 -pe 's#proxy:\s*\{[^}]*\}#do{ my $$x=$&; $$x=~s#/ops\b#/_keep_ops_proxy_marker_#g; $$x }#e' -i apps/coordination_ui/vite.config.* 2>/dev/null || true
+# (If you know the exact proxies, tighten them manually—e.g. "/ops/health", "/ops/escalation", not plain "/ops")
+
+# 7) Build check (optional local)
+npm --prefix apps/coordination_ui run build 2>/dev/null || true
+
+# 8) Commit & push
+git add -A
+git commit -m "ui(ops): Routes Dashboard + StatusBadge + skeleton pages; wire /ops/routes; keep /ops/routes on FE"
+git push -u origin ui/route-inventory-and-skeletons
+```
+
+## What you’ll see
+
+* Visit `/ops/routes` (you’ll get login first if auth-protected). The table lists all routes with badges. Change statuses in `statusMap.ts` as you implement.
+* No more 404s for the core pages because we dropped in skeletons.
+
+## Where to push next (fastest value)
+
+1. Pick **one** page (Tasks) and move it to **ready**:
+
+   * Define the URL contract.
+   * Add list + detail view.
+   * Wire create/edit with optimistic updates.
+   * Mark `/tasks` → `ready` in `statusMap.ts`.
+
+2. Add a tiny “Page completeness checklist” to each skeleton so devs know the definition of done:
+
+   * Data source hooked
+   * Empty state
+   * Error state
+   * Loading state
+   * a11y & keyboard
+   * E2E happy path
+
+You’ll get momentum and clarity: the dashboard becomes your living map, and each route gets promoted from missing → skeleton → ready with receipts.
