@@ -23,6 +23,24 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();
+      
+      // Check if user had "remember me" unchecked and browser was closed
+      const rememberMe = localStorage.getItem('edenRememberMe');
+      const hasTemporaryFlag = sessionStorage.getItem('edenTemporarySession');
+      
+      // If session exists but remember-me was false and no temporary flag, user closed browser - log them out
+      if (session && rememberMe === 'false' && !hasTemporaryFlag) {
+        await supabase.auth.signOut();
+        localStorage.removeItem('edenAuthToken');
+        clearCachedPerms();
+        setSession(null);
+        setUser(null);
+        setPermissions([]);
+        setRoles([]);
+        setIsLoading(false);
+        return;
+      }
+      
       setSession(session);
       setUser(session?.user ?? null);
       
