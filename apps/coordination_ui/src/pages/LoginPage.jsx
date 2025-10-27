@@ -89,9 +89,9 @@ export default function LoginPage() {
     <div className="min-h-screen bg-background flex items-center justify-center" style={{ paddingTop: 'var(--space-6)', paddingBottom: 'var(--space-6)' }}>
       <div className="card" style={{ maxWidth: '400px', width: '100%', margin: 'var(--space-3)' }}>
         <div style={{ textAlign: 'center', marginBottom: 'var(--space-4)' }}>
-          <img src="/eden-mep-logo.png" alt="EDEN MEP INC" style={{ height: '48px', width: 'auto', margin: '0 auto var(--space-2)' }} />
+          <img src="/logo-eden.svg" alt="EDEN" style={{ height: '32px', width: 'auto', margin: '0 auto var(--space-2)' }} />
           <h1 style={{ fontSize: '24px', lineHeight: '32px', fontWeight: 400, color: 'var(--md-on-surface)', marginBottom: 'var(--space-1)' }}>
-            Sign in to EDEN MEP INC
+            Sign in to EDEN
           </h1>
           <p className="text-caption" style={{ color: 'var(--md-on-surface-variant)' }}>
             Enter your credentials to continue
@@ -321,7 +321,7 @@ export default function LoginPage() {
 
         <div style={{ marginTop: 'var(--space-3)', textAlign: 'center' }}>
           <p className="text-caption" style={{ color: 'var(--md-on-surface-variant)' }}>
-            New to EDEN MEP INC?{' '}
+            New to EDEN?{' '}
             <Link to="/signup" className="text-link">
               Create an account
             </Link>
