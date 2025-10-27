@@ -7,7 +7,7 @@ export default function GuestDashboard() {
       <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', padding: 'var(--space-4)' }}>
         <div className="card" style={{ marginBottom: 'var(--space-4)' }}>
           <div style={{ textAlign: 'center', padding: 'var(--space-6)' }}>
-            <img src="/logo-eden.svg" alt="EDEN" style={{ height: '48px', width: 'auto', margin: '0 auto var(--space-3)' }} />
+            <img src="/eden-logo.png" alt="EDEN" style={{ height: '64px', width: 'auto', margin: '0 auto var(--space-3)' }} />
             <h1 style={{ fontSize: '32px', lineHeight: '40px', fontWeight: 400, color: 'var(--md-on-surface)', marginBottom: 'var(--space-2)' }}>
               Welcome to EDEN
             </h1>

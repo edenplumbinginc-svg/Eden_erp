@@ -32,7 +32,7 @@ export default function EdenHeader() {
       }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/logo-eden.svg" alt="EDEN" style={{height: '28px', width: 'auto'}} />
+            <img src="/eden-logo.png" alt="EDEN" style={{height: '32px', width: 'auto'}} />
             <span className="text-caption" style={{ 
               color: 'var(--md-on-surface-variant)', 
               padding: '4px 12px',
