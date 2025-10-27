@@ -39,6 +39,7 @@ import ShowcasePage from './pages/ShowcasePage';
 import AboutEden from './pages/AboutEden';
 import StyleguidePage from './pages/StyleguidePage';
 import RouteMap from './pages/RouteMap';
+import RoutesDashboard from './pages/ops/RoutesDashboard';
 import { ThemeProvider } from './components/ThemeProvider';
 
 const queryClient = new QueryClient();
@@ -360,6 +361,14 @@ function AppContent() {
                   element={
                     <RequireAuth>
                       <RouteMap />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/ops/routes" 
+                  element={
+                    <RequireAuth>
+                      <RoutesDashboard />
                     </RequireAuth>
                   } 
                 />

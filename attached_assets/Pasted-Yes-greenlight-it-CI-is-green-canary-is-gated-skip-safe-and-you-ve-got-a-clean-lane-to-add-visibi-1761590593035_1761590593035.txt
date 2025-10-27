@@ -1,0 +1,129 @@
+Yes—greenlight it. CI is green, canary is gated/skip-safe, and you’ve got a clean lane to add visibility. The Routes Dashboard gives you x-ray vision on what’s missing so we stop stumbling in the dark.
+
+Here’s the quickest way to land it now (copy–paste, from repo root). It adds the dashboard, status badges, and skeleton pages; then you’ll wire one route and open a PR.
+
+```bash
+# new branch (if you don't already have it)
+git switch -c ui/route-inventory-and-skeletons || git switch ui/route-inventory-and-skeletons
+
+# 1) StatusBadge
+mkdir -p apps/coordination_ui/src/components
+cat > apps/coordination_ui/src/components/StatusBadge.tsx <<'TS'
+import React from "react";
+type Status = "ready" | "skeleton" | "missing";
+const classes: Record<Status, string> = {
+  ready: "bg-green-600/15 text-green-700 ring-1 ring-green-600/20",
+  skeleton: "bg-amber-500/15 text-amber-700 ring-1 ring-amber-500/20",
+  missing: "bg-rose-500/15 text-rose-700 ring-1 ring-rose-500/20",
+};
+export function StatusBadge({ status }: { status: Status }) {
+  return <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${classes[status]}`}>{status.toUpperCase()}</span>;
+}
+export type { Status };
+TS
+
+# 2) Route status map
+mkdir -p apps/coordination_ui/src/routes
+cat > apps/coordination_ui/src/routes/statusMap.ts <<'TS'
+import type { Status } from "../components/StatusBadge";
+export const routeStatus: Record<string, Status> = {
+  "/": "skeleton",
+  "/dashboard": "skeleton",
+  "/tasks": "missing",
+  "/projects": "missing",
+  "/teams": "missing",
+  "/messages": "missing",
+  "/settings": "skeleton",
+  "/styleguide": "ready",
+};
+TS
+
+# 3) Routes Dashboard page
+mkdir -p apps/coordination_ui/src/pages/ops
+cat > apps/coordination_ui/src/pages/ops/RoutesDashboard.tsx <<'TS'
+import React from "react";
+import { StatusBadge } from "../../components/StatusBadge";
+import { routeStatus } from "../../routes/statusMap";
+
+let showcase: string[] = [];
+try {
+  // optional file written by your generator; ignore if missing
+  // @ts-ignore
+  showcase = (await import("../../showcase/routes.json")).default as string[];
+} catch {}
+
+const rows = Array.from(new Set([...showcase, ...Object.keys(routeStatus)])).sort();
+
+export default function RoutesDashboard() {
+  return (
+    <div className="p-6 space-y-6">
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">Routes Dashboard</h1>
+          <p className="text-sm text-zinc-500">Inventory of app routes with implementation status.</p>
+        </div>
+      </header>
+      <div className="rounded-2xl border border-zinc-200 overflow-hidden shadow-sm">
+        <table className="w-full text-sm">
+          <thead className="bg-zinc-50">
+            <tr className="text-left">
+              <th className="p-3 font-medium text-zinc-600">Route</th>
+              <th className="p-3 font-medium text-zinc-600">Status</th>
+              <th className="p-3 font-medium text-zinc-600">Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((path) => {
+              const status = routeStatus[path] ?? "missing";
+              return (
+                <tr key={path} className="border-t border-zinc-100 hover:bg-zinc-50/50">
+                  <td className="p-3"><a href={path} className="text-blue-600 hover:underline">{path}</a></td>
+                  <td className="p-3"><StatusBadge status={status} /></td>
+                  <td className="p-3 text-zinc-500">
+                    {status === "missing" ? "Needs skeleton page" :
+                     status === "skeleton" ? "Wire real data & interactions" :
+                     "Looks good—QA next"}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+TS
+
+# 4) Quick skeleton pages so nothing 404s
+mkdir -p apps/coordination_ui/src/pages/{dashboard,tasks,projects,teams,messages,settings}
+for p in dashboard tasks projects teams messages settings; do
+cat > apps/coordination_ui/src/pages/$p/index.tsx <<TS
+import React from "react";
+export default function ${p^}Page() {
+  return (
+    <div className="p-6 space-y-2">
+      <h1 className="text-2xl font-semibold capitalize">${p}</h1>
+      <p className="text-zinc-500">Skeleton screen. Replace with real content.</p>
+      <div className="rounded-xl border border-dashed p-6 text-zinc-400">todo: design + data</div>
+    </div>
+  );
+}
+TS
+done
+
+# 5) Commit & push
+git add -A
+git commit -m "ui(ops): add Routes Dashboard + StatusBadge + skeleton pages"
+git push -u origin ui/route-inventory-and-skeletons
+```
+
+Last step: add the route to your router so you can visit `/ops/routes`. In your UI router file (where `<Routes>` live), add:
+
+```tsx
+import RoutesDashboard from "./pages/ops/RoutesDashboard";
+// …
+<Route path="/ops/routes" element={<RoutesDashboard />} />
+```
+
+That’s it. Open the PR, merge, then hit `/ops/routes` to see the live inventory. From there, promote routes from **missing → skeleton → ready** as you implement. Next smart move: pick one screen (e.g., **Tasks**) and take it all the way to “ready”—real data, edit flow, and optimistic UI. That momentum compounds.

@@ -24,7 +24,11 @@ export default defineConfig({
         target: 'http://localhost:3000',
         changeOrigin: true
       },
-      '/ops': {
+      '/ops/alarms': {
+        target: 'http://localhost:3000',
+        changeOrigin: true
+      },
+      '/ops/health': {
         target: 'http://localhost:3000',
         changeOrigin: true
       }
