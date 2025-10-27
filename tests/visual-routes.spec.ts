@@ -9,26 +9,26 @@ test.describe("Visual Regression Tests", () => {
     test.describe(`Visual snapshots (${scheme} mode)`, () => {
       test.use({ colorScheme: scheme });
 
-      test.beforeEach(async ({ page }) => {
-        // Log in before testing routes
-        await page.goto("http://localhost:5173/login");
-        await page.fill('input[type="email"]', "test@eden.com");
-        await page.fill('input[type="password"]', "password");
-        await page.click('button[type="submit"]');
-        
-        // Wait for navigation to complete
-        await page.waitForURL(/\/(dashboard|$)/, { timeout: 5000 });
-      });
-
       for (const r of STATIC_ROUTES) {
-        test(`${r.path} - ${r.title}`, async ({ page }) => {
-          // Navigate to the route
-          await page.goto(`http://localhost:5173${r.path}`);
+        test(`${r.path} - ${r.title}`, async ({ page, context }) => {
+          // Set e2e cookie for auth bypass
+          await context.addCookies([
+            { name: "e2e", value: "1", url: "http://localhost:5173" }
+          ]);
+
+          // Add motion-freeze CSS to reduce animation flake
+          await page.addStyleTag({ 
+            path: "apps/coordination_ui/public/test-freeze.css" 
+          }).catch(() => {
+            // Silently continue if file doesn't exist
+          });
+
+          // Navigate to route with e2e bypass enabled
+          await page.goto(`http://localhost:5173${r.path}?e2e=1`);
           await page.waitForLoadState("networkidle");
 
-          // Wait for animations to settle (adjust based on your motion tokens)
-          // Your --dur-md is 280ms, so 300ms should be safe
-          await page.waitForTimeout(300);
+          // Wait for animations to settle (150ms is enough with freeze CSS)
+          await page.waitForTimeout(150);
 
           // Take full-page screenshot
           const screenshotName = `${scheme}${r.path.replace(/\W+/g, "_")}.png`;

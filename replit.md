@@ -28,6 +28,8 @@ A TypeScript-based Route Coverage Map (`/routes`) provides a visual inventory of
 
 Quality gates include automated accessibility testing via axe-core (WCAG 2.0 Level A/AA compliance) and light/dark mode visual regression snapshots for all static routes. Tests run via `npm run test:a11y` for accessibility, `npm run test:visual` for visual regression, and `npm run test:quality` for the complete suite. The system ensures routes are not only present but also usable and visually stable.
 
+A test-only authentication bypass allows automated tests to mount routes without requiring login credentials. The bypass is explicitly opt-in via environment variable (`VITE_E2E=true`) or query parameter (`?e2e=1`), ensuring production security while enabling comprehensive route testing. Motion-freeze CSS reduces visual test flakiness by minimizing animation variance.
+
 Production-grade environment variable validation with Zod schemas is implemented, along with a config health endpoint. User Profile Management is available via an API for optional user fields. An automated UI Coverage Gate enforces complete page coverage based on a contract (`docs/ui-contract.yaml`), preventing half-built features. A contract-driven Playwright test suite (`Navigation Smoke Test`) validates all routes, including authenticated ones, and integrates with CI/CD. CI Quality Gates (`.github/workflows/quality-gates.yml`) automate quality enforcement, including builds, UI coverage checks, and smoke tests, on every PR and push to main.
 
 ### System Design Choices

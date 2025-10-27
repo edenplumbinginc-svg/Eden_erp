@@ -6,21 +6,22 @@ import { ROUTES } from "../apps/coordination_ui/src/routes.manifest";
 const STATIC_ROUTES = ROUTES.filter(r => !r.path.includes(":"));
 
 test.describe("Accessibility Smoke Tests", () => {
-  test.beforeEach(async ({ page }) => {
-    // Log in before testing routes
-    await page.goto("http://localhost:5173/login");
-    await page.fill('input[type="email"]', "test@eden.com");
-    await page.fill('input[type="password"]', "password");
-    await page.click('button[type="submit"]');
-    
-    // Wait for navigation to complete
-    await page.waitForURL(/\/(dashboard|$)/, { timeout: 5000 });
-  });
-
   for (const r of STATIC_ROUTES) {
-    test(`a11y: ${r.path} - ${r.title}`, async ({ page }) => {
-      // Navigate to the route
-      await page.goto(`http://localhost:5173${r.path}`);
+    test(`a11y: ${r.path} - ${r.title}`, async ({ page, context }) => {
+      // Set e2e cookie for auth bypass
+      await context.addCookies([
+        { name: "e2e", value: "1", url: "http://localhost:5173" }
+      ]);
+
+      // Add motion-freeze CSS to reduce animation flake
+      await page.addStyleTag({ 
+        path: "apps/coordination_ui/public/test-freeze.css" 
+      }).catch(() => {
+        // Silently continue if file doesn't exist
+      });
+
+      // Navigate to route with e2e bypass enabled
+      await page.goto(`http://localhost:5173${r.path}?e2e=1`);
       await page.waitForLoadState("networkidle");
 
       // Run axe accessibility checks
