@@ -1,12 +1,14 @@
 name: Canary Deployment with Release Guard
-'on':
+
+on:
   push:
-    branches:
-      - main
-  workflow_dispatch: null
+    branches: [main]
+  workflow_dispatch:
+
 env:
   NODE_VERSION: '20'
   STAGING_URL: ${{ secrets.STAGING_URL || 'https://your-staging-host.repl.co' }}
+
 jobs:
   test:
     name: Run Tests
@@ -20,14 +22,15 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - name: Install dependencies
-        run: npm ci
+        run: npm ci || npm install --no-audit --no-fund
       - name: Run escalation worker tests
-        run: npx jest --clearCache && npm test -- --passWithNoTests __tests__/escalation.*
         env:
           CI: true
           ESCALATION_WORKER_ENABLED: 'true'
           ESCALATION_V1: 'true'
           ESC_CANARY_PCT: '100'
+        run: npx jest --clearCache && npm test -- --passWithNoTests __tests__/escalation.*
+
   build:
     name: Build Application
     runs-on: ubuntu-latest
@@ -40,29 +43,36 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-      - name: Install dependencies
-        run: npm ci
+      - name: Install root deps
+        run: npm ci || npm install --no-audit --no-fund
       - name: Build frontend
-        run: |-
+        working-directory: apps/coordination_ui
+        run: |
           npm install --no-audit --no-fund
           if jq -e ".scripts.build" package.json >/dev/null 2>&1; then
-            npm run build;
+            npm run build
           elif jq -e ".devDependencies.next // .dependencies.next" package.json >/dev/null 2>&1; then
-            npx next build;
+            npx next build
           elif jq -e ".devDependencies.vite // .dependencies.vite" package.json >/dev/null 2>&1; then
-            npx vite build;
+            npx vite build
           else
-            echo "ℹ️ No recognizable UI build target; skipping";
+            echo "ℹ️ No recognizable UI build target; skipping"
           fi
+      - name: UI e2e (Playwright) — optional
+        if: ${{ hashFiles('apps/coordination_ui/playwright.config.*') != '' && (hashFiles('apps/coordination_ui/tests/e2e/**') != '' || hashFiles('apps/coordination_ui/e2e/**') != '') }}
         working-directory: apps/coordination_ui
+        run: |
+          npx playwright install --with-deps
+          npx playwright test --reporter=line
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: build-artifacts
-          path: |-
+          path: |
             apps/coordination_ui/dist
             apps/coordination_ui/.next
           retention-days: 1
+
   deploy-canary:
     name: Deploy to Canary (10%)
     runs-on: ubuntu-latest
@@ -81,34 +91,33 @@ jobs:
       - name: Deploy to staging (canary 10%)
         run: |
           echo "Deploying canary to staging..."
-          # Add your deployment commands here
-          # Example: scp, rsync, cloud CLI, etc.
+          # TODO: your real deploy command(s)
           echo "✅ Canary deployed"
       - name: Smoke test (basic health)
+        if: ${{ env.STAGING_URL != '' && !contains(env.STAGING_URL, 'your-staging-host') }}
         run: |
           sleep 5
-          curl -f "${{ env.STAGING_URL }}/health" || exit 1
+          curl -fsS "$STAGING_URL/health"
           echo "✅ Health check passed"
       - name: Smoke test (escalation worker health)
+        if: ${{ env.STAGING_URL != '' && !contains(env.STAGING_URL, 'your-staging-host') }}
         run: |
-          response=$(curl -s "${{ env.STAGING_URL }}/ops/escalation/health")
+          response=$(curl -fsS "$STAGING_URL/ops/escalation/health" || echo '{}')
           echo "Escalation Health: $response"
-          enabled=$(echo "$response" | jq -r '.enabled')
-          dryRun=$(echo "$response" | jq -r '.dryRun')
-          canaryPct=$(echo "$response" | jq -r '.canaryPct')
-
+          enabled=$(echo "$response" | jq -r '.enabled // "false"')
+          dryRun=$(echo "$response" | jq -r '.dryRun // "false"')
+          canaryPct=$(echo "$response" | jq -r '.canaryPct // "0"')
           if [ "$enabled" != "true" ]; then
             echo "❌ Escalation worker not enabled"
             exit 1
           fi
-
           if [ "$dryRun" != "true" ]; then
             echo "⚠️  Warning: DRY_RUN is disabled in staging"
           fi
-
           echo "✅ Escalation worker health check passed"
       - name: Release Guard (incident gate)
         id: release-guard
+        if: ${{ env.STAGING_URL != '' && !contains(env.STAGING_URL, 'your-staging-host') }}
         env:
           GUARD_URL: ${{ env.STAGING_URL }}/ops/release-guard
           GUARD_LOOKBACK_MIN: '10'
@@ -117,33 +126,26 @@ jobs:
         run: |
           set -euo pipefail
           echo "🛡️  Checking Release Guard..."
-
           code=$(curl -s -o guard.json -w "%{http_code}" \
             -H "X-Guard-Lookback-Min: ${GUARD_LOOKBACK_MIN}" \
             -H "X-Guard-Min-Esc-Level: ${GUARD_MIN_ESC_LEVEL}" \
             -H "X-Guard-Include-Warning: ${GUARD_INCLUDE_WARNING}" \
             "$GUARD_URL" || echo "000")
-
           echo "Release Guard HTTP: $code"
-
           if [ -f guard.json ]; then
-            echo "Release Guard Response:"
             cat guard.json | jq '.' || cat guard.json
           fi
-
           if [ "$code" = "200" ]; then
             echo "✅ Release Guard PASSED - No blocking incidents"
-            exit 0
           elif [ "$code" = "503" ]; then
             echo "❌ Release Guard BLOCKED - Active critical incidents detected"
-            echo "See guard.json for details"
             exit 1
           else
             echo "⚠️  Release Guard returned unexpected status: $code"
             exit 1
           fi
       - name: Upload Release Guard report
-        if: always()
+        if: always() && steps.release-guard.outcome != 'skipped'
         uses: actions/upload-artifact@v4
         with:
           name: release-guard-report
@@ -153,21 +155,14 @@ jobs:
         if: failure() && steps.release-guard.outcome == 'failure'
         run: |
           echo "🔄 Release Guard failed - executing auto-rollback..."
-          echo "Rolling back canary deployment..."
-
-          # Add your rollback commands here
-          # Example: restore previous version, scale down canary, etc.
-
+          # TODO: add rollback commands
           echo "✅ Rollback completed"
-          echo "❌ Deployment blocked due to active critical incidents"
-          echo "Review the Release Guard report for details"
           exit 1
       - name: Notify on guard failure
         if: failure() && steps.release-guard.outcome == 'failure'
         run: |
-          echo "📢 Sending notification about blocked deployment..."
-          # Add Slack/email notification here if needed
-          echo "Deployment blocked by Release Guard. Check incidents in Velocity Dashboard."
+          echo "📢 Deployment blocked by Release Guard."
+
   promote-production:
     name: Promote to Production (100%)
     runs-on: ubuntu-latest
@@ -185,9 +180,9 @@ jobs:
       - name: Promote to production
         run: |
           echo "Promoting to production (100%)..."
-          # Add your production deployment commands here
+          # TODO: your real prod deploy command(s)
           echo "✅ Production deployment complete"
       - name: Production smoke test
         run: |
-          # Add production health checks here
+          # TODO: real prod health checks
           echo "✅ Production health check passed"
