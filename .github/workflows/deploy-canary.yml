@@ -1,15 +1,12 @@
 name: Canary Deployment with Release Guard
-
-on:
+'on':
   push:
     branches:
       - main
-  workflow_dispatch:
-
+  workflow_dispatch: null
 env:
   NODE_VERSION: '20'
   STAGING_URL: ${{ secrets.STAGING_URL || 'https://your-staging-host.repl.co' }}
-
 jobs:
   test:
     name: Run Tests
@@ -17,16 +14,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
+          cache: npm
       - name: Install dependencies
         run: npm ci
-
       - name: Run escalation worker tests
         run: npx jest --clearCache && npm test -- --passWithNoTests __tests__/escalation.*
         env:
@@ -34,7 +28,6 @@ jobs:
           ESCALATION_WORKER_ENABLED: 'true'
           ESCALATION_V1: 'true'
           ESC_CANARY_PCT: '100'
-
   build:
     name: Build Application
     runs-on: ubuntu-latest
@@ -42,27 +35,24 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
+          cache: npm
       - name: Install dependencies
         run: npm ci
-
       - name: Build frontend
-        run: npm run build:ui
+        run: |-
+          npm ci || npm install --no-audit --no-fund
+          npm run build:ui
         working-directory: apps/coordination_ui
-
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: build-artifacts
           path: apps/coordination_ui/dist
           retention-days: 1
-
   deploy-canary:
     name: Deploy to Canary (10%)
     runs-on: ubuntu-latest
@@ -73,26 +63,22 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: build-artifacts
           path: apps/coordination_ui/dist
-
       - name: Deploy to staging (canary 10%)
         run: |
           echo "Deploying canary to staging..."
           # Add your deployment commands here
           # Example: scp, rsync, cloud CLI, etc.
           echo "✅ Canary deployed"
-
       - name: Smoke test (basic health)
         run: |
           sleep 5
           curl -f "${{ env.STAGING_URL }}/health" || exit 1
           echo "✅ Health check passed"
-
       - name: Smoke test (escalation worker health)
         run: |
           response=$(curl -s "${{ env.STAGING_URL }}/ops/escalation/health")
@@ -100,43 +86,41 @@ jobs:
           enabled=$(echo "$response" | jq -r '.enabled')
           dryRun=$(echo "$response" | jq -r '.dryRun')
           canaryPct=$(echo "$response" | jq -r '.canaryPct')
-          
+
           if [ "$enabled" != "true" ]; then
             echo "❌ Escalation worker not enabled"
             exit 1
           fi
-          
+
           if [ "$dryRun" != "true" ]; then
             echo "⚠️  Warning: DRY_RUN is disabled in staging"
           fi
-          
-          echo "✅ Escalation worker health check passed"
 
-      # ==================== RELEASE GUARD GATE ====================
+          echo "✅ Escalation worker health check passed"
       - name: Release Guard (incident gate)
         id: release-guard
         env:
-          GUARD_URL: "${{ env.STAGING_URL }}/ops/release-guard"
-          GUARD_LOOKBACK_MIN: "10"
-          GUARD_MIN_ESC_LEVEL: "1"
-          GUARD_INCLUDE_WARNING: "false"
+          GUARD_URL: ${{ env.STAGING_URL }}/ops/release-guard
+          GUARD_LOOKBACK_MIN: '10'
+          GUARD_MIN_ESC_LEVEL: '1'
+          GUARD_INCLUDE_WARNING: 'false'
         run: |
           set -euo pipefail
           echo "🛡️  Checking Release Guard..."
-          
+
           code=$(curl -s -o guard.json -w "%{http_code}" \
             -H "X-Guard-Lookback-Min: ${GUARD_LOOKBACK_MIN}" \
             -H "X-Guard-Min-Esc-Level: ${GUARD_MIN_ESC_LEVEL}" \
             -H "X-Guard-Include-Warning: ${GUARD_INCLUDE_WARNING}" \
             "$GUARD_URL" || echo "000")
-          
+
           echo "Release Guard HTTP: $code"
-          
+
           if [ -f guard.json ]; then
             echo "Release Guard Response:"
             cat guard.json | jq '.' || cat guard.json
           fi
-          
+
           if [ "$code" = "200" ]; then
             echo "✅ Release Guard PASSED - No blocking incidents"
             exit 0
@@ -148,7 +132,6 @@ jobs:
             echo "⚠️  Release Guard returned unexpected status: $code"
             exit 1
           fi
-
       - name: Upload Release Guard report
         if: always()
         uses: actions/upload-artifact@v4
@@ -156,29 +139,25 @@ jobs:
           name: release-guard-report
           path: guard.json
           retention-days: 7
-
-      # ==================== AUTO-ROLLBACK ON FAILURE ====================
       - name: Auto-rollback on guard fail
         if: failure() && steps.release-guard.outcome == 'failure'
         run: |
           echo "🔄 Release Guard failed - executing auto-rollback..."
           echo "Rolling back canary deployment..."
-          
+
           # Add your rollback commands here
           # Example: restore previous version, scale down canary, etc.
-          
+
           echo "✅ Rollback completed"
           echo "❌ Deployment blocked due to active critical incidents"
           echo "Review the Release Guard report for details"
           exit 1
-
       - name: Notify on guard failure
         if: failure() && steps.release-guard.outcome == 'failure'
         run: |
           echo "📢 Sending notification about blocked deployment..."
           # Add Slack/email notification here if needed
           echo "Deployment blocked by Release Guard. Check incidents in Velocity Dashboard."
-
   promote-production:
     name: Promote to Production (100%)
     runs-on: ubuntu-latest
@@ -188,19 +167,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: build-artifacts
           path: apps/coordination_ui/dist
-
       - name: Promote to production
         run: |
           echo "Promoting to production (100%)..."
           # Add your production deployment commands here
           echo "✅ Production deployment complete"
-
       - name: Production smoke test
         run: |
           # Add production health checks here
