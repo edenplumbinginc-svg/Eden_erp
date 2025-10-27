@@ -125,6 +125,17 @@ function pagePaths(route) {
     candidates.push(`admin/${pascalCase}.tsx`);
   }
   
+  // Handle multi-part routes: /about/eden -> AboutEden.jsx (combine all parts)
+  if (parts.length > 1) {
+    const combinedPascal = parts
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join("");
+    candidates.push(`${combinedPascal}.jsx`);
+    candidates.push(`${combinedPascal}.tsx`);
+    candidates.push(`${combinedPascal}Page.jsx`);
+    candidates.push(`${combinedPascal}Page.tsx`);
+  }
+  
   // Handle dynamic routes: /task/[id] -> TaskDetail.jsx or /incidents/[id] -> IncidentDetail.jsx
   if (fileName.startsWith("[")) {
     const baseName = parts[parts.length - 2];
