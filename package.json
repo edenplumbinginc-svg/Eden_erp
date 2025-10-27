@@ -37,7 +37,7 @@
     "build": "npm run build:ui",
     "postinstall": "npm --prefix Eden_erp install --no-audit --no-fund",
     "prepare": "node -e \"process.exit(0)\"",
-    "build:ui": "npm --prefix apps/coordination_ui run build"
+    "build:ui": "npm --prefix apps/coordination_ui ci || npm --prefix apps/coordination_ui install --no-audit --no-fund && npm --prefix apps/coordination_ui run build"
   },
   "description": "Monolithic shell.",
   "main": "server.js",
