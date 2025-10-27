@@ -85,11 +85,18 @@ jobs:
           # Example: scp, rsync, cloud CLI, etc.
           echo "✅ Canary deployed"
       - name: Smoke test (basic health)
+  if: ${{ env.STAGING_URL != '' && !contains(env.STAGING_URL, 'your-staging-host') }}
+  run: |
+    sleep 5
+    curl -fsS "$STAGING_URL/health"
         run: |
           sleep 5
           curl -f "${{ env.STAGING_URL }}/health" || exit 1
           echo "✅ Health check passed"
       - name: Smoke test (escalation worker health)
+  if: ${{ env.STAGING_URL != '' && !contains(env.STAGING_URL, 'your-staging-host') }}
+  run: |
+    curl -fsS "$STAGING_URL/api/worker/health"
         run: |
           response=$(curl -s "${{ env.STAGING_URL }}/ops/escalation/health")
           echo "Escalation Health: $response"
