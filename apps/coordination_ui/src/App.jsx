@@ -371,6 +371,7 @@ function AppContent() {
         )}
       </div>
     </div>
+    </Main>
   );
 }
 
@@ -407,9 +408,7 @@ function App() {
         </Router>
       </QueryClientProvider>
     </ThemeProvider>
-  
-</Main>
-);
+  );
 }
 
 export default App;
