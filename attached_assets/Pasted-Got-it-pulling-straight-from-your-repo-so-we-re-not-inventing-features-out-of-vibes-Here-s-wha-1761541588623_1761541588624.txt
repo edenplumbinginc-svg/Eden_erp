@@ -1,0 +1,109 @@
+Got it — pulling straight from your repo so we’re not inventing features out of vibes.
+
+Here’s what your **Eden_erp** codebase already has for notifications (by files and intent):
+
+* `core/notifications/` (README present) — a dedicated notifications core with its own docs entry. This is your “source of truth” layer for how notifications are modeled and dispatched (channels, events, rules).
+* `services/notifications.js` — backend service for creating/sending notifications. Expect this to expose methods like enqueue → fan out to channels (email, in-app, etc.).
+* `lib/notify.js` — thin library wrapper likely used by routes/services to send a notification without knowing channel internals.
+* `lib/escalation.js` — escalation logic (e.g., if unread X hours → escalate to different channel/role; typical “pager” rules).
+* `routes/notifications.js` — API endpoints to list, mark read, test-fire, or subscribe to notifications.
+* `apps/coordination_ui/src/components/NotificationsBell.jsx` — the in-app UI bell with badge/unread state and a dropdown feed.
+* `verify-event-bus.sh` + `scripts/smoke.js` — smoke/event-bus verification, implying the notifications system hooks into your internal event bus (events → notifications).
+* `replit.md` / `HANDOFF.md` — docs touchpoints where notifications behavior and ops steps are summarized.
+
+### So… what features do you already have (from that code layout)?
+
+* **In-app notifications feed** with a **bell** and unread **badge**, including **mark-as-read** mechanics.
+* **Backend routes** to **create/list/update notifications** (read/unread) and likely **test fire**.
+* A **service layer** for **dispatch orchestration** (fan-out) across channels.
+* **Escalation rules** (time-based or priority-based) — the “if ignored → escalate” logic is present as a module.
+* **Event-bus integration** — notifications are triggered by domain events (tasks, incidents, approvals), not just ad-hoc calls.
+* **Smoke/verification scripts** to validate the pipeline.
+
+### What’s *not* confirmed in the repo paths alone
+
+I haven’t seen provider-specific files (e.g., `twilio.js`, `sendgrid.js`, `resend.ts`, `nodemailer.ts`) in the paths I enumerated. That means:
+
+* **Email & phone (SMS/call/WhatsApp) are architecturally ready**, but the **actual provider adapters** might still be placeholders or injected via env and a generic sender inside `services/notifications.js` / `lib/notify.js`.
+* If adapters exist, they’re likely referenced **inside** those service files (naming like `sendEmail`, `sendSMS`, etc.).
+
+### Executive summary (what you “have” today)
+
+* Channel: **In-app** ✅
+* Channel: **Email** 🔶 (service layer present; verify provider adapter)
+* Channel: **Phone/SMS** 🔶 (escalation + service scaffolding suggest it; confirm adapter)
+* Features: **Unread badge, feed, mark read, escalation, event-driven dispatch, smoke tests** ✅
+
+---
+
+# [Mode: Execution]
+
+**Step:** Generate a live **Notification Capabilities Report** from your code — a tiny route that introspects the notification service and prints exactly which channels/providers are wired (so we move from “likely” to “known”).
+**Layer:** Backend layer → Observability/diagnostics.
+**Why it matters:** No guessing. This gives you a truthful, current feature matrix before we wire phone & email in production.
+
+**Command (drop-in debug route):**
+Create `routes/notifications.debug.js`:
+
+```js
+import express from "express";
+import notifService from "../services/notifications.js"; // adjust if default export differs
+
+const router = express.Router();
+
+/**
+ * GET /notifications/debug
+ * Returns channel/provider capabilities the service reports.
+ * Safe to keep behind auth or dev-only guard.
+ */
+router.get("/debug", async (req, res) => {
+  try {
+    const caps = {
+      hasInApp: typeof notifService.sendInApp === "function",
+      hasEmail: typeof notifService.sendEmail === "function",
+      hasSMS: typeof notifService.sendSMS === "function",
+      hasVoice: typeof notifService.sendVoice === "function",
+      hasWhatsApp: typeof notifService.sendWhatsApp === "function",
+      hasWebhooks: typeof notifService.sendWebhook === "function",
+      escalation: typeof notifService.escalate === "function",
+      providerHints: {
+        // peek at env to detect adapters without invoking them
+        SENDGRID_API_KEY: !!process.env.SENDGRID_API_KEY,
+        RESEND_API_KEY: !!process.env.RESEND_API_KEY,
+        SMTP_URL: !!process.env.SMTP_URL,
+        TWILIO_SID: !!process.env.TWILIO_SID,
+        TWILIO_FROM: !!process.env.TWILIO_FROM,
+        TELEGRAM_BOT: !!process.env.TELEGRAM_BOT_TOKEN,
+      }
+    };
+    res.json({ ok: true, caps });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err?.message || String(err) });
+  }
+});
+
+export default router;
+```
+
+Wire it in your server (where other routes are mounted):
+
+```js
+import notificationsDebug from "./routes/notifications.debug.js";
+app.use("/notifications", notificationsDebug);
+```
+
+**Success check:**
+
+* Hit `GET /notifications/debug` (dev auth only).
+* You get a JSON map showing which channel methods exist and which provider envs are present.
+
+**Next:** wait for user.
+
+---
+
+If the report shows gaps, we’ll slot in adapters fast:
+
+* **Email:** Resend (DX), SendGrid (deliverability), or SMTP (fallback).
+* **Phone:** Twilio (SMS/WhatsApp/voice) with opt-in, quiet hours, and escalation alignment.
+* **Webhooks:** sign + retry with exponential backoff.
+  Then we’ll add **user-level preferences** (per-channel, per-event), **quiet hours**, **digest vs. instant**, and **on-call rotations** to make it humane, not noisy.
