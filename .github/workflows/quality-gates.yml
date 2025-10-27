@@ -8,7 +8,6 @@ on:
 jobs:
   gates:
     runs-on: ubuntu-latest
-
     permissions:
       contents: read
 
@@ -40,7 +39,7 @@ jobs:
           VITE_RELEASE_SHA: ${{ github.sha }}
         run: npm --prefix apps/coordination_ui run build
 
-      # Contract-driven UI coverage
+      # Contract-driven UI coverage (your existing checker)
       - name: UI coverage
         run: npm run check:ui
 
@@ -81,6 +80,30 @@ jobs:
           BASE_URL: http://localhost:4173
         run: npm run test:buttons
 
+      # -------- NEW: Route coverage (manifest-based) --------
+      - name: Route coverage smoke tests
+        env:
+          VITE_E2E: true
+          PW_SKIP_WEBSERVER: 1
+          BASE_URL: http://localhost:4173
+        run: npm run test:routes
+
+      # -------- NEW: Accessibility (axe-core WCAG A/AA) --------
+      - name: Accessibility tests (axe-core)
+        env:
+          VITE_E2E: true
+          PW_SKIP_WEBSERVER: 1
+          BASE_URL: http://localhost:4173
+        run: npm run test:a11y
+
+      # -------- NEW: Visual regression (light/dark snapshots) --------
+      - name: Visual regression tests
+        env:
+          VITE_E2E: true
+          PW_SKIP_WEBSERVER: 1
+          BASE_URL: http://localhost:4173
+        run: npm run test:visual
+
       # Restore quarantined unit tests regardless of outcome
       - name: Restore unit test folders
         if: always()
@@ -88,13 +111,13 @@ jobs:
           if [ -d "__tests__.ci_hold" ]; then mv __tests__.ci_hold __tests__; fi
           if [ -d "__tests__.ci_hold_skip" ]; then mv __tests__.ci_hold_skip "__tests__._skip"; fi
 
-      # Artifacts: Playwright HTML report (if generated)
+      # Artifacts: Playwright HTML report (default path)
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: coverage/playwright-report
+          path: playwright-report
           if-no-files-found: ignore
 
       # Artifacts: UI gaps report (if checker output exists)
