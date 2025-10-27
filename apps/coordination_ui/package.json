@@ -9,7 +9,7 @@
     "build": "vite build",
     "prepreview": "node ../../scripts/generate-showcase.js",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint src --ext .ts,.tsx --max-warnings=0"
   },
   "dependencies": {
@@ -21,6 +21,8 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.16",
     "@types/node": "^24.9.1",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
     "@typescript-eslint/eslint-plugin": "^8.46.2",
     "@typescript-eslint/parser": "^8.46.2",
     "@vitejs/plugin-react": "^4.7.0",
