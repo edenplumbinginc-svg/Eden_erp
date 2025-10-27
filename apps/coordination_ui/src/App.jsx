@@ -38,6 +38,7 @@ import IncidentDetail from './pages/IncidentDetail';
 import ShowcasePage from './pages/ShowcasePage';
 import AboutEden from './pages/AboutEden';
 import StyleguidePage from './pages/StyleguidePage';
+import RouteMap from './pages/RouteMap';
 import { ThemeProvider } from './components/ThemeProvider';
 
 const queryClient = new QueryClient();
@@ -351,6 +352,14 @@ function AppContent() {
                   element={
                     <RequireAuth>
                       <AboutEden />
+                    </RequireAuth>
+                  } 
+                />
+                <Route 
+                  path="/routes" 
+                  element={
+                    <RequireAuth>
+                      <RouteMap />
                     </RequireAuth>
                   } 
                 />

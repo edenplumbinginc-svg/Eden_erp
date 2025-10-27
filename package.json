@@ -18,6 +18,8 @@
     "test:smoke": "playwright test -g 'contract routes'",
     "test:smoke:headed": "PW_SKIP_WEBSERVER=1 BASE_URL=http://localhost:4173 playwright test -g 'contract routes' --headed",
     "test:smoke:ui": "PW_SKIP_WEBSERVER=1 BASE_URL=http://localhost:4173 playwright test -g 'contract routes' --ui",
+    "test:routes": "playwright test tests/routes-smoke.spec.ts",
+    "test:routes:headed": "PW_SKIP_WEBSERVER=1 BASE_URL=http://localhost:4173 playwright test tests/routes-smoke.spec.ts --headed",
     "test:buttons": "playwright test -g 'button'",
     "test:buttons:headed": "PW_SKIP_WEBSERVER=1 BASE_URL=http://localhost:4173 playwright test -g 'button' --headed",
     "test:nav": "playwright test button-navigation.spec.cjs",

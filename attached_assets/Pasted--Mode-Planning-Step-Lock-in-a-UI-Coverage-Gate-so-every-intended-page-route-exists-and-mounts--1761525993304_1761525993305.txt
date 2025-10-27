@@ -1,0 +1,160 @@
+[Mode: Planning]
+Step: Lock in a “UI Coverage Gate” so every intended page/route exists and mounts (no ghosts), then follow with A11y pass, dark-mode tune, and visual regression snapshots.
+Why it matters: You’ve got the premium look; now we guarantee breadth (all pages exist), quality (A11y/dark parity), and stability (snapshots).
+Inputs needed: React Router app, Playwright already in CI.
+Command: N/A (planning only).
+Success check: A live Route Map page lists every expected route with status; CI includes a smoke that fails if any route doesn’t mount.
+Next: proceed to the single execution step below.
+
+[Mode: Execution]
+Step: Add a Route Coverage Map (UI + test) that inventories all routes and fails CI if any don’t mount.
+Layer: Frontend layer → Routing/observability (active).
+Why it matters: This makes “is there a page for X?” a measurable fact. It prevents silent regressions and missing screens as features land.
+
+Inputs needed: Your Vite React repo open; ability to add one manifest file, one page, and one Playwright spec.
+
+Command (copy–paste):
+
+1. Create a route manifest the app and tests can share.
+   `src/routes.manifest.ts`
+
+```ts
+export type RouteItem = {
+  path: string;
+  title: string;
+  owner?: string;        // optional: who “owns” the route
+  critical?: boolean;    // if true, failure should block merges
+};
+
+export const ROUTES: RouteItem[] = [
+  { path: "/", title: "Home", owner: "Core", critical: true },
+  { path: "/dashboard", title: "Dashboard", owner: "Ops", critical: true },
+  { path: "/settings", title: "Settings", owner: "Core" },
+  // add all intended routes here ↓
+  // { path: "/tasks", title: "Tasks", owner: "Ops", critical: true },
+  // { path: "/reports", title: "Reports", owner: "Finance" },
+];
+```
+
+2. Add a Route Map page that renders status and gives you a quick visual check.
+   `src/pages/RouteMap.tsx`
+
+```tsx
+import React from "react";
+import { ROUTES } from "../routes.manifest";
+import { Link } from "react-router-dom";
+
+export default function RouteMap() {
+  return (
+    <div className="container-xl section">
+      <header className="glass glass-header" style={{ marginBottom: "var(--space-5)" }}>
+        <div style={{ flex: 1 }}>
+          <h1 style={{ margin: 0, fontWeight: 600 }}>Route Coverage Map</h1>
+          <p style={{ margin: "6px 0 0 0", color: "var(--color-muted)" }}>
+            Inventory of intended pages. Click a path to smoke it manually.
+          </p>
+          <div className="header-accent" style={{ marginTop: 12 }} />
+        </div>
+      </header>
+
+      <div className="card" style={{ padding: "var(--space-5)" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ textAlign: "left", color: "var(--color-muted)" }}>
+              <th style={{ padding: "10px 8px" }}>Title</th>
+              <th style={{ padding: "10px 8px" }}>Path</th>
+              <th style={{ padding: "10px 8px" }}>Owner</th>
+              <th style={{ padding: "10px 8px" }}>Critical</th>
+              <th style={{ padding: "10px 8px" }}>Check</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ROUTES.map(r => (
+              <tr key={r.path} style={{ borderTop: "1px solid var(--color-border)" }}>
+                <td style={{ padding: "12px 8px" }}>{r.title}</td>
+                <td style={{ padding: "12px 8px" }}>
+                  <Link to={r.path} className="focus-ring" style={{ color: "var(--color-accent)", textDecoration: "none" }}>
+                    {r.path}
+                  </Link>
+                </td>
+                <td style={{ padding: "12px 8px" }}>{r.owner ?? "—"}</td>
+                <td style={{ padding: "12px 8px" }}>
+                  <span style={{
+                    display: "inline-block",
+                    padding: "2px 8px",
+                    borderRadius: "var(--radius-sm)",
+                    background: r.critical ? "hsl(0 82% 56% / .12)" : "hsl(160 65% 36% / .12)",
+                    color: r.critical ? "hsl(0 82% 46%)" : "hsl(160 65% 28%)",
+                    border: "1px solid var(--color-border)"
+                  }}>
+                    {r.critical ? "Critical" : "Standard"}
+                  </span>
+                </td>
+                <td style={{ padding: "12px 8px" }}>
+                  <a className="btn-primary focus-ring" href={r.path} style={{ padding: "8px 12px" }}>Open</a>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+```
+
+3. Add a route to access it. In `src/App.tsx` (or your router file), mount `/routes`.
+
+```tsx
+// ...
+import RouteMap from "./pages/RouteMap";
+// ...
+<Routes>
+  {/* existing routes */}
+  <Route path="/routes" element={<PageTransition><RouteMap /></PageTransition>} />
+</Routes>
+```
+
+4. Add a Playwright smoke that visits each route and fails if any don’t mount.
+   `tests/routes-smoke.spec.ts`
+
+```ts
+import { test, expect } from "@playwright/test";
+import { ROUTES } from "../src/routes.manifest";
+
+for (const r of ROUTES) {
+  test(`route mounts: ${r.path}`, async ({ page }) => {
+    await page.goto(`http://localhost:5173${r.path}`);
+    // Expect the page to render without crashing and paint content.
+    await expect(page).toHaveTitle(/.+/); // fallback: any title
+    // Optional stronger checks per route:
+    // if (r.path === "/dashboard") await expect(page.getByRole("heading", { name: /operations|dashboard/i })).toBeVisible();
+
+    // If route is critical, assert there’s visible content above the fold.
+    if (r.critical) {
+      await expect(page.locator("body")).toBeVisible();
+      await expect(page.locator("*")).toHaveCountGreaterThan(0);
+    }
+  });
+}
+```
+
+5. (Optional) Add a CI job step (if your script name differs, adjust):
+   `package.json`
+
+```json
+{
+  "scripts": {
+    "test:routes": "playwright test tests/routes-smoke.spec.ts"
+  }
+}
+```
+
+Success check:
+• Run the app, open `/routes` → you see a table of all intended pages with owners and criticality.
+• Add one obviously missing route to `ROUTES` and watch the smoke test fail.
+• CI fails if a critical route crashes or can’t mount (hard stop before merge).
+
+Next: wait for user.
+
+Mini-lesson (product thinking): this shifts “do we have a page for that?” from vibes to verification. The manifest is now a contract. Add a new feature? Add the route to the manifest first (red), build the page (green), and keep CI honest. When you’re ready, list the routes you expect and I’ll prefill the manifest + targeted assertions per page.
