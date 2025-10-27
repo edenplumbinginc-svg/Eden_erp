@@ -4,6 +4,8 @@ const router = express.Router();
 const { pool } = require('../services/database');
 const { authenticate, authorize } = require('../middleware/auth');
 
+const debugRouter = require('./notifications.debug');
+
 /**
  * GET /api/notifications/recent
  * Query params:
@@ -258,5 +260,7 @@ router.post('/weekly-digest', authenticate, authorize(['Admin', 'System']), asyn
     res.status(500).json({ error: e.message });
   }
 });
+
+router.use(debugRouter);
 
 module.exports = router;

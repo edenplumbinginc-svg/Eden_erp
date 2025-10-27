@@ -40,6 +40,41 @@ Eden ERP is a monolithic ERP system for Eden Plumbing Inc., designed to streamli
 - Monitor CI results to confirm all 6 quality gates pass
 - Consider notification system enhancements (email/SMS channels, user preferences, escalation rules)
 
+### October 27, 2025 - Notification Capabilities Audit
+**Status**: Debug endpoint deployed
+
+**Key Accomplishments**:
+1. **Created Notification Debug Endpoint** - Added `GET /api/notifications/debug` (Admin-only) to introspect current notification capabilities and provider configuration.
+
+2. **Discovered Current Notification Infrastructure**:
+   - ✅ In-app notifications: Fully implemented with bell UI, unread badge, mark-as-read
+   - ✅ Email: Nodemailer with SMTP support (or console fallback in dev)
+   - ✅ Slack escalation: Webhook-based incident escalation system
+   - ✅ Queue system: In-memory job queue with handlers
+   - ❌ SMS/Voice/WhatsApp: Not yet implemented
+
+3. **Identified Enhancement Opportunities**:
+   - Add Twilio adapter for SMS/WhatsApp/voice notifications
+   - Implement user notification preferences (per-channel, per-event)
+   - Add quiet hours and digest mode
+   - Enable channel selection UI
+
+**Files Modified**:
+- `routes/notifications.debug.js` (created)
+- `routes/notifications.js` (wired debug endpoint)
+
+**How to Use**:
+```bash
+# Test the debug endpoint (requires Admin/System role):
+curl -H "Authorization: Bearer <your-token>" http://localhost:3000/api/notifications/debug
+```
+
+The endpoint returns a comprehensive capabilities report including:
+- Available notification channels (in-app, email, SMS, voice, WhatsApp, Slack)
+- Provider configuration status (SMTP, Twilio, SendGrid, Resend, etc.)
+- Infrastructure status (queue, escalation worker)
+- Feature flags and recommended next steps
+
 ## User Preferences
 I prefer iterative development, with a focus on delivering functional increments. Please ask before making major architectural changes or introducing new dependencies. I appreciate clear and concise explanations for complex topics. Ensure the codebase remains clean, well-documented, and adheres to established patterns.
 
