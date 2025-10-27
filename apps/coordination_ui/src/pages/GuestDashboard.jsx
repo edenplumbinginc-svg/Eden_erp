@@ -7,9 +7,9 @@ export default function GuestDashboard() {
       <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', padding: 'var(--space-4)' }}>
         <div className="card" style={{ marginBottom: 'var(--space-4)' }}>
           <div style={{ textAlign: 'center', padding: 'var(--space-6)' }}>
-            <img src="/logo-eden.svg" alt="EDEN" style={{ height: '48px', width: 'auto', margin: '0 auto var(--space-3)' }} />
+            <img src="/eden-mep-logo.png" alt="EDEN MEP INC" style={{ height: '64px', width: 'auto', margin: '0 auto var(--space-3)' }} />
             <h1 style={{ fontSize: '32px', lineHeight: '40px', fontWeight: 400, color: 'var(--md-on-surface)', marginBottom: 'var(--space-2)' }}>
-              Welcome to Eden ERP
+              Welcome to EDEN MEP INC
             </h1>
             <p style={{ fontSize: '18px', color: 'var(--md-on-surface-variant)', marginBottom: 'var(--space-4)' }}>
               Guest View - Limited Access
@@ -21,7 +21,7 @@ export default function GuestDashboard() {
               marginBottom: 'var(--space-4)'
             }}>
               <p style={{ color: 'var(--md-on-surface-variant)', marginBottom: 'var(--space-2)' }}>
-                You're viewing Eden ERP as a guest. Some features require authentication.
+                You're viewing EDEN MEP INC as a guest. Some features require authentication.
               </p>
               <p style={{ color: 'var(--md-on-surface-variant)' }}>
                 <Link to="/login" className="text-link" style={{ fontWeight: 500 }}>Sign in</Link> or{' '}
@@ -34,10 +34,10 @@ export default function GuestDashboard() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 'var(--space-4)' }}>
           <div className="card">
             <h2 style={{ fontSize: '20px', marginBottom: 'var(--space-3)', color: 'var(--md-on-surface)' }}>
-              📊 About Eden ERP
+              📊 About EDEN MEP INC
             </h2>
             <p style={{ color: 'var(--md-on-surface-variant)', marginBottom: 'var(--space-2)' }}>
-              A comprehensive ERP system for Eden Plumbing Inc., designed to streamline business operations with:
+              A comprehensive ERP system for EDEN MEP INC, designed to streamline business operations with:
             </p>
             <ul style={{ color: 'var(--md-on-surface-variant)', paddingLeft: 'var(--space-4)' }}>
               <li>Project & Task Management</li>
