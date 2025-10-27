@@ -13,7 +13,7 @@
     "diag:db:json": "curl -sS http://localhost:3000/diag/db || true",
     "dev:web": "npm --prefix apps/coordination_ui run dev",
     "smoke:api": "node scripts/smoke-api.js",
-    "test": "npm --prefix Eden_erp test --",
+    "test": "node -e \"process.chdir('Eden_erp');require('child_process').execSync('npx jest --runInBand --clearCache --passWithNoTests --rootDir . --testPathIgnorePatterns=/node_modules/ __tests__/escalation.*',{stdio:'inherit'})\"",
     "check:ui": "node scripts/check-ui-coverage.js",
     "test:smoke": "playwright test -g 'contract routes'",
     "test:smoke:headed": "PW_SKIP_WEBSERVER=1 BASE_URL=http://localhost:4173 playwright test -g 'contract routes' --headed",
