@@ -1,0 +1,122 @@
+[Mode: Execution]
+Step: Fix the JWT verifier so it chooses the correct verification path (HS* uses shared secret; RS*/ES* uses JWKS).
+Layer: Backend layer → Auth middleware (active).
+Why it matters: Your error `JWT verification failed: Unsupported "alg" value for a JSON Web Key Set` means HS256 tokens were being verified against a JWKS (which only works for asymmetric algs like RS256/ES256). This patch auto-detects alg and uses the right verifier.
+
+Inputs needed: Where your auth middleware runs (e.g., `middleware/auth.js` or `routes/_auth_mw.js`). Have envs ready:
+
+* `AUTH_ALLOWED_AUD` (optional), `AUTH_ALLOWED_ISS` (optional)
+* For HS*: `AUTH_JWT_SECRET`
+* For RS*/ES*: `AUTH_JWKS_URL`
+
+Command (drop-in middleware; CommonJS friendly):
+
+```js
+// middleware/auth.js
+const { createRemoteJWKSet, jwtVerify, decodeProtectedHeader } = require("jose");
+const fetch = require("node-fetch"); // if Node <18; otherwise remove
+
+// Config
+const AUTH_JWKS_URL = process.env.AUTH_JWKS_URL;         // e.g., https://issuer/.well-known/jwks.json
+const AUTH_JWT_SECRET = process.env.AUTH_JWT_SECRET;     // for HS* tokens
+const AUTH_ALLOWED_ISS = process.env.AUTH_ALLOWED_ISS;   // comma list
+const AUTH_ALLOWED_AUD = process.env.AUTH_ALLOWED_AUD;   // comma list
+
+function csv(v) {
+  return (v || "").split(",").map(s => s.trim()).filter(Boolean);
+}
+const allowedIss = new Set(csv(AUTH_ALLOWED_ISS));
+const allowedAud = new Set(csv(AUTH_ALLOWED_AUD));
+
+let jwks; // lazy init for RS/ES
+function getJWKS() {
+  if (!jwks) {
+    if (!AUTH_JWKS_URL) throw new Error("AUTH_JWKS_URL not set for RS/ES tokens");
+    jwks = createRemoteJWKSet(new URL(AUTH_JWKS_URL), { fetch });
+  }
+  return jwks;
+}
+
+function auth(required = true) {
+  return async (req, res, next) => {
+    try {
+      const authz = req.headers.authorization || "";
+      const token = authz.startsWith("Bearer ") ? authz.slice(7) : null;
+      if (!token) {
+        if (!required) return next();
+        return res.status(401).json({ ok: false, error: "Missing bearer token" });
+      }
+
+      // Decide verification strategy based on the token's declared alg
+      const { alg } = decodeProtectedHeader(token);
+
+      let verified;
+      if (alg && alg.startsWith("HS")) {
+        // Symmetric: require AUTH_JWT_SECRET
+        if (!AUTH_JWT_SECRET) throw new Error("AUTH_JWT_SECRET not configured for HS* token");
+        verified = await jwtVerify(token, Buffer.from(AUTH_JWT_SECRET, "utf8"), {
+          algorithms: ["HS256", "HS384", "HS512"],
+          issuer: allowedIss.size ? [...allowedIss] : undefined,
+          audience: allowedAud.size ? [...allowedAud] : undefined,
+        });
+      } else if (alg && (alg.startsWith("RS") || alg.startsWith("ES") || alg.startsWith("PS"))) {
+        // Asymmetric: verify with JWKS
+        const keySet = getJWKS();
+        verified = await jwtVerify(token, keySet, {
+          algorithms: ["RS256", "RS384", "RS512", "ES256", "ES384", "PS256", "PS384", "PS512"],
+          issuer: allowedIss.size ? [...allowedIss] : undefined,
+          audience: allowedAud.size ? [...allowedAud] : undefined,
+        });
+      } else {
+        // Anything else (incl. "none") is rejected
+        throw new Error(`Unsupported JWT alg: ${alg || "unknown"}`);
+      }
+
+      req.user = verified.payload;
+      return next();
+    } catch (err) {
+      // Keep this terse in prod
+      return res.status(401).json({ ok: false, error: "Unauthorized", detail: err.message });
+    }
+  };
+}
+
+module.exports = { auth };
+```
+
+Wire it where you protect routes (example):
+
+```js
+// server/index.js (or routes)
+const { auth } = require("./middleware/auth");
+
+// protected routes
+app.use("/api/notifications", auth(true), notificationsRouter);
+// public or optional-auth routes
+app.get("/api/health", auth(false), (req, res) => res.json({ ok: true }));
+```
+
+Env setup examples:
+
+```
+# If your tokens are HS256 (shared secret):
+AUTH_JWT_SECRET=superlongrandomsecret
+AUTH_ALLOWED_ISS=https://eden.local
+AUTH_ALLOWED_AUD=eden-erp
+
+# If your tokens are RS256 from an IdP (Auth0/Clerk/Cognito/etc.):
+AUTH_JWKS_URL=https://YOUR-ISSUER/.well-known/jwks.json
+AUTH_ALLOWED_ISS=https://YOUR-ISSUER/
+AUTH_ALLOWED_AUD=eden-erp
+```
+
+Success check:
+
+1. Use a valid HS256 token (signed with `AUTH_JWT_SECRET`) → previously 401, now 200 on a protected route.
+2. Use a valid RS256 token (from your IdP) with correct `AUTH_JWKS_URL` → 200.
+3. Use a token with mismatched alg (e.g., HS256 while only JWKS configured, or vice versa) → 401, clear `detail`.
+4. Your earlier error line disappears from logs.
+
+Next: wait for user.
+
+Mini-lesson (crypto sanity): JWKS is a directory of **public keys** for **asymmetric** JWTs (RS*/ES*/PS*). **Symmetric** JWTs (HS*) don’t use JWKS; they use a shared secret. Decoding the header first is the polite way to avoid trying to fetch a JWKS for a symmetric token and getting that “unsupported alg for JWKS” faceplant.
