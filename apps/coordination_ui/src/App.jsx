@@ -42,6 +42,7 @@ import StyleguidePage from './pages/StyleguidePage';
 import RouteMap from './pages/RouteMap';
 import RoutesDashboard from './pages/ops/RoutesDashboard';
 import { ThemeProvider } from './components/ThemeProvider';
+import ProtectedCheck from "./pages/ops/ProtectedCheck";
 
 const queryClient = new QueryClient();
 
@@ -374,7 +375,17 @@ function AppContent() {
                     </RequireAuth>
                   } 
                 />
-              </Routes>
+              
+          <Route
+            path="/protected-check"
+            element={
+              <RequireAuth>
+                <ProtectedCheck />
+              </RequireAuth>
+            }
+          />
+
+</Routes>
             </motion.div>
           </AnimatePresence>
         )}
