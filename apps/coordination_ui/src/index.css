@@ -1,39 +1,35 @@
 /* -------- Modern Eden UI base -------- */
 @import "./styles/tokens.css";
 
-/* Material Design Base */
+/* Material Design Base - Mapped to Premium Tokens */
 :root {
-  /* Typography */
-  --font-sans: "Inter Variable", Inter, system-ui, -apple-system, "Segoe UI",
-               Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  /* Material Design Color Palette (references premium tokens) */
+  --md-primary: var(--primary);
+  --md-primary-dark: var(--primary-600);
+  --md-primary-light: var(--primary-500);
   
-  /* Material Design Color Palette */
-  --md-primary: #1a73e8;
-  --md-primary-dark: #1557b0;
-  --md-primary-light: #4285f4;
+  --md-surface: var(--panel);
+  --md-background: var(--bg);
+  --md-surface-variant: var(--panel-2);
   
-  --md-surface: #ffffff;
-  --md-background: #f8f9fa;
-  --md-surface-variant: #f1f3f4;
+  --md-on-surface: var(--text);
+  --md-on-surface-variant: var(--text-muted);
+  --md-on-background: var(--text);
   
-  --md-on-surface: #202124;
-  --md-on-surface-variant: #5f6368;
-  --md-on-background: #202124;
+  --md-border: var(--border);
+  --md-divider: var(--border);
   
-  --md-border: #dadce0;
-  --md-divider: #e8eaed;
+  /* Status Colors (references premium tokens) */
+  --md-success: var(--success);
+  --md-warning: var(--warning);
+  --md-error: var(--danger);
+  --md-info: var(--accent);
   
-  /* Status Colors */
-  --md-success: #1e8e3e;
-  --md-warning: #f9ab00;
-  --md-error: #d93025;
-  --md-info: #1a73e8;
-  
-  /* Elevation Shadows */
-  --md-shadow-1: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);
-  --md-shadow-2: 0 1px 2px 0 rgba(60,64,67,0.3), 0 2px 6px 2px rgba(60,64,67,0.15);
-  --md-shadow-3: 0 4px 8px 3px rgba(60,64,67,0.15), 0 1px 3px 0 rgba(60,64,67,0.3);
-  --md-shadow-4: 0 6px 10px 4px rgba(60,64,67,0.15), 0 2px 3px 0 rgba(60,64,67,0.3);
+  /* Elevation Shadows (references premium tokens) */
+  --md-shadow-1: var(--shadow-1);
+  --md-shadow-2: var(--shadow-2);
+  --md-shadow-3: var(--shadow-3);
+  --md-shadow-4: var(--shadow-4);
   
   /* Spacing System (8px grid) */
   --space-1: 8px;
@@ -42,12 +38,6 @@
   --space-4: 32px;
   --space-5: 40px;
   --space-6: 48px;
-  
-  /* Border Radius */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
   
   /* Transitions */
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -223,8 +213,8 @@ h3 {
 .form-group select:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: var(--md-primary);
-  box-shadow: 0 0 0 1px var(--md-primary);
+  border-color: var(--accent);
+  box-shadow: var(--ring);
 }
 
 /* Form Inputs (global) */
@@ -242,17 +232,18 @@ input, select, textarea {
 
 input:focus, select:focus, textarea:focus {
   outline: none;
-  border-color: var(--md-primary);
-  box-shadow: 0 0 0 1px var(--md-primary);
+  border-color: var(--accent);
+  box-shadow: var(--ring);
 }
 
 button:focus, input:focus, select:focus, textarea:focus {
   outline: none;
 }
 
+/* Premium Focus Ring (soft blue glow for keyboard navigation) */
 button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
-  outline: 2px solid var(--md-primary);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: var(--ring);
 }
 
 .form-group textarea {
@@ -284,20 +275,28 @@ button:active, .btn:active {
 }
 
 .btn:focus-visible {
-  outline: 2px solid var(--md-primary);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: var(--ring);
 }
 
-/* Primary Button (Raised) */
+/* Primary Button (Raised) - Premium styling */
 .btn-primary, .btn.btn-primary {
   background: var(--md-primary);
   color: white;
-  box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);
+  box-shadow: var(--shadow-1);
+  border: 1px solid color-mix(in hsl, var(--md-primary) 85%, black 15%);
+  transition: transform 0.06s ease, box-shadow 0.2s ease, filter 0.2s ease;
 }
 
 .btn-primary:hover {
   background: var(--md-primary-dark);
-  box-shadow: 0 1px 3px 0 rgba(60,64,67,0.3), 0 4px 8px 3px rgba(60,64,67,0.15);
+  box-shadow: var(--shadow-2);
+  filter: saturate(1.05);
+}
+
+.btn-primary:active {
+  transform: translateY(1px);
+  box-shadow: var(--shadow-1);
 }
 
 /* Secondary Button (Outlined) */
