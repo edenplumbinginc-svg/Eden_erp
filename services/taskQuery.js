@@ -188,6 +188,12 @@ async function fetchTasks(filters, userPermissions = []) {
     ? '(SELECT COUNT(*)::int FROM task_voice_notes vn WHERE vn.task_id = t.id) AS voice_notes_count,'
     : '';
 
+  // Defense-in-depth: Only include attachments_count if user has tasks.files.read permission
+  const hasFilesRead = userPermissions.includes('tasks.files.read');
+  const attachmentsCountSql = hasFilesRead
+    ? '(SELECT COUNT(*)::int FROM task_files tf WHERE tf.task_id = t.id) AS attachments_count,'
+    : '';
+
   const sql = `
     SELECT 
       t.id, t.title, t.description, t.status, t.priority,
@@ -196,6 +202,7 @@ async function fetchTasks(filters, userPermissions = []) {
       t.tags, t.origin, t.project_id, t.department,
       t.is_overdue, t.needs_idle_reminder,
       ${voiceNotesCountSql}
+      ${attachmentsCountSql}
       CASE 
         WHEN t.status IN ('todo', 'open') AND t.ball_in_court IS NOT NULL 
              AND t.updated_at < now() - INTERVAL '3 days'
