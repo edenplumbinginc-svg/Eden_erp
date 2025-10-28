@@ -114,7 +114,8 @@ function isValidStatusTransition(currentStatus, newStatus) {
 router.get('/', authenticate, requirePerm('task.view'), async (req, res) => {
   try {
     const filters = parseQuery(req.query);
-    const result = await fetchTasks(filters);
+    const userPermissions = req.user?.permissions || [];
+    const result = await fetchTasks(filters, userPermissions);
     res.setHeader('X-Total-Count', String(result.total ?? 0));
     res.json({ ok: true, ...result });
   } catch (e) {

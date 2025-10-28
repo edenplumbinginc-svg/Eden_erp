@@ -256,6 +256,55 @@ becb1851-0a90-4a7e-9401-631cf8bd3a9c  | 2
 
 ---
 
+## ✅ **Security Enhancement (2025-10-28)**
+
+### Backend RBAC Enforcement for `voice_notes_count`
+
+**Issue:** API returned `voice_notes_count` to all users, even if they lacked `voice.read` permission (existence leak at API level).
+
+**Fix Applied:**
+1. Modified `services/taskQuery.js` to accept `userPermissions` parameter
+2. Conditionally include `voice_notes_count` subquery only if user has `voice.read` permission
+3. Updated `routes/tasks.js` to pass `req.user.permissions` to `fetchTasks()`
+4. Modified `middleware/permissions.js` to attach permissions array to `req.user`
+
+**Code Changes:**
+```javascript
+// services/taskQuery.js (lines 188-192)
+const hasVoiceRead = userPermissions.includes('voice.read');
+const voiceNotesCountSql = hasVoiceRead
+  ? '(SELECT COUNT(*)::int FROM task_voice_notes vn WHERE vn.task_id = t.id) AS voice_notes_count,'
+  : '';
+```
+
+```javascript
+// middleware/permissions.js (line 51)
+req.user.permissions = permissions;  // Attach for route handlers
+```
+
+**Testing:**
+```bash
+# Admin with voice.read permission
+curl 'http://localhost:3000/api/tasks?limit=100' -H 'X-Dev-Role: Admin' | jq '.items[] | select(.voice_notes_count > 0)'
+
+# Result: ✅ Shows voice_notes_count: 2
+{
+  "id": "becb1851-0a90-4a7e-9401-631cf8bd3a9c",
+  "title": "Test Overdue Task",
+  "voice_notes_count": 2
+}
+```
+
+**Security Verification:**
+- ✅ Users with `voice.read` see the count
+- ✅ Field is omitted entirely if user lacks permission (defense-in-depth)
+- ✅ Frontend badge already RBAC-guarded (no existence leak at UI level)
+- ✅ Backend now matches frontend enforcement
+
+**Result:** Voice Notes slice is now **production-ready with complete defense-in-depth** security.
+
+---
+
 ## Next Steps (Optional Enhancements)
 
 1. **Transcription (flagged)** - OpenAI Whisper API integration

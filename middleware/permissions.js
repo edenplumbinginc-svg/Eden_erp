@@ -44,6 +44,9 @@ function requirePerm(permissionCode) {
       // Fetch user's permissions
       const permissions = await getUserPermissions(userId);
       
+      // Attach permissions to req.user for use in route handlers (defense-in-depth)
+      req.user.permissions = permissions;
+      
       // Admin fast-path: users with admin:manage get automatic access
       const hasAdminAccess = permissions.includes('admin:manage');
       const hasRequiredPermission = permissions.includes(permissionCode);

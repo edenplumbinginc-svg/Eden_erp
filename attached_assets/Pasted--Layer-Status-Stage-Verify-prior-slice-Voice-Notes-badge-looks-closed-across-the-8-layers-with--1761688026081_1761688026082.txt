@@ -1,0 +1,285 @@
+[Layer: Status] [Stage: Verify prior slice]
+Voice Notes badge looks closed across the 8 layers with flag default OFF. One security nit: your task list API returns voice_notes_count for everyone. That’s fine internally, but to meet “backend enforces,” consider omitting that field unless the caller has voice.read. Not a blocker—just aligning principle with practice.
+—
+[Layer: Planning] [Stage: Confirm next slice]
+Proceeding with Slice: Tasks — Attachments (files) exactly as proposed. Data migration is already prepared.
+
+[Layer: API+RBAC] [Stage: Implement backend]
+Endpoints
+
+
+POST /api/tasks/:id/files (multipart file)
+
+
+GET  /api/tasks/:id/files
+
+
+RBAC
+
+
+tasks.files.create → required for POST
+
+
+tasks.files.read   → required for GET
+
+
+Server constraints
+
+
+Max size: 10 MB (enforce at multer AND DB).
+
+
+Allowed MIME:
+
+
+application/pdf
+
+
+image/jpeg (covers .jpg/.jpeg)
+
+
+image/png
+
+
+image/webp
+
+
+image/heic, image/heif
+
+
+text/csv, application/csv
+
+
+application/vnd.openxmlformats-officedocument.spreadsheetml.sheet (.xlsx)
+
+
+
+
+Storage (v1, internal)
+
+
+Save with UUID filename + original extension, outside web root (e.g., var/uploads/tasks/<taskId>/).
+
+
+Persist a public-unsafe url (path) now; later swap to signed URLs (Retention & Storage slice).
+
+
+contracts
+
+
+POST 201
+{ "item": { "id","taskId","url","filename","mime","size","createdAt" } }
+
+Errors: 400 (type), 403 (RBAC), 413 (size), 404 (task not found).
+
+
+GET 200
+{ "items": [ { "id","taskId","url","filename","mime","size","createdAt" } ] }
+
+
+
+tasks list enhancement
+
+
+Add to your SELECT:
+(SELECT COUNT(*)::int FROM task_files tf WHERE tf.task_id = t.id) AS attachments_count
+
+
+
+Express sketch (drop-in)
+// middleware/rbac.js
+export const requirePermission = (resource, action) => (req, res, next) => {
+  if (!req.user?.can?.(resource, action)) return res.sendStatus(403);
+  next();
+};
+
+// routes/taskFiles.js
+import express from 'express';
+import multer from 'multer';
+import { extname } from 'node:path';
+import { randomUUID } from 'node:crypto';
+import { requirePermission } from '../middleware/rbac.js';
+import * as db from '../db/index.js';
+
+const router = express.Router({ mergeParams: true });
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, '/var/uploads/tasks'),
+    filename: (req, file, cb) => cb(null, `${randomUUID()}${extname(file.originalname).toLowerCase()}`)
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB
+});
+
+const ALLOWED = new Set([
+  'application/pdf',
+  'image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif',
+  'text/csv', 'application/csv',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+]);
+
+router.post(
+  '/',
+  requirePermission('tasks.files', 'create'),
+  upload.single('file'),
+  async (req, res) => {
+    try {
+      const taskId = req.params.id;
+      const task = await db.oneOrNone('select id from tasks where id=$1', [taskId]);
+      if (!task) return res.sendStatus(404);
+
+      const f = req.file; // multer populated
+      if (!f) return res.status(400).json({ error: 'file required' });
+      if (!ALLOWED.has(f.mimetype)) return res.status(400).json({ error: 'disallowed type' });
+
+      // DB CHECK also guards size <= 10MB
+      const row = await db.one(
+        `insert into task_files(task_id,url,filename,mime,size,created_by)
+         values ($1,$2,$3,$4,$5,$6)
+         returning id, task_id as "taskId", url, filename, mime, size, created_at as "createdAt"`,
+        [taskId, `/secure/tasks/${taskId}/${f.filename}`, f.originalname, f.mimetype, f.size, req.user.id]
+      );
+      return res.status(201).json({ item: row });
+    } catch (e) {
+      if (e.code === '23514') return res.status(413).json({ error: 'file too large' }); // DB CHECK
+      if (e.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: 'file too large' });
+      return res.status(500).json({ error: 'upload failed' });
+    }
+  }
+);
+
+router.get(
+  '/',
+  requirePermission('tasks.files', 'read'),
+  async (req, res) => {
+    const items = await db.any(
+      `select id, task_id as "taskId", url, filename, mime, size, created_at as "createdAt"
+         from task_files
+        where task_id = $1
+        order by created_at desc`,
+      [req.params.id]
+    );
+    res.json({ items });
+  }
+);
+
+export default router;
+
+Route wiring
+// routes/index.js
+import taskFiles from './taskFiles.js';
+app.use('/api/tasks/:id/files', taskFiles);
+
+Curl checks (200 / 403 / 413 / 400)
+# 1) Admin happy path
+curl -s -H "Authorization: Bearer $ADMIN" \
+  -F "file=@/path/spec.pdf" \
+  http://localhost:5000/api/tasks/$TASK_ID/files | jq
+
+# 2) Read list
+curl -s -H "Authorization: Bearer $VIEWER" \
+  http://localhost:5000/api/tasks/$TASK_ID/files | jq
+
+# 3) Disallowed mime (e.g., .exe)
+curl -s -H "Authorization: Bearer $ADMIN" \
+  -F "file=@/path/bad.exe" \
+  http://localhost:5000/api/tasks/$TASK_ID/files | jq
+# -> 400
+
+# 4) Oversize (simulate >10MB)
+head -c 11000000 </dev/zero > /tmp/big.bin
+curl -s -H "Authorization: Bearer $ADMIN" \
+  -F "file=@/tmp/big.bin;type=application/pdf" \
+  http://localhost:5000/api/tasks/$TASK_ID/files | jq
+# -> 413
+
+# 5) RBAC forbidden
+curl -s -H "Authorization: Bearer $NO_CREATE" \
+  -F "file=@/path/spec.pdf" \
+  http://localhost:5000/api/tasks/$TASK_ID/files -o /dev/null -w "%{http_code}\n"
+# -> 403
+
+Commits
+feat(api): POST/GET /api/tasks/:id/files with 10MB & MIME allowlist (RBAC)
+feat(api): tasks list includes attachments_count
+
+
+[Layer: RBAC] [Stage: Matrix delta]
+Add rows to your role-permission DB and rbac.json UX cache:
+
+
+tasks.files.create → Admin, Ops Lead, Field Ops, PM, Contributor, Office Admin
+
+
+tasks.files.read   → all who can read tasks
+
+
+
+[Layer: Frontend] [Stage: Guards + UI skeleton]
+
+
+Flag: taskAttachments (default TRUE for internal)
+
+
+Task List badge (flag + RBAC guarded, no existence leak):
+
+
+show 📎 {t.attachments_count} only if hasFeature('taskAttachments') AND RequirePermission resource="tasks.files" action="read" AND t.attachments_count > 0.
+
+
+
+
+Task Detail → Attachments
+
+
+<RoutePermission resource="tasks.files" action="read"> section.
+
+
+<RequirePermission resource="tasks.files" action="create"> shows drag/drop Upload; otherwise list-only.
+
+
+Each row: filename, size (humanized), download anchor to item.url.
+
+
+
+
+Commit
+feat(frontend): Task Attachments section + 📎 badge (flag+RBAC guarded)
+
+
+[Layer: Test] [Stage: Smoke script]
+
+
+Admin: upload two files → GET lists both; 📎 increments.
+
+
+Viewer: no upload control; GET works; 📎 visible if count>0.
+
+
+Oversize & type: client blocks, server returns 413/400; confirm both.
+
+
+Flag OFF: badge and section hidden; API still RBAC-enforced.
+
+
+
+[Layer: Docs] [Stage: Drafts]
+
+
+docs/ATTACHMENTS.md: limits, RBAC, error states, storage path, future signed URLs.
+
+
+CHANGELOG.md: endpoints added; UI surfaces; flags; RBAC.
+
+
+
+[Branch]
+slice/tasks-attachments-v1
+[PR DoD]
+
+
+AC met; DB mig applied; API contracts doc’d; 403 confirmed; RBAC verified; route/component guards wired; flag added; smoke script evidence; docs updated.
+
+
+Mini-lesson (file MIME gotcha): don’t trust the extension. Validate file.mimetype from the parser, and for PDFs/images you can add a magic-bytes sniff (e.g., %PDF- or JPEG/WebP signatures) if you want belt-and-suspenders later.
+Next, wire the routes and run the curl checks; then we’ll flip to Frontend guards and the 📎 badge.

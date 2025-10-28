@@ -89,7 +89,7 @@ function parseQuery(qs = {}) {
   return filters;
 }
 
-async function fetchTasks(filters) {
+async function fetchTasks(filters, userPermissions = []) {
   const {
     status, priority, assignee, project, department, bic,
     due_from, due_to, overdue, idle, q, updated_after,
@@ -182,6 +182,12 @@ async function fetchTasks(filters) {
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
   const orderSql = `ORDER BY t.${sortCol} ${sortDir}, t.id DESC`;
 
+  // Defense-in-depth: Only include voice_notes_count if user has voice.read permission
+  const hasVoiceRead = userPermissions.includes('voice.read');
+  const voiceNotesCountSql = hasVoiceRead
+    ? '(SELECT COUNT(*)::int FROM task_voice_notes vn WHERE vn.task_id = t.id) AS voice_notes_count,'
+    : '';
+
   const sql = `
     SELECT 
       t.id, t.title, t.description, t.status, t.priority,
@@ -189,7 +195,7 @@ async function fetchTasks(filters) {
       t.due_at, t.created_at, t.updated_at,
       t.tags, t.origin, t.project_id, t.department,
       t.is_overdue, t.needs_idle_reminder,
-      (SELECT COUNT(*)::int FROM task_voice_notes vn WHERE vn.task_id = t.id) AS voice_notes_count,
+      ${voiceNotesCountSql}
       CASE 
         WHEN t.status IN ('todo', 'open') AND t.ball_in_court IS NOT NULL 
              AND t.updated_at < now() - INTERVAL '3 days'
