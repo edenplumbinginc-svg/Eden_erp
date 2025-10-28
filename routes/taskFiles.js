@@ -58,6 +58,21 @@ const ALLOWED_MIME_TYPES = new Set([
 ]);
 
 /**
+ * Multer error handler middleware
+ * Catches multer-specific errors (e.g., LIMIT_FILE_SIZE) and returns appropriate status codes
+ */
+function handleMulterError(err, req, res, next) {
+  if (err) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({ error: 'file too large', maxSize: '10MB' });
+    }
+    // Other multer errors
+    return res.status(400).json({ error: err.message || 'upload failed' });
+  }
+  next();
+}
+
+/**
  * POST /api/tasks/:id/files
  * Upload a file attachment to a task
  * 
@@ -72,13 +87,14 @@ const ALLOWED_MIME_TYPES = new Set([
  * - 400 if no file or disallowed type
  * - 403 if missing permission
  * - 404 if task not found
- * - 413 if file too large (DB CHECK violation)
+ * - 413 if file too large (multer limit or DB CHECK violation)
  */
 router.post(
   '/',
   authenticate,
   requirePerm('tasks.files.create'),
   upload.single('file'),
+  handleMulterError,
   async (req, res) => {
     try {
       const taskId = req.params.id;
