@@ -27,7 +27,7 @@ export default function TaskForm({ onSubmit, onCancel, initialData = {}, submitL
     voice_url: initialData.voice_url || '',
     voice_transcript: initialData.voice_transcript || '',
     ball_in_court_note: initialData.ball_in_court_note || '',
-    ball_owner_department: initialData.ball_owner_department || ''
+    department: initialData.department || 'Operations'
   });
 
   const [errors, setErrors] = useState({});
@@ -187,10 +187,9 @@ export default function TaskForm({ onSubmit, onCancel, initialData = {}, submitL
       <div className="form-group">
         <label>Department (Ball in Court)</label>
         <select
-          value={formData.ball_owner_department}
-          onChange={(e) => handleChange('ball_owner_department', e.target.value)}
+          value={formData.department}
+          onChange={(e) => handleChange('department', e.target.value)}
         >
-          <option value="">None</option>
           {DEPARTMENT_OPTIONS.map(d => (
             <option key={d} value={d}>
               {d}
