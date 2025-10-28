@@ -2,6 +2,7 @@
   "Admin": {
     "projects": {"scope":"all","read":true,"create":true,"edit":true,"delete":true},
     "tasks": {"scope":"all","read":true,"create":true,"edit":true,"assign":true,"delete":true,"complete":true},
+    "voice": {"create":true,"read":true},
     "comments": {"write":true},
     "attachments": {"upload":true},
     "scheduling": {"level":"full"},
@@ -12,6 +13,7 @@
   "Ops Lead": {
     "projects": {"scope":"all","read":true,"create":false,"edit":false,"delete":false},
     "tasks": {"scope":"all","read":true,"create":true,"edit":true,"assign":true,"delete":false,"complete":true},
+    "voice": {"create":true,"read":true},
     "comments": {"write":true},
     "attachments": {"upload":true},
     "scheduling": {"level":"limited"},
@@ -22,6 +24,7 @@
   "Scheduler": {
     "projects": {"scope":"all","read":true,"create":false,"edit":false,"delete":false},
     "tasks": {"scope":"timing","read":true,"create":false,"edit":true,"assign":true,"delete":false,"complete":false},
+    "voice": {"create":false,"read":true},
     "comments": {"write":false},
     "attachments": {"upload":false},
     "scheduling": {"level":"full"},
@@ -32,6 +35,7 @@
   "Field Ops": {
     "projects": {"scope":"assigned","read":true,"create":false,"edit":false,"delete":false},
     "tasks": {"scope":"field","read":true,"create":true,"edit":true,"assign":true,"delete":false,"complete":true},
+    "voice": {"create":true,"read":true},
     "comments": {"write":true},
     "attachments": {"upload":true},
     "scheduling": {"level":"none"},
@@ -42,6 +46,7 @@
   "Project Manager": {
     "projects": {"scope":"own","read":true,"create":true,"edit":true,"delete":false},
     "tasks": {"scope":"own","read":true,"create":true,"edit":true,"assign":true,"delete":false,"complete":true},
+    "voice": {"create":true,"read":true},
     "comments": {"write":true},
     "attachments": {"upload":true},
     "scheduling": {"level":"none"},
@@ -52,6 +57,7 @@
   "Client Guest": {
     "projects": {"scope":"shared","read":true,"create":false,"edit":false,"delete":false},
     "tasks": {"scope":"shared","read":true,"create":false,"edit":false,"assign":false,"delete":false,"complete":false},
+    "voice": {"create":false,"read":true},
     "comments": {"write":true},
     "attachments": {"upload":true},
     "scheduling": {"level":"none"},
@@ -62,6 +68,7 @@
   "Contributor": {
     "projects": {"scope":"assigned","read":true,"create":false,"edit":false,"delete":false},
     "tasks": {"scope":"team","read":true,"create":true,"edit":true,"assign":false,"delete":false,"complete":true},
+    "voice": {"create":true,"read":true},
     "comments": {"write":true},
     "attachments": {"upload":true},
     "scheduling": {"level":"none"},
@@ -72,6 +79,7 @@
   "Accounting": {
     "projects": {"scope":"all","read":true,"create":false,"edit":false,"delete":false},
     "tasks": {"scope":"all","read":true,"create":false,"edit":false,"assign":false,"delete":false,"complete":false},
+    "voice": {"create":false,"read":true},
     "comments": {"write":true},
     "attachments": {"upload":true},
     "scheduling": {"level":"none"},
@@ -82,6 +90,7 @@
   "Viewer": {
     "projects": {"scope":"all","read":true,"create":false,"edit":false,"delete":false},
     "tasks": {"scope":"all","read":true,"create":false,"edit":false,"assign":false,"delete":false,"complete":false},
+    "voice": {"create":false,"read":true},
     "comments": {"write":false},
     "attachments": {"upload":false},
     "scheduling": {"level":"none"},
@@ -92,6 +101,7 @@
   "Inventory Manager": {
     "projects": {"scope":"none","read":false,"create":false,"edit":false,"delete":false},
     "tasks": {"scope":"all","read":true,"create":false,"edit":false,"assign":false,"delete":false,"complete":false},
+    "voice": {"create":false,"read":true},
     "comments": {"write":true},
     "attachments": {"upload":false},
     "scheduling": {"level":"none"},
@@ -102,6 +112,7 @@
   "Trainer": {
     "projects": {"scope":"all","read":true,"create":false,"edit":false,"delete":false},
     "tasks": {"scope":"all","read":true,"create":false,"edit":false,"assign":false,"delete":false,"complete":false},
+    "voice": {"create":false,"read":true},
     "comments": {"write":true},
     "attachments": {"upload":true},
     "scheduling": {"level":"none"},
@@ -112,6 +123,7 @@
   "Office Admin": {
     "projects": {"scope":"all","read":true,"create":true,"edit":true,"delete":false},
     "tasks": {"scope":"all","read":true,"create":true,"edit":true,"assign":true,"delete":false,"complete":true},
+    "voice": {"create":true,"read":true},
     "comments": {"write":true},
     "attachments": {"upload":true},
     "scheduling": {"level":"none"},
@@ -122,6 +134,7 @@
   "Estimator": {
     "projects": {"scope":"all","read":true,"create":false,"edit":false,"delete":false},
     "tasks": {"scope":"estimates","read":true,"create":true,"edit":true,"assign":false,"delete":false,"complete":false},
+    "voice": {"create":true,"read":true},
     "comments": {"write":true},
     "attachments": {"upload":true},
     "scheduling": {"level":"none"},
@@ -132,6 +145,7 @@
   "Subcontractor": {
     "projects": {"scope":"assigned","read":true,"create":false,"edit":false,"delete":false},
     "tasks": {"scope":"assigned","read":true,"create":false,"edit":false,"assign":false,"delete":false,"complete":true},
+    "voice": {"create":false,"read":true},
     "comments": {"write":true},
     "attachments": {"upload":true},
     "scheduling": {"level":"none"},
