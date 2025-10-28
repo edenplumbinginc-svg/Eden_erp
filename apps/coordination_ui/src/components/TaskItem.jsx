@@ -45,6 +45,24 @@ export default function TaskItem({ t }) {
                 )}
               </RequirePermission>
             </FeatureGate>
+            <FeatureGate feature="taskAttachments">
+              <RequirePermission resource="tasks.files" action="read" fallback={null}>
+                {t.attachments_count > 0 && (
+                  <span 
+                    title={`${t.attachments_count} attachment${t.attachments_count > 1 ? 's' : ''}`}
+                    className="inline-flex items-center text-xs border rounded px-1.5 py-0.5"
+                    style={{
+                      borderColor: 'var(--md-tertiary)',
+                      backgroundColor: 'var(--md-tertiary-container)',
+                      color: 'var(--md-on-tertiary-container)',
+                      fontWeight: 500
+                    }}
+                  >
+                    📎 {t.attachments_count}
+                  </span>
+                )}
+              </RequirePermission>
+            </FeatureGate>
           </div>
           {t.description && (
             <p className="text-body text-muted mt-1" style={{

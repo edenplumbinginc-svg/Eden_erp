@@ -16,6 +16,7 @@ import BallHistoryPanel from "../components/BallHistoryPanel";
 import TaskSlaBanner from "../components/TaskSlaBanner";
 import VoiceRecorder from "../components/VoiceRecorder";
 import VoiceNotesList from "../components/VoiceNotesList";
+import AttachmentsPanel from "../components/AttachmentsPanel";
 import FeatureGate from "../components/FeatureGate";
 import { getStatusLabel } from "../constants/statusLabels";
 import { useHasPermission } from "../hooks/usePermissions";
@@ -557,7 +558,7 @@ export default function TaskDetail() {
           <Comments taskId={taskId} />
         </div>
         <div className="space-y-6">
-          <Attachments taskId={taskId} />
+          <AttachmentsPanel />
 
           <div className="space-y-2">
             <div className="font-semibold">Guest Invite</div>

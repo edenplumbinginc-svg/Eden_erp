@@ -1,5 +1,6 @@
 {
   "voiceToText": false,
+  "taskAttachments": true,
   "hardDeleteProjects": false,
   "includeArchivedToggle": true,
   "rbacDevBanner": true

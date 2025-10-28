@@ -1,0 +1,238 @@
+[Layer: Frontend] [Stage: Implement UI + Guards]
+Scope: Add Task Attachments UI (detail section + 📎 badge), fully RBAC/flag-gated. No delete/download endpoint yet.
+1) Feature flag
+apps/coordination_ui/src/config/features.json
+{
+  "voiceToText": false,
+  "taskAttachments": true
+}
+
+Default TRUE for internal testing (per AC). Flip to false if you want to stage first.
+
+2) 📎 badge on task list (no existence leak)
+apps/coordination_ui/src/components/TaskItem.jsx (excerpt)
+import FeatureGate from "@/components/FeatureGate";
+import { RequirePermission } from "@/components/permissions";
+
+// ...inside the TaskItem render, near other badges:
+<FeatureGate feature="taskAttachments">
+  <RequirePermission resource="tasks.files" action="read" fallback={null}>
+    {t.attachments_count > 0 && (
+      <span className="ml-2 text-xs opacity-80" title={`${t.attachments_count} attachment${t.attachments_count > 1 ? 's' : ''}`}>
+        📎 {t.attachments_count}
+      </span>
+    )}
+  </RequirePermission>
+</FeatureGate>
+
+The count field only exists when server-side RBAC allows tasks.files.read. Frontend still hides by flag + permission.
+
+3) Task Detail → “Attachments” section
+Create a panel and a small uploader. Upload is shown only with tasks.files.create; list is behind tasks.files.read.
+apps/coordination_ui/src/components/AttachmentsPanel.jsx
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import FeatureGate from "@/components/FeatureGate";
+import { RoutePermission, RequirePermission } from "@/components/permissions";
+import api from "@/services/api"; // axios instance
+import { useParams } from "react-router-dom";
+
+function humanFileSize(bytes) {
+  if (!Number.isFinite(bytes)) return "-";
+  const units = ["B","KB","MB","GB"];
+  let i = 0, n = bytes;
+  while (n >= 1024 && i < units.length-1) { n /= 1024; i++; }
+  return `${n.toFixed(n >= 10 || i === 0 ? 0 : 1)} ${units[i]}`;
+}
+
+function AttachmentsUploader({ taskId, onUploaded }) {
+  const qc = useQueryClient();
+  const m = useMutation({
+    mutationFn: async (file) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await api.post(`/api/tasks/${taskId}/files`, fd, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      return res.data.item;
+    },
+    onSuccess: () => {
+      // Refresh list + task list count
+      qc.invalidateQueries({ queryKey: ["task", taskId, "files"] });
+      qc.invalidateQueries({ queryKey: ["tasks","list"] }); // adjust if your key differs
+      onUploaded?.();
+    }
+  });
+
+  const onSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (file) m.mutate(file);
+  };
+
+  // Simple drag/drop (optional)
+  const onDrop = (e) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file) m.mutate(file);
+  };
+
+  return (
+    <div
+      className="border rounded-xl p-4"
+      onDragOver={(e)=>e.preventDefault()}
+      onDrop={onDrop}
+    >
+      <div className="flex items-center gap-3">
+        <input
+          id="task-file"
+          type="file"
+          className="hidden"
+          onChange={onSelect}
+          accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.csv,.xlsx"
+        />
+        <label htmlFor="task-file" className="cursor-pointer px-3 py-2 rounded-lg border">
+          Upload file
+        </label>
+        {m.isPending && <span className="text-xs opacity-70">Uploading…</span>}
+        {m.isError && <span className="text-xs text-red-600">Upload failed</span>}
+      </div>
+      <p className="mt-2 text-xs opacity-70">
+        Max 10MB. Allowed: pdf, jpg, jpeg, png, webp, heic, csv, xlsx. Drag & drop supported.
+      </p>
+    </div>
+  );
+}
+
+export default function AttachmentsPanel() {
+  const { id: taskId } = useParams();
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["task", taskId, "files"],
+    queryFn: async () => {
+      const res = await api.get(`/api/tasks/${taskId}/files`);
+      return res.data.items;
+    },
+    staleTime: 30_000
+  });
+
+  return (
+    <FeatureGate feature="taskAttachments">
+      <RoutePermission resource="tasks.files" action="read" fallback={null}>
+        <section className="mt-6">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-base font-semibold">Attachments</h3>
+            {/* Upload only if user can create */}
+            <RequirePermission resource="tasks.files" action="create" fallback={null}>
+              <AttachmentsUploader taskId={taskId} onUploaded={() => refetch()} />
+            </RequirePermission>
+          </div>
+
+          {isLoading && <div className="text-sm opacity-70">Loading attachments…</div>}
+          {isError && <div className="text-sm text-red-600">Failed to load attachments.</div>}
+          {!isLoading && !isError && (!data || data.length === 0) && (
+            <div className="text-sm opacity-70">No attachments yet.</div>
+          )}
+          <ul className="mt-2 space-y-2">
+            {data?.map(it => (
+              <li key={it.id} className="flex items-center justify-between border rounded-lg p-2">
+                <div className="min-w-0">
+                  <div className="truncate text-sm">{it.filename}</div>
+                  <div className="text-xs opacity-70">{humanFileSize(it.size)} • {it.mime}</div>
+                </div>
+                {/* v1 direct link; replace with signed download route later */}
+                <a href={it.url} className="text-sm underline" rel="noopener">
+                  Download
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </RoutePermission>
+    </FeatureGate>
+  );
+}
+
+apps/coordination_ui/src/pages/TaskDetail.jsx (hook panel into detail page)
+// ...existing imports
+import AttachmentsPanel from "@/components/AttachmentsPanel";
+
+// ...inside TaskDetail page render:
+<AttachmentsPanel />
+
+
+4) Smoke checks (UI)
+
+
+Flag OFF → no section, no badge.
+
+
+Flag ON + Viewer (read) → section visible, no upload control, list renders.
+
+
+Flag ON + Admin (create+read) → can upload; list refreshes; 📎 badge increments on list page after upload (query invalidated).
+
+
+Edge states handled: loading, empty, error.
+
+
+
+5) Commits
+feat(frontend): Task Attachments panel with RBAC guards + flag
+feat(frontend): 📎 attachments badge on TaskItem (flag+RBAC+count>0)
+chore(flags): enable taskAttachments for internal testing
+
+Branch: slice/tasks-attachments-v1
+PR DoD additions (frontend)
+
+
+ Frontend guards wired (RoutePermission / RequirePermission).
+
+
+ Badge gated (flag+RBAC) and hidden when count absent.
+
+
+ States: empty/error/loading handled.
+
+
+ Smoke script executed (screenshots optional).
+
+
+ Docs updated (UI usage + flag).
+
+
+
+[Layer: Flags] [Stage: Verify defaults]
+
+
+taskAttachments is TRUE internally. Before prod deploy, set FALSE by default or keep TRUE for internal-only environments.
+
+
+
+[Layer: Test] [Stage: Frontend smoke script]
+
+
+Toggle flag TRUE. Login as Admin. Go to a task → Upload spec.pdf (<10MB). Expect success; list shows file; go back to tasks list → 📎 appears with correct count.
+
+
+Switch to role without tasks.files.create (keep tasks.files.read). Upload control hidden; list still visible.
+
+
+Temporarily remove tasks.files.read. Section disappears entirely (route-guard).
+
+
+Try to upload a .exe. Client allows selection, server responds 400. UI shows “Upload failed”.
+
+
+Try >10MB file. Server 413; UI shows “Upload failed”.
+
+
+
+[Layer: Docs] [Stage: Update]
+
+
+docs/ATTACHMENTS.md: add UI section, states, and flag gating. Note: download uses raw url for v1; will swap to signed download route later.
+
+
+CHANGELOG.md: “Task Attachments UI (detail section + list + upload) and Task List badge”.
+
+
+
+Mini-lesson (React Query v5 + uploads): treat file uploads as mutations returning the created resource. Invalidate the list and any aggregate queries that depend on it (like counts). Don’t over-invalidate; target keys precisely to avoid UI churn. For multipart, FormData + default browser boundary handling is fine—never manually set Content-Type besides multipart/form-data header (Axios sets boundary automatically).
