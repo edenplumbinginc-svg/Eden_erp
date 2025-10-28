@@ -439,6 +439,10 @@ app.use('/api', require('./routes/me'));
 // --- Enforce authentication on all /api/* routes ---
 app.use('/api', requireAuth);
 
+// --- Auto-sync Supabase users to local database ---
+const { ensureUserRecord } = require('./middleware/ensureUserRecord');
+app.use('/api', ensureUserRecord);
+
 // --- Protected API endpoints ---
 app.get('/api/users', async (_, res) => {
   try {

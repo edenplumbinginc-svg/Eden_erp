@@ -19,6 +19,12 @@ async function verifySupabaseJwt(token) {
     // Decode the JWT header to determine the algorithm
     const { alg } = decodeProtectedHeader(token);
     
+    // Supabase can use either base URL or /auth/v1 as issuer
+    const acceptedIssuers = [
+      SUPABASE_URL,
+      `${SUPABASE_URL}/auth/v1`
+    ];
+    
     let verified;
     
     if (alg && alg.startsWith('HS')) {
@@ -29,7 +35,7 @@ async function verifySupabaseJwt(token) {
       
       verified = await jwtVerify(token, new TextEncoder().encode(SUPABASE_JWT_SECRET), {
         algorithms: ['HS256', 'HS384', 'HS512'],
-        issuer: SUPABASE_URL,
+        issuer: acceptedIssuers,
         audience: JWT_AUD,
       });
     } else if (alg && (alg.startsWith('RS') || alg.startsWith('ES') || alg.startsWith('PS'))) {
@@ -41,7 +47,7 @@ async function verifySupabaseJwt(token) {
       const keySet = getJWKS();
       verified = await jwtVerify(token, keySet, {
         algorithms: ['RS256', 'RS384', 'RS512', 'ES256', 'ES384', 'PS256', 'PS384', 'PS512'],
-        issuer: SUPABASE_URL,
+        issuer: acceptedIssuers,
         audience: JWT_AUD,
       });
     } else {
