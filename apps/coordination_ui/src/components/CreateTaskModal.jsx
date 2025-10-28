@@ -21,7 +21,20 @@ export default function CreateTaskModal({ isOpen, onClose }) {
       }
     },
     onError: (error) => {
-      const errorMsg = error?.response?.data?.error?.message || error.message || 'Failed to create task';
+      const errorData = error?.response?.data?.error;
+      let errorMsg = 'Failed to create task';
+      
+      if (errorData?.issues?.fieldErrors) {
+        const fields = Object.entries(errorData.issues.fieldErrors)
+          .map(([field, errors]) => `${field}: ${errors.join(', ')}`)
+          .join('; ');
+        errorMsg = `Validation error: ${fields}`;
+      } else if (errorData?.message) {
+        errorMsg = errorData.message;
+      } else if (error.message) {
+        errorMsg = error.message;
+      }
+      
       push('error', errorMsg);
     }
   });
