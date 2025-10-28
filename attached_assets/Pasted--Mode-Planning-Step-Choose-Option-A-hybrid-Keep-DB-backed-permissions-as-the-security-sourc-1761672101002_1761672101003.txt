@@ -1,0 +1,130 @@
+[Mode: Planning]
+
+Step: Choose Option A (hybrid). Keep DB-backed permissions as the security source of truth; add `rbac.json` for fast UX gating. Then wire route + component guards, and only after that expose destructive actions (Delete/Archive). Extras (voice-to-text) ship behind a feature flag.
+
+Why it matters: This prevents rework. UI can hide/show instantly while the backend still enforces reality.
+
+Inputs needed: None beyond repo access; your DevAuthSwitcher already exposes roles.
+
+Command: Decision locked: **Hybrid RBAC** → Order of work:
+
+1. RBAC kernel (`rbac.json` + `can()`),
+2. Route guards,
+3. Component guards,
+4. Delete/Archive,
+5. Feature flags (voice-to-text).
+
+Success check: Toggling role changes visible controls without touching feature code.
+
+Next: move to Execution.
+
+[Mode: Execution]
+
+Step: Add a `RequirePermission` wrapper and a `useRole` helper, then guard the Project “Delete” button behind `projects: delete`.
+
+Why it matters: This is the smallest wiring that proves hybrid RBAC without risky refactors.
+
+Inputs needed: Replit access; the earlier `rbac.json` and `lib/can.ts`.
+
+Command (RBAC layer → Frontend guard wiring):
+
+1. Update `apps/coordination_ui/src/lib/can.ts` to export types (paste entire file):
+
+```ts
+// Layer: RBAC → Frontend guard (kernel)
+import rbac from "@/config/rbac.json";
+
+export type Role = keyof typeof rbac;
+export type Resource =
+  | "projects" | "tasks" | "comments" | "attachments"
+  | "scheduling" | "archive" | "delete" | "roleManagement";
+export type Action = string;
+
+export function can(role: Role, resource: Resource, action: Action): boolean {
+  const roleDef: any = (rbac as any)[role];
+  if (!roleDef) return false;
+
+  const resDef: any = roleDef[resource];
+  if (!resDef) return false;
+
+  // Direct boolean action (e.g., edit, delete, assign)
+  if (typeof resDef[action] === "boolean") return !!resDef[action];
+
+  // Level-based permissions (e.g., { level: "full" | "limited" | "none" })
+  if (resDef.level) return resDef.level !== "none";
+
+  // Scope-based defaults
+  if (resDef.scope) {
+    if (action === "read") return resDef.read === true;
+    return resDef[action] === true;
+  }
+
+  return false;
+}
+
+export function scope(role: Role, resource: Resource): string | undefined {
+  const resDef: any = (rbac as any)[role]?.[resource];
+  return resDef?.scope || resDef?.level;
+}
+```
+
+2. Create `apps/coordination_ui/src/lib/authRole.ts`:
+
+```ts
+// Layer: RBAC → role source adapter
+import type { Role } from "@/lib/can";
+
+// Pull from DevAuthSwitcher, window, or localStorage; default Viewer.
+export function getCurrentRole(): Role {
+  // Prefer a global the dev switcher might set:
+  const winRole = typeof window !== "undefined" ? ((window as any).__DEV_ROLE as string) : "";
+  // Fallback to a localStorage key your switcher may use:
+  const lsRole = typeof localStorage !== "undefined" ? (localStorage.getItem("dev.role") || "") : "";
+  const role = (winRole || lsRole || "Viewer") as Role;
+  return role;
+}
+```
+
+3. Create `apps/coordination_ui/src/components/RequirePermission.tsx`:
+
+```tsx
+// Layer: RBAC → component guard
+import type { ReactNode } from "react";
+import { can, type Resource } from "@/lib/can";
+import { getCurrentRole } from "@/lib/authRole";
+
+type Props = {
+  resource: Resource;
+  action: string;
+  children: ReactNode;
+  fallback?: ReactNode;
+};
+
+export default function RequirePermission({ resource, action, children, fallback = null }: Props) {
+  const role = getCurrentRole();
+  return can(role, resource, action) ? <>{children}</> : <>{fallback}</>;
+}
+```
+
+4. Guard your Project Delete control. Wherever your delete button/link lives, wrap it:
+
+```tsx
+import RequirePermission from "@/components/RequirePermission";
+
+// ...
+<RequirePermission resource="projects" action="delete" fallback={null}>
+  <button onClick={handleDeleteProject} aria-label="Delete project">Delete</button>
+</RequirePermission>
+```
+
+Keep server routes protected by your existing DB/middleware as the final gate.
+
+Success check:
+
+* As **Admin**, the Delete button renders.
+* Switch to **Viewer** (via DevAuthSwitcher): the Delete button disappears.
+* Attempting a DELETE API call as Viewer still fails on the backend (middleware), confirming defense-in-depth.
+
+Next: wait for user.
+
+Mini dev lesson: front-end RBAC is a UI cache, not security. To avoid drift, add a tiny `/api/rbac/version` on the backend later and compare it to a `version` field in `rbac.json`; log a warning if mismatched. When you’re ready, paste the component code for your Projects list/card so I can wire the wrapper exactly in-place and add a guarded Archive action alongside Delete.
