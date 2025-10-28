@@ -1,0 +1,166 @@
+[Mode: Execution]
+
+Step: Create a single-source RBAC map (`rbac.json`) in the app.
+
+Why it matters: Central RBAC truth enables clean route guards, component-level checks, and server policy alignment without scattering role logic.
+
+Inputs needed: Replit access to the repo.
+
+Command (RBAC layer — config stage):
+
+1. In Replit file tree, create: `apps/coordination_ui/src/config/rbac.json`
+2. Paste this JSON (derived from your RBAC matrix in Notion/PDF ):
+
+```json
+{
+  "Admin": {
+    "projects": {"scope":"all","read":true,"create":true,"edit":true,"delete":true},
+    "tasks": {"scope":"all","read":true,"create":true,"edit":true,"assign":true,"delete":true,"complete":true},
+    "comments": {"write":true},
+    "attachments": {"upload":true},
+    "scheduling": {"level":"full"},
+    "archive": {"level":"batch"},
+    "delete": {"level":"batch"},
+    "roleManagement": {"level":"full"}
+  },
+  "Ops Lead": {
+    "projects": {"scope":"all","read":true,"create":false,"edit":false,"delete":false},
+    "tasks": {"scope":"all","read":true,"create":true,"edit":true,"assign":true,"delete":false,"complete":true},
+    "comments": {"write":true},
+    "attachments": {"upload":true},
+    "scheduling": {"level":"limited"},
+    "archive": {"level":"batch"},
+    "delete": {"level":"none"},
+    "roleManagement": {"level":"none"}
+  },
+  "Project Manager": {
+    "projects": {"scope":"own","read":true,"create":true,"edit":true,"delete":false},
+    "tasks": {"scope":"own","read":true,"create":true,"edit":true,"assign":true,"delete":false,"complete":true},
+    "comments": {"write":true},
+    "attachments": {"upload":true},
+    "scheduling": {"level":"none"},
+    "archive": {"level":"own"},
+    "delete": {"level":"none"},
+    "roleManagement": {"level":"none"}
+  },
+  "Field Ops": {
+    "projects": {"scope":"assigned","read":true,"create":false,"edit":false,"delete":false},
+    "tasks": {"scope":"field","read":true,"create":true,"edit":true,"assign":true,"delete":false,"complete":true},
+    "comments": {"write":true},
+    "attachments": {"upload":true},
+    "scheduling": {"level":"none"},
+    "archive": {"level":"none"},
+    "delete": {"level":"none"},
+    "roleManagement": {"level":"none"}
+  },
+  "Scheduler": {
+    "projects": {"scope":"all","read":true,"create":false,"edit":false,"delete":false},
+    "tasks": {"scope":"timing","read":true,"create":false,"edit":true,"assign":true,"delete":false,"complete":false},
+    "comments": {"write":false},
+    "attachments": {"upload":false},
+    "scheduling": {"level":"full"},
+    "archive": {"level":"timing"},
+    "delete": {"level":"none"},
+    "roleManagement": {"level":"none"}
+  },
+  "Office Admin": {
+    "projects": {"scope":"all","read":true,"create":true,"edit":true,"delete":false},
+    "tasks": {"scope":"all","read":true,"create":true,"edit":true,"assign":true,"delete":false,"complete":true},
+    "comments": {"write":true},
+    "attachments": {"upload":true},
+    "scheduling": {"level":"none"},
+    "archive": {"level":"batch"},
+    "delete": {"level":"none"},
+    "roleManagement": {"level":"none"}
+  },
+  "Estimator": {
+    "projects": {"scope":"all","read":true,"create":false,"edit":false,"delete":false},
+    "tasks": {"scope":"estimates","read":true,"create":true,"edit":true,"assign":false,"delete":false,"complete":false},
+    "comments": {"write":true},
+    "attachments": {"upload":true},
+    "scheduling": {"level":"none"},
+    "archive": {"level":"none"},
+    "delete": {"level":"none"},
+    "roleManagement": {"level":"none"}
+  },
+  "Accounting": {
+    "projects": {"scope":"all","read":true,"create":false,"edit":false,"delete":false},
+    "tasks": {"scope":"all","read":true,"create":false,"edit":false,"assign":false,"delete":false,"complete":false},
+    "comments": {"write":true},
+    "attachments": {"upload":true},
+    "scheduling": {"level":"none"},
+    "archive": {"level":"none"},
+    "delete": {"level":"none"},
+    "roleManagement": {"level":"none"}
+  },
+  "Inventory Manager": {
+    "projects": {"scope":"none","read":false,"create":false,"edit":false,"delete":false},
+    "tasks": {"scope":"all","read":true,"create":false,"edit":false,"assign":false,"delete":false,"complete":false},
+    "comments": {"write":true},
+    "attachments": {"upload":false},
+    "scheduling": {"level":"none"},
+    "archive": {"level":"none"},
+    "delete": {"level":"none"},
+    "roleManagement": {"level":"none"}
+  },
+  "Trainer": {
+    "projects": {"scope":"all","read":true,"create":false,"edit":false,"delete":false},
+    "tasks": {"scope":"all","read":true,"create":false,"edit":false,"assign":false,"delete":false,"complete":false},
+    "comments": {"write":true},
+    "attachments": {"upload":true},
+    "scheduling": {"level":"none"},
+    "archive": {"level":"none"},
+    "delete": {"level":"none"},
+    "roleManagement": {"level":"none"}
+  },
+  "Subcontractor": {
+    "projects": {"scope":"assigned","read":true,"create":false,"edit":false,"delete":false},
+    "tasks": {"scope":"assigned","read":true,"create":false,"edit":false,"assign":false,"delete":false,"complete":true},
+    "comments": {"write":true},
+    "attachments": {"upload":true},
+    "scheduling": {"level":"none"},
+    "archive": {"level":"none"},
+    "delete": {"level":"none"},
+    "roleManagement": {"level":"none"}
+  },
+  "Client": {
+    "projects": {"scope":"shared","read":true,"create":false,"edit":false,"delete":false},
+    "tasks": {"scope":"shared","read":true,"create":false,"edit":false,"assign":false,"delete":false,"complete":false},
+    "comments": {"write":true},
+    "attachments": {"upload":true},
+    "scheduling": {"level":"none"},
+    "archive": {"level":"none"},
+    "delete": {"level":"none"},
+    "roleManagement": {"level":"none"}
+  },
+  "Viewer": {
+    "projects": {"scope":"all","read":true,"create":false,"edit":false,"delete":false},
+    "tasks": {"scope":"all","read":true,"create":false,"edit":false,"assign":false,"delete":false,"complete":false},
+    "comments": {"write":false},
+    "attachments": {"upload":false},
+    "scheduling": {"level":"none"},
+    "archive": {"level":"none"},
+    "delete": {"level":"none"},
+    "roleManagement": {"level":"none"}
+  },
+  "Guest": {
+    "projects": {"scope":"shared","read":true,"create":false,"edit":false,"delete":false},
+    "tasks": {"scope":"shared","read":true,"create":false,"edit":false,"assign":false,"delete":false,"complete":false},
+    "comments": {"write":false},
+    "attachments": {"upload":false},
+    "scheduling": {"level":"none"},
+    "archive": {"level":"none"},
+    "delete": {"level":"none"},
+    "roleManagement": {"level":"none"}
+  }
+}
+```
+
+Success check:
+
+* File saves without JSON errors.
+* Import test compiles: add `import rbac from "@/config/rbac.json"; console.log("RBAC roles:", Object.keys(rbac));` in a dev-only spot (e.g., `apps/coordination_ui/src/main.jsx`) and confirm roles print in the browser console, then remove the log.
+
+Next: wait for user
+
+Suggestion for later (not part of this step): after you confirm the file exists, I’ll give you a tiny `can()` helper and a `RequirePermission` component to wire guards to routes/components, then map your current auth role → RBAC lookups.
