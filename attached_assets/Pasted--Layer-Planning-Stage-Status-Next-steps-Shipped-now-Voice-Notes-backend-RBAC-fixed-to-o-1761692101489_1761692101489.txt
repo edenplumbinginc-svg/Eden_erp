@@ -1,0 +1,151 @@
+[Layer: Planning] [Stage: Status + Next steps]
+
+Shipped (now)
+
+Voice Notes — backend RBAC fixed to omit voice_notes_count without voice.read.
+
+Tasks → Attachments (files) — Data, API, RBAC, Frontend, Flags, Docs complete; badge gated with no existence leak.
+
+Secure Download (+ Audit) — GET /api/task-files/:fileId/download streams with RBAC check; file_downloads audit table; frontend links updated; docs+changelog updated.
+
+Task list (current project board)
+
+Close out
+
+ Mark Tasks → Attachments v1 slice Shipped (internal) in Notion Slices DB.
+
+ Mark Secure Download (+ Audit) slice Shipped (internal).
+
+ Update RBAC Matrix DB with tasks.files.create/read.
+
+ Feature Flags DB: taskAttachments = true (internal owner set).
+
+Tech-debt / hygiene (quick wins)
+
+ Remove/flag legacy Supabase attachments pipeline (one canonical flow).
+
+PR: chore: deprecate legacy attachments (Supabase) (delete routes/components or gate behind deprecated flag OFF).
+
+ Centralize UPLOAD_ROOT and URL mapping in a single helper (avoid ad-hoc replaces).
+
+Add resolveFilePath(url) with path.resolve + root clamp check.
+
+Tests (backfill)
+
+ Add API tests: 200 stream (+audit row), 403 (no tasks.files.read), 404 (unknown file), 413 (oversize), 400 (disallowed MIME).
+
+ Add minimal E2E: upload → list → download; assert 📎 increments and audit row exists.
+
+Observability
+
+ Structured log on download {file_id, task_id, user_id, ip, ua, ts}; error logs with same correlation fields.
+
+ Add metric counters: files.uploaded, files.downloaded, files.rejected.mime, files.rejected.size.
+
+Next vertical slices (in order)
+1) Attachments — Soft Delete (+ Undelete) (small, safe)
+
+Data: add deleted_at TIMESTAMPTZ to task_files (index (task_id, deleted_at, created_at DESC)).
+
+API: DELETE /api/task-files/:id → soft delete; POST /api/task-files/:id/restore → undelete.
+
+RBAC: tasks.files.delete (limited to Admin, PM, Ops Lead).
+
+UI: “Archive file” action; filter toggle “Include archived” (follows your page coverage rule).
+
+Flag: taskFilesDelete default OFF.
+
+Tests: delete/restore paths; list excludes archived by default.
+
+2) Attachments — Storage Migration (S3 + signed URLs) (medium)
+
+Data: store bucket, key, checksum, size, mime.
+
+API: upload proxy → S3; download issues time-limited signed URL after RBAC+audit.
+
+Security: server-side magic-bytes sniff on upload (PDF %PDF-, JPEG FFD8, PNG 89504E47, WebP RIFF....WEBP, XLSX ZIP header).
+
+Ops: lifecycle policy (e.g., archive after 180d).
+
+Flag: attachmentsObjectStorage (gradual rollout).
+
+3) RBAC Drift Auditor (utility)
+
+Script: diff DB role_permissions vs rbac.json; exit non-zero in CI on mismatches; optional allowlist exemptions.
+
+4) Procurement v1 (draft→sent) (builds on attachments)
+
+Vendors table, PO create; attach PDFs via the new pipeline.
+
+Notion updates (paste)
+
+Slices DB
+
+Tasks — Attachments v1: Status Shipped (internal); PR link; evidence (screens + curl).
+
+Secure Download (+ Audit): Status Shipped (internal).
+
+Attachments — Soft Delete: Status Planned; AC above.
+
+Attachments — Storage Migration (S3): Status Planned.
+
+RBAC Matrix DB
+
+Add: tasks.files.create (roles: Admin, Ops Lead, PM, Contributor, Field Ops, Office Admin)
+
+Add: tasks.files.read (all task readers)
+
+Add (planned): tasks.files.delete (Admin, Ops Lead, PM)
+
+Feature Flags DB
+
+taskAttachments → Default: true (internal), Owner: <you>
+
+Planned: taskFilesDelete (default OFF)
+
+Planned: attachmentsObjectStorage (default OFF)
+
+Snippets to backlog (ready-to-use)
+
+Path clamp helper (defense-in-depth)
+
+import path from 'node:path';
+const ROOT = process.env.TASK_UPLOAD_ROOT;
+
+export function resolveFilePath(url) {
+  // Example: /secure/tasks/<taskId>/<uuid>.<ext> → <ROOT>/<taskId>/<uuid>.<ext>
+  const rel = url.replace(/^\/secure\/tasks\//, '');
+  const abs = path.resolve(ROOT, rel);
+  if (!abs.startsWith(path.resolve(ROOT))) throw new Error('Path escape blocked');
+  return abs;
+}
+
+
+DB: soft delete
+
+ALTER TABLE task_files ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+CREATE INDEX IF NOT EXISTS idx_task_files_visible
+  ON task_files (task_id, deleted_at, created_at DESC);
+
+PR checklist (DoD) — carry forward
+
+ AC met.
+
+ DB migration + rollback applied.
+
+ API contracts doc’d; 403/400/413 verified; stream 200 verified.
+
+ RBAC policies verified (matrix + rbac.json).
+
+ Frontend guards wired; empty/error/loading states handled.
+
+ Feature flag added/updated.
+
+ Smoke script evidence attached.
+
+ Docs updated (ATTACHMENTS.md, CHANGELOG).
+
+Mini-lesson (download headers, practical):
+Serve downloads with Content-Disposition: attachment; filename="<original>" and Content-Type from trusted mime detection. Add Cache-Control: private, no-store for sensitive files. If you migrate to signed URLs, keep RBAC+audit on your server first, then redirect (302) to the signed URL—policy gate stays yours, storage just moves the bytes.
+
+Next action to pull: Attachments — Soft Delete (+ Undelete) slice.
