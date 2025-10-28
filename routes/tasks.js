@@ -20,11 +20,11 @@ const UpdateTaskSchema = z.object({
   description: z.string().max(20000).optional(),
   status: z.enum(['open', 'todo', 'in_progress', 'review', 'done']).optional(),
   priority: z.string().optional(),
-  assignee_id: z.string().uuid().nullable().optional(),
-  ball_in_court: z.string().uuid().nullable().optional(),
+  assignee_id: z.union([z.string().uuid(), z.literal('')]).transform(v => v === '' ? undefined : v).optional(),
+  ball_in_court: z.union([z.string().uuid(), z.literal('')]).transform(v => v === '' ? undefined : v).optional(),
   ball_in_court_note: z.string().max(1000).nullable().optional(),
   ballOwnerType: z.enum(['user', 'vendor', 'dept', 'system']).nullable().optional(),
-  ballOwnerId: z.string().uuid().nullable().optional(),
+  ballOwnerId: z.union([z.string().uuid(), z.literal('')]).transform(v => v === '' ? undefined : v).optional(),
   due_at: z.string().datetime().nullable().optional(),
   tags: z.array(z.string().min(1).max(64)).max(50).optional(),
   origin: z.string().optional(),
@@ -74,17 +74,17 @@ const CreateTaskSchema = z.object({
   status: z.enum(['open', 'todo', 'in_progress', 'review', 'done']).optional(),
   department: z.enum(['Operations', 'Procurement', 'Accounting', 'Service', 'Estimating', 'Scheduling']),
   priority: z.string().optional(),
-  assignee_id: z.string().uuid().nullable().optional(),
-  ball_in_court: z.string().uuid().nullable().optional(),
+  assignee_id: z.union([z.string().uuid(), z.literal('')]).transform(v => v === '' ? undefined : v).optional(),
+  ball_in_court: z.union([z.string().uuid(), z.literal('')]).transform(v => v === '' ? undefined : v).optional(),
   ball_in_court_note: z.string().max(1000).nullable().optional(),
   ballOwnerType: z.enum(['user', 'vendor', 'dept', 'system']).nullable().optional(),
-  ballOwnerId: z.string().uuid().nullable().optional(),
+  ballOwnerId: z.union([z.string().uuid(), z.literal('')]).transform(v => v === '' ? undefined : v).optional(),
   due_at: z.string().datetime().nullable().optional(),
   tags: z.array(z.string().min(1).max(64)).max(50).optional(),
   origin: z.string().optional(),
   voice_url: z.string().url().nullable().optional(),
   voice_transcript: z.string().max(20000).nullable().optional(),
-  project_id: z.string().uuid().nullable().optional()
+  project_id: z.union([z.string().uuid(), z.literal('')]).transform(v => v === '' ? undefined : v).optional()
 });
 
 // Status flow validation
