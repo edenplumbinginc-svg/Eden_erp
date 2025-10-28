@@ -57,71 +57,69 @@ export default function AllTasksView() {
   return (
     <div className="space-y-4">
       <div className="bg-white border-b">
-        <div className="flex gap-1 px-4">
-          <button
-            className={`px-4 py-3 text-body font-medium border-b-2 transition-colors ${
-              isAllTasksActive 
-                ? 'border-primary' 
-                : 'border-transparent text-muted hover:border-gray-300'
-            }`}
-            style={isAllTasksActive ? { color: 'var(--md-primary)' } : {}}
-            onClick={() => handleTabClick({ assignee: null, bic: null })}
-          >
-            All Tasks
-            {allTasksCount > 0 && (
-              <span className="ml-2 inline-block px-2 py-0.5 bg-primary text-white rounded-full text-caption font-semibold">
-                {allTasksCount}
-              </span>
-            )}
-          </button>
-          <button
-            className={`px-4 py-3 text-body font-medium border-b-2 transition-colors ${
-              isMyTasksActive 
-                ? 'border-primary' 
-                : 'border-transparent text-muted hover:border-gray-300'
-            }`}
-            style={isMyTasksActive ? { color: 'var(--md-primary)' } : {}}
-            onClick={() => handleTabClick({ assignee: currentUser.id, bic: null })}
-          >
-            My Tasks
-            {myTasksCount > 0 && (
-              <span className="ml-2 inline-block px-2 py-0.5 bg-primary text-white rounded-full text-caption font-semibold">
-                {myTasksCount}
-              </span>
-            )}
-          </button>
-          <button
-            className={`px-4 py-3 text-body font-medium border-b-2 transition-colors ${
-              isBallInCourtActive 
-                ? 'border-primary' 
-                : 'border-transparent text-muted hover:border-gray-300'
-            }`}
-            style={isBallInCourtActive ? { color: 'var(--md-primary)' } : {}}
-            onClick={() => handleTabClick({ bic: currentUser.id, assignee: null })}
-          >
-            🏀 Ball in My Court
-            {bicCount > 0 && (
-              <span className="ml-2 inline-block px-2 py-0.5 bg-primary text-white rounded-full text-caption font-semibold">
-                {bicCount}
-              </span>
-            )}
-          </button>
+        <div className="flex gap-1 px-4 items-center justify-between">
+          <div className="flex gap-1">
+            <button
+              className={`px-4 py-3 text-body font-medium border-b-2 transition-colors ${
+                isAllTasksActive 
+                  ? 'border-primary' 
+                  : 'border-transparent text-muted hover:border-gray-300'
+              }`}
+              style={isAllTasksActive ? { color: 'var(--md-primary)' } : {}}
+              onClick={() => handleTabClick({ assignee: null, bic: null })}
+            >
+              All Tasks
+              {allTasksCount > 0 && (
+                <span className="ml-2 inline-block px-2 py-0.5 bg-primary text-white rounded-full text-caption font-semibold">
+                  {allTasksCount}
+                </span>
+              )}
+            </button>
+            <button
+              className={`px-4 py-3 text-body font-medium border-b-2 transition-colors ${
+                isMyTasksActive 
+                  ? 'border-primary' 
+                  : 'border-transparent text-muted hover:border-gray-300'
+              }`}
+              style={isMyTasksActive ? { color: 'var(--md-primary)' } : {}}
+              onClick={() => handleTabClick({ assignee: currentUser.id, bic: null })}
+            >
+              My Tasks
+              {myTasksCount > 0 && (
+                <span className="ml-2 inline-block px-2 py-0.5 bg-primary text-white rounded-full text-caption font-semibold">
+                  {myTasksCount}
+                </span>
+              )}
+            </button>
+            <button
+              className={`px-4 py-3 text-body font-medium border-b-2 transition-colors ${
+                isBallInCourtActive 
+                  ? 'border-primary' 
+                  : 'border-transparent text-muted hover:border-gray-300'
+              }`}
+              style={isBallInCourtActive ? { color: 'var(--md-primary)' } : {}}
+              onClick={() => handleTabClick({ bic: currentUser.id, assignee: null })}
+            >
+              🏀 Ball in My Court
+              {bicCount > 0 && (
+                <span className="ml-2 inline-block px-2 py-0.5 bg-primary text-white rounded-full text-caption font-semibold">
+                  {bicCount}
+                </span>
+              )}
+            </button>
+          </div>
+          {canCreateTask && (
+            <button
+              className="btn btn-primary whitespace-nowrap"
+              onClick={() => setIsCreateModalOpen(true)}
+            >
+              + Create Task
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
-        <div className="flex-1">
-          <TasksFilters />
-        </div>
-        {canCreateTask && (
-          <button
-            className="btn btn-primary ml-4 whitespace-nowrap"
-            onClick={() => setIsCreateModalOpen(true)}
-          >
-            + Create Task
-          </button>
-        )}
-      </div>
+      <TasksFilters />
 
       <CreateTaskModal 
         isOpen={isCreateModalOpen} 
