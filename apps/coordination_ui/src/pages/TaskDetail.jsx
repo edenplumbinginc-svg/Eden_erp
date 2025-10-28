@@ -20,7 +20,7 @@ import { useHasPermission } from "../hooks/usePermissions";
 function TaskMetadata({ task }) {
   const { data: projects = [] } = useQuery({
     queryKey: ['projects'],
-    queryFn: () => apiService.getProjects().then(res => res.data)
+    queryFn: () => apiService.getProjects().then(res => res.data?.items || [])
   });
 
   const project = projects.find(p => p.id === task?.project_id);

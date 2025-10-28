@@ -36,7 +36,7 @@ export default function TaskForm({ onSubmit, onCancel, initialData = {}, submitL
     queryKey: ['projects'],
     queryFn: async () => {
       const res = await apiService.getProjects();
-      return res.data || [];
+      return res.data?.items || [];
     }
   });
 
