@@ -1,0 +1,15 @@
+﻿Role,Archive,Attachments,Comments,Delete,Projects,Role Management,Scheduling,Tasks
+Ops Lead,✅ batch,✅ upload,✅ write,❌,✅ read,❌,✅ limited,✅ create/edit/assign
+Admin,✅ batch,✅ upload,✅ write,✅ batch,✅ create/edit/delete,✅ full,✅ full,✅ create/edit/assign/delete
+Scheduler,✅ (timing-related),❌,❌,❌,✅ read,❌,✅ full,✅ assign/update timing
+Field Ops,❌,✅ upload,✅ write,❌,✅ read (assigned projects only),❌,❌,✅ create/edit/assign (within field scope)
+Project Manager,✅ (own project),✅ upload,✅ write,❌,✅ create/edit (own),❌,❌,✅ create/edit/assign (own)
+Client Guest,❌,✅ upload (optional),✅ write (optional),❌,✅ read (shared only),❌,❌,✅ read (shared only)
+Contributor,❌,✅ upload,✅ write,❌,✅ read (assigned projects only),❌,❌,✅ create/edit (own + team scope)
+Accounting,❌,✅ upload,✅ write,❌,✅ read,❌,❌,✅ read
+Viewer,❌,❌,❌,❌,✅ read,❌,❌,✅ read
+Inventory Manager,❌,❌,✅ write,❌,❌,❌,❌,✅ read
+Trainer,❌,✅ upload,✅ write,❌,✅ read,❌,❌,✅ read
+Office Admin,✅,✅ upload,✅ write,❌,✅ create/edit,❌,❌,✅ create/edit/assign
+Estimator,❌,✅ upload,✅ write,❌,✅ read,❌,❌,✅ create/edit (estimates only)
+Subcontractor,❌,✅ upload,✅ write,❌,✅ read (assigned projects only),❌,❌,✅ read/complete (assigned only)
