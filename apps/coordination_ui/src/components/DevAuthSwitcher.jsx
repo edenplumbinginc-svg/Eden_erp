@@ -18,6 +18,13 @@ function DevAuthSwitcher({ onUserChange }) {
     devAuth.setUser(preset.email, preset.id);
     setCurrentUser(devAuth.getCurrentUser());
     setShowCustom(false);
+    
+    // Expose role globally for RBAC system
+    if (typeof window !== 'undefined') {
+      window.__DEV_ROLE = preset.role;
+      localStorage.setItem('dev.role', preset.role);
+    }
+    
     window.dispatchEvent(new Event('dev-user-changed'));
     if (onUserChange) onUserChange();
   };
@@ -28,6 +35,13 @@ function DevAuthSwitcher({ onUserChange }) {
       devAuth.setUser(customEmail, customId);
       setCurrentUser(devAuth.getCurrentUser());
       setShowCustom(false);
+      
+      // Default custom users to Admin role
+      if (typeof window !== 'undefined') {
+        window.__DEV_ROLE = 'Admin';
+        localStorage.setItem('dev.role', 'Admin');
+      }
+      
       window.dispatchEvent(new Event('dev-user-changed'));
       if (onUserChange) onUserChange();
     }

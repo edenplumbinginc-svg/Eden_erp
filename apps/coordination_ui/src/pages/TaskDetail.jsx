@@ -16,6 +16,7 @@ import BallHistoryPanel from "../components/BallHistoryPanel";
 import TaskSlaBanner from "../components/TaskSlaBanner";
 import { getStatusLabel } from "../constants/statusLabels";
 import { useHasPermission } from "../hooks/usePermissions";
+import RequirePermission from "../components/RequirePermission";
 
 function TaskMetadata({ task }) {
   const { data: projects = [] } = useQuery({
@@ -155,13 +156,15 @@ function Comments({ taskId }) {
               <div className="text-caption text-muted">{new Date(c.created_at || c.createdAt).toLocaleString()}</div>
             </div>
             {canDeleteComment && (
-              <button
-                className="btn-icon text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={() => setDeleteConfirm(c.id)}
-                title="Delete comment"
-              >
-                🗑️
-              </button>
+              <RequirePermission resource="tasks" action="delete">
+                <button
+                  className="btn-icon text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={() => setDeleteConfirm(c.id)}
+                  title="Delete comment"
+                >
+                  🗑️
+                </button>
+              </RequirePermission>
             )}
           </div>
         )) : <div className="text-body text-muted">No comments yet.</div>}

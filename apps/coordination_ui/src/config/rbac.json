@@ -1,0 +1,142 @@
+{
+  "Admin": {
+    "projects": {"scope":"all","read":true,"create":true,"edit":true,"delete":true},
+    "tasks": {"scope":"all","read":true,"create":true,"edit":true,"assign":true,"delete":true,"complete":true},
+    "comments": {"write":true},
+    "attachments": {"upload":true},
+    "scheduling": {"level":"full"},
+    "archive": {"level":"batch"},
+    "delete": {"level":"batch"},
+    "roleManagement": {"level":"full"}
+  },
+  "Ops Lead": {
+    "projects": {"scope":"all","read":true,"create":false,"edit":false,"delete":false},
+    "tasks": {"scope":"all","read":true,"create":true,"edit":true,"assign":true,"delete":false,"complete":true},
+    "comments": {"write":true},
+    "attachments": {"upload":true},
+    "scheduling": {"level":"limited"},
+    "archive": {"level":"batch"},
+    "delete": {"level":"none"},
+    "roleManagement": {"level":"none"}
+  },
+  "Scheduler": {
+    "projects": {"scope":"all","read":true,"create":false,"edit":false,"delete":false},
+    "tasks": {"scope":"timing","read":true,"create":false,"edit":true,"assign":true,"delete":false,"complete":false},
+    "comments": {"write":false},
+    "attachments": {"upload":false},
+    "scheduling": {"level":"full"},
+    "archive": {"level":"timing"},
+    "delete": {"level":"none"},
+    "roleManagement": {"level":"none"}
+  },
+  "Field Ops": {
+    "projects": {"scope":"assigned","read":true,"create":false,"edit":false,"delete":false},
+    "tasks": {"scope":"field","read":true,"create":true,"edit":true,"assign":true,"delete":false,"complete":true},
+    "comments": {"write":true},
+    "attachments": {"upload":true},
+    "scheduling": {"level":"none"},
+    "archive": {"level":"none"},
+    "delete": {"level":"none"},
+    "roleManagement": {"level":"none"}
+  },
+  "Project Manager": {
+    "projects": {"scope":"own","read":true,"create":true,"edit":true,"delete":false},
+    "tasks": {"scope":"own","read":true,"create":true,"edit":true,"assign":true,"delete":false,"complete":true},
+    "comments": {"write":true},
+    "attachments": {"upload":true},
+    "scheduling": {"level":"none"},
+    "archive": {"level":"own"},
+    "delete": {"level":"none"},
+    "roleManagement": {"level":"none"}
+  },
+  "Client Guest": {
+    "projects": {"scope":"shared","read":true,"create":false,"edit":false,"delete":false},
+    "tasks": {"scope":"shared","read":true,"create":false,"edit":false,"assign":false,"delete":false,"complete":false},
+    "comments": {"write":true},
+    "attachments": {"upload":true},
+    "scheduling": {"level":"none"},
+    "archive": {"level":"none"},
+    "delete": {"level":"none"},
+    "roleManagement": {"level":"none"}
+  },
+  "Contributor": {
+    "projects": {"scope":"assigned","read":true,"create":false,"edit":false,"delete":false},
+    "tasks": {"scope":"team","read":true,"create":true,"edit":true,"assign":false,"delete":false,"complete":true},
+    "comments": {"write":true},
+    "attachments": {"upload":true},
+    "scheduling": {"level":"none"},
+    "archive": {"level":"none"},
+    "delete": {"level":"none"},
+    "roleManagement": {"level":"none"}
+  },
+  "Accounting": {
+    "projects": {"scope":"all","read":true,"create":false,"edit":false,"delete":false},
+    "tasks": {"scope":"all","read":true,"create":false,"edit":false,"assign":false,"delete":false,"complete":false},
+    "comments": {"write":true},
+    "attachments": {"upload":true},
+    "scheduling": {"level":"none"},
+    "archive": {"level":"none"},
+    "delete": {"level":"none"},
+    "roleManagement": {"level":"none"}
+  },
+  "Viewer": {
+    "projects": {"scope":"all","read":true,"create":false,"edit":false,"delete":false},
+    "tasks": {"scope":"all","read":true,"create":false,"edit":false,"assign":false,"delete":false,"complete":false},
+    "comments": {"write":false},
+    "attachments": {"upload":false},
+    "scheduling": {"level":"none"},
+    "archive": {"level":"none"},
+    "delete": {"level":"none"},
+    "roleManagement": {"level":"none"}
+  },
+  "Inventory Manager": {
+    "projects": {"scope":"none","read":false,"create":false,"edit":false,"delete":false},
+    "tasks": {"scope":"all","read":true,"create":false,"edit":false,"assign":false,"delete":false,"complete":false},
+    "comments": {"write":true},
+    "attachments": {"upload":false},
+    "scheduling": {"level":"none"},
+    "archive": {"level":"none"},
+    "delete": {"level":"none"},
+    "roleManagement": {"level":"none"}
+  },
+  "Trainer": {
+    "projects": {"scope":"all","read":true,"create":false,"edit":false,"delete":false},
+    "tasks": {"scope":"all","read":true,"create":false,"edit":false,"assign":false,"delete":false,"complete":false},
+    "comments": {"write":true},
+    "attachments": {"upload":true},
+    "scheduling": {"level":"none"},
+    "archive": {"level":"none"},
+    "delete": {"level":"none"},
+    "roleManagement": {"level":"none"}
+  },
+  "Office Admin": {
+    "projects": {"scope":"all","read":true,"create":true,"edit":true,"delete":false},
+    "tasks": {"scope":"all","read":true,"create":true,"edit":true,"assign":true,"delete":false,"complete":true},
+    "comments": {"write":true},
+    "attachments": {"upload":true},
+    "scheduling": {"level":"none"},
+    "archive": {"level":"batch"},
+    "delete": {"level":"none"},
+    "roleManagement": {"level":"none"}
+  },
+  "Estimator": {
+    "projects": {"scope":"all","read":true,"create":false,"edit":false,"delete":false},
+    "tasks": {"scope":"estimates","read":true,"create":true,"edit":true,"assign":false,"delete":false,"complete":false},
+    "comments": {"write":true},
+    "attachments": {"upload":true},
+    "scheduling": {"level":"none"},
+    "archive": {"level":"none"},
+    "delete": {"level":"none"},
+    "roleManagement": {"level":"none"}
+  },
+  "Subcontractor": {
+    "projects": {"scope":"assigned","read":true,"create":false,"edit":false,"delete":false},
+    "tasks": {"scope":"assigned","read":true,"create":false,"edit":false,"assign":false,"delete":false,"complete":true},
+    "comments": {"write":true},
+    "attachments": {"upload":true},
+    "scheduling": {"level":"none"},
+    "archive": {"level":"none"},
+    "delete": {"level":"none"},
+    "roleManagement": {"level":"none"}
+  }
+}
