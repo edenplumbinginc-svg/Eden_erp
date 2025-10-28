@@ -42,35 +42,20 @@ function AttachmentsUploader({ taskId, onUploaded }) {
     if (file) m.mutate(file);
   };
 
-  const onDrop = (e) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files?.[0];
-    if (file) m.mutate(file);
-  };
-
   return (
-    <div
-      className="border rounded-xl p-4"
-      onDragOver={(e) => e.preventDefault()}
-      onDrop={onDrop}
-    >
-      <div className="flex items-center gap-3">
-        <input
-          id="task-file"
-          type="file"
-          className="hidden"
-          onChange={onSelect}
-          accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.csv,.xlsx"
-        />
-        <label htmlFor="task-file" className="cursor-pointer px-3 py-2 rounded-lg border">
-          Upload file
-        </label>
-        {m.isPending && <span className="text-xs opacity-70">Uploading…</span>}
-        {m.isError && <span className="text-xs text-red-600">Upload failed</span>}
-      </div>
-      <p className="mt-2 text-xs opacity-70">
-        Max 10MB. Allowed: pdf, jpg, jpeg, png, webp, heic, csv, xlsx. Drag & drop supported.
-      </p>
+    <div className="flex items-center gap-2">
+      <input
+        id="task-file"
+        type="file"
+        className="hidden"
+        onChange={onSelect}
+        accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.csv,.xlsx"
+      />
+      <label htmlFor="task-file" className="cursor-pointer px-3 py-1.5 text-sm rounded-lg border hover:bg-gray-50 transition-colors">
+        Upload file
+      </label>
+      {m.isPending && <span className="text-xs opacity-70">Uploading…</span>}
+      {m.isError && <span className="text-xs text-red-600">Upload failed</span>}
     </div>
   );
 }
@@ -91,8 +76,12 @@ export default function AttachmentsPanel() {
     <FeatureGate feature="taskAttachments">
       <RoutePermission resource="tasks.files" action="read" fallback={null}>
         <section className="mt-6">
-          <div className="mb-2">
+          <div className="flex items-center justify-between mb-2">
             <h3 className="text-base font-semibold">Attachments</h3>
+            {/* Upload only if user can create */}
+            <RequirePermission resource="tasks.files" action="create" fallback={null}>
+              <AttachmentsUploader taskId={taskId} onUploaded={() => refetch()} />
+            </RequirePermission>
           </div>
 
           {isLoading && <div className="text-sm opacity-70">Loading attachments…</div>}
@@ -100,33 +89,20 @@ export default function AttachmentsPanel() {
           {!isLoading && !isError && (!data || data.length === 0) && (
             <div className="text-sm opacity-70">No attachments yet.</div>
           )}
-          
-          {!isLoading && !isError && data && data.length > 0 && (
-            <ul className="mt-2 space-y-2">
-              {data.map(it => (
-                <li key={it.id} className="flex items-center justify-between border rounded-lg p-3 bg-white">
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium">{it.filename}</div>
-                    <div className="text-xs opacity-70 mt-0.5">
-                      {humanFileSize(it.size)} • {it.mime}
-                    </div>
-                  </div>
-                  <a 
-                    href={it.url} 
-                    className="text-sm underline ml-3 flex-shrink-0" 
-                    rel="noopener"
-                    download={it.filename}
-                  >
-                    Download
-                  </a>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <RequirePermission resource="tasks.files" action="create" fallback={null}>
-            <AttachmentsUploader taskId={taskId} onUploaded={() => refetch()} />
-          </RequirePermission>
+          <ul className="mt-2 space-y-2">
+            {data?.map(it => (
+              <li key={it.id} className="flex items-center justify-between border rounded-lg p-2">
+                <div className="min-w-0">
+                  <div className="truncate text-sm">{it.filename}</div>
+                  <div className="text-xs opacity-70">{humanFileSize(it.size)} • {it.mime}</div>
+                </div>
+                {/* v1 direct link; replace with signed download route later */}
+                <a href={it.url} className="text-sm underline" rel="noopener">
+                  Download
+                </a>
+              </li>
+            ))}
+          </ul>
         </section>
       </RoutePermission>
     </FeatureGate>
