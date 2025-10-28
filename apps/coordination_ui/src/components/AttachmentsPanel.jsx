@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import FeatureGate from "./FeatureGate";
 import RoutePermission from "./RoutePermission";
@@ -62,15 +63,31 @@ function AttachmentsUploader({ taskId, onUploaded }) {
 
 export default function AttachmentsPanel() {
   const { taskId } = useParams();
+  const qc = useQueryClient();
+  const [includeArchived, setIncludeArchived] = useState(false);
+  
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["task", taskId, "files"],
+    queryKey: ["task", taskId, "files", { includeArchived }],
     queryFn: async () => {
-      const res = await api.get(`/tasks/${taskId}/files`);
+      const q = includeArchived ? "?include=archived" : "";
+      const res = await api.get(`/tasks/${taskId}/files${q}`);
       return res.data.items;
     },
     staleTime: 30_000,
     enabled: !!taskId
   });
+
+  const handleArchive = async (fileId) => {
+    await api.delete(`/task-files/${fileId}`);
+    refetch();
+    qc.invalidateQueries({ queryKey: ["tasks", "list"] });
+  };
+
+  const handleRestore = async (fileId) => {
+    await api.post(`/task-files/${fileId}/restore`);
+    refetch();
+    qc.invalidateQueries({ queryKey: ["tasks", "list"] });
+  };
 
   return (
     <FeatureGate feature="taskAttachments">
@@ -84,6 +101,20 @@ export default function AttachmentsPanel() {
             </RequirePermission>
           </div>
 
+          {/* Include archived toggle (feature-gated) */}
+          <FeatureGate feature="taskFilesDelete">
+            <div className="flex items-center gap-3 mb-2">
+              <label className="text-xs flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={includeArchived}
+                  onChange={(e) => setIncludeArchived(e.target.checked)}
+                />
+                Include archived
+              </label>
+            </div>
+          </FeatureGate>
+
           {isLoading && <div className="text-sm opacity-70">Loading attachments…</div>}
           {isError && <div className="text-sm text-red-600">Failed to load attachments.</div>}
           {!isLoading && !isError && (!data || data.length === 0) && (
@@ -91,14 +122,40 @@ export default function AttachmentsPanel() {
           )}
           <ul className="mt-2 space-y-2">
             {data?.map(it => (
-              <li key={it.id} className="flex items-center justify-between border rounded-lg p-2">
+              <li key={it.id} className={`flex items-center justify-between border rounded-lg p-2 ${it.deletedAt ? "opacity-60" : ""}`}>
                 <div className="min-w-0">
-                  <div className="truncate text-sm">{it.filename}</div>
+                  <div className="truncate text-sm">
+                    {it.filename} 
+                    {it.deletedAt && <span className="ml-2 text-[10px] uppercase tracking-wide">Archived</span>}
+                  </div>
                   <div className="text-xs opacity-70">{humanFileSize(it.size)} • {it.mime}</div>
                 </div>
-                <a href={`/api/task-files/${it.id}/download`} className="text-sm underline" rel="noopener">
-                  Download
-                </a>
+                <div className="flex items-center gap-3">
+                  <a href={`/api/task-files/${it.id}/download`} className="text-sm underline" rel="noopener">
+                    Download
+                  </a>
+
+                  {/* Archive/Restore actions (feature-gated + RBAC) */}
+                  <FeatureGate feature="taskFilesDelete">
+                    <RequirePermission resource="tasks.files" action="delete" fallback={null}>
+                      {!it.deletedAt ? (
+                        <button
+                          className="text-sm px-2 py-1 border rounded"
+                          onClick={() => handleArchive(it.id)}
+                        >
+                          Archive
+                        </button>
+                      ) : (
+                        <button
+                          className="text-sm px-2 py-1 border rounded"
+                          onClick={() => handleRestore(it.id)}
+                        >
+                          Restore
+                        </button>
+                      )}
+                    </RequirePermission>
+                  </FeatureGate>
+                </div>
               </li>
             ))}
           </ul>

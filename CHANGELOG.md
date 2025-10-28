@@ -1,5 +1,66 @@
 # EDEN ERP - Change Log
 
+## 2025-10-28: Tasks → Attachments (Files) - Soft Delete + Restore
+
+### Added
+- **Soft delete for task files:** DELETE /api/task-files/:id and POST /api/task-files/:id/restore endpoints
+- **GET /api/tasks/:taskId/files?include=archived** - List query supports archived filter
+- **Frontend Archive/Restore UI** - Feature-gated Archive/Restore actions + "Include archived" toggle
+- **RBAC:** tasks.files.delete permission (Admin, Ops Lead, Project Manager)
+- **Feature Flag:** taskFilesDelete (default: false)
+
+### API Layer
+- **DELETE /api/task-files/:id** - Soft delete file (sets deleted_at = NOW())
+  - Requires tasks.files.delete permission
+  - Returns 200 { ok: true } on success, 404 if not found or already deleted
+
+- **POST /api/task-files/:id/restore** - Restore soft-deleted file (sets deleted_at = NULL)
+  - Requires tasks.files.delete permission
+  - Returns 200 { ok: true } on success, 404 if not found or not deleted
+
+- **GET /api/tasks/:taskId/files?include=archived** - Enhanced list endpoint
+  - Default: excludes deleted files (deleted_at IS NULL)
+  - With `?include=archived`: includes all files, ordered active-first
+  - Response includes deletedAt field for each item
+
+- **GET /api/tasks** - Task list attachments_count
+  - Updated to exclude soft-deleted files (deleted_at IS NULL)
+  - Remains RBAC-aware (no existence leak)
+
+### Database Layer
+- **task_files.deleted_at** - Timestamptz column for soft delete
+- **Partial index:** (task_id, created_at DESC) WHERE deleted_at IS NULL (hot path)
+- **Composite index:** (task_id, deleted_at, created_at DESC) for archived queries
+
+### RBAC Layer
+- **tasks.files.delete permission** - Archive/restore operations
+  - Granted to: Admin, Ops Lead, Project Manager
+  - Database + frontend rbac.json updated
+
+### Frontend Components
+- **AttachmentsPanel.jsx** - Enhanced with soft delete UI
+  - "Include archived" toggle (feature-gated: taskFilesDelete)
+  - Archive/Restore buttons per file (feature + RBAC gated)
+  - Archived files show with opacity-60 + "ARCHIVED" badge
+  - Query key includes { includeArchived } for proper caching
+  - Downloads remain available for archived files
+
+### Feature Flag
+- **taskFilesDelete:** Defaults to **FALSE** (disabled)
+  - Controls Archive/Restore UI visibility
+  - Backend RBAC enforcement remains active regardless of flag
+
+### Security
+- Soft delete is reversible (safety net before hard delete)
+- Badge count excludes archived files (no existence leak)
+- RBAC enforced on delete/restore endpoints
+- Download permission unchanged (tasks.files.read)
+
+### Documentation
+- **Updated:** `docs/TASK_FILES.md` with soft delete semantics and endpoints
+
+---
+
 ## 2025-10-28: Tasks → Attachments (Files)
 
 ### Added

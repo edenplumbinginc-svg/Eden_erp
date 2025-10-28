@@ -33,14 +33,20 @@ Upload a file attachment.
 - 404: Task not found
 - 413: File too large (>10MB)
 
-### GET /api/tasks/:id/files
+### GET /api/tasks/:id/files?include=archived
 Get all file attachments for a task.
 
 **Auth**: Required  
 **Permission**: tasks.files.read
 
+**Query Parameters**:
+- `include=archived`: Include soft-deleted files (shows deletedAt timestamp)
+
+**Default behavior**: Returns only non-deleted files (deleted_at IS NULL)  
+**With include=archived**: Returns all files, ordered by deleted_at IS NULL DESC, created_at DESC (active files first)
+
 **Responses**:
-- 200: `{ items: [...] }`
+- 200: `{ items: [...] }` (each item includes deletedAt field)
 - 403: Missing permission
 - 404: Task not found
 
@@ -61,6 +67,28 @@ Secure file download with RBAC enforcement and audit trail.
 - 403: Missing permission
 - 404: File not found (database or disk)
 - 500: Download failed (stream error)
+
+### DELETE /api/task-files/:id
+Soft delete a file attachment (sets deleted_at = NOW()).
+
+**Auth**: Required  
+**Permission**: tasks.files.delete
+
+**Responses**:
+- 200: `{ ok: true }`
+- 403: Missing permission
+- 404: File not found or already deleted
+
+### POST /api/task-files/:id/restore
+Restore a soft-deleted file attachment (sets deleted_at = NULL).
+
+**Auth**: Required  
+**Permission**: tasks.files.delete
+
+**Responses**:
+- 200: `{ ok: true }`
+- 403: Missing permission
+- 404: File not found or not deleted
 
 ## MIME Type Allowlist
 - `application/pdf`
@@ -88,12 +116,15 @@ All endpoints tested via cURL with the following scenarios:
 **Findings**: No security issues. RBAC layering, endpoint behavior, and data integrity all confirmed correct.
 
 ## Frontend Implementation
-- **AttachmentsPanel.jsx**: Compact inline upload button with file list, secure download links
-- **TaskItem.jsx**: 📎 badge on task list (feature-gated + RBAC-guarded, count > 0 only)
-- **Feature Flag**: taskAttachments (default: true for internal testing)
-- **States Handled**: loading, empty, error
-- **React Query**: Invalidates ["task", taskId, "files"] and ["tasks", "list"] on upload
+- **AttachmentsPanel.jsx**: Compact inline upload button with file list, secure download links, Archive/Restore actions, Include archived toggle
+- **TaskItem.jsx**: 📎 badge on task list (feature-gated + RBAC-guarded, count > 0 only, excludes deleted files)
+- **Feature Flags**: 
+  - `taskAttachments` (default: true for internal testing)
+  - `taskFilesDelete` (default: false - controls Archive/Restore UI)
+- **States Handled**: loading, empty, error, archived (opacity-60 + "Archived" badge)
+- **React Query**: Invalidates ["task", taskId, "files", { includeArchived }] and ["tasks", "list"] on upload/archive/restore
 - **Download Links**: Use secure endpoint `/api/task-files/:fileId/download` (not direct URL)
+- **Archive/Restore**: Feature-gated (`taskFilesDelete`) + RBAC-guarded (`tasks.files.delete`)
 
 ## Audit Trail
 The `file_downloads` table tracks all file downloads:
@@ -103,7 +134,25 @@ The `file_downloads` table tracks all file downloads:
 - `user_agent`: Browser/client user agent
 - `downloaded_at`: Timestamp (default NOW())
 
+## Soft Delete
+The system implements soft delete (reversible archiving) for file attachments:
+
+**Database**:
+- `deleted_at` column (timestamptz, nullable)
+- Partial index on (task_id, created_at DESC) WHERE deleted_at IS NULL (hot path optimization)
+- Index on (task_id, deleted_at, created_at DESC) for "include archived" queries
+
+**RBAC**:
+- `tasks.files.delete` permission required for Archive/Restore operations
+- Granted to: Admin, Ops Lead, Project Manager
+
+**Behavior**:
+- Default list query excludes deleted files (deleted_at IS NULL)
+- `?include=archived` parameter includes all files (active first, then archived)
+- Badge count (📎) excludes deleted files (RBAC-aware, no existence leak)
+- Download remains available for archived files (tasks.files.read permission)
+
 ## Future Work
-- Delete endpoint (soft-delete) with tasks.files.delete permission
+- Hard delete endpoint for permanent removal
 - Automated regression tests
 - Magic byte validation for enhanced security
