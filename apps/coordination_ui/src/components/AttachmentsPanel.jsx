@@ -86,7 +86,8 @@ export default function AttachmentsPanel() {
       const res = await api.get(`/api/tasks/${taskId}/files`);
       return res.data.items;
     },
-    staleTime: 30_000
+    staleTime: 30_000,
+    enabled: !!taskId
   });
 
   return (
