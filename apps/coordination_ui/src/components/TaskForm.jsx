@@ -79,6 +79,13 @@ export default function TaskForm({ onSubmit, onCancel, initialData = {}, submitL
     if (!validate()) return;
 
     const payload = { ...formData };
+    
+    // Convert date string to ISO datetime format
+    if (payload.due_at && payload.due_at.trim()) {
+      // Date input gives us "2025-10-27", convert to "2025-10-27T00:00:00Z"
+      payload.due_at = new Date(payload.due_at + 'T00:00:00').toISOString();
+    }
+    
     Object.keys(payload).forEach(key => {
       if (payload[key] === '') delete payload[key];
     });
