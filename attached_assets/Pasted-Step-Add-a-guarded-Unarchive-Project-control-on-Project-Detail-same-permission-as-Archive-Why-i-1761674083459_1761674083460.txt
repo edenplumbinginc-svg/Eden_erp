@@ -1,0 +1,89 @@
+Step: Add a guarded Unarchive Project control on Project Detail (same permission as Archive).
+
+Why it matters: Completes the reversible workflow; lowers support load when projects are archived by mistake.
+
+Inputs needed: ProjectDetail.jsx path, working patch() in services/api.js, existing RequirePermission and getCurrentRole.
+
+Command (Frontend layer — component guard + UI):
+
+// apps/coordination_ui/src/pages/ProjectDetail.jsx
+import RequirePermission from "@/components/RequirePermission";
+import { patch } from "@/services/api";
+import { useState } from "react";
+
+export default function ProjectDetail(props) {
+  const [project, setProject] = useState(props.project || null);
+
+  async function handleUnarchiveProject() {
+    if (!project?.id) return;
+    try {
+      // optimistic flip
+      setProject(p => ({ ...p, archived: false }));
+      await patch(`/api/projects/${project.id}`, { archived: false });
+      console.info("Project unarchived");
+    } catch (e) {
+      setProject(p => ({ ...p, archived: true })); // rollback
+      console.error(e);
+      alert("Unarchiving failed. Check console for details.");
+    }
+  }
+
+  return (
+    <div className="flex items-center justify-between">
+      <h1 className="text-xl font-semibold">
+        {project?.name}{" "}
+        {project?.archived ? (
+          <span className="ml-2 text-xs px-2 py-1 border rounded">Archived</span>
+        ) : null}
+      </h1>
+
+      {/* Show Archive when active, Unarchive when archived */}
+      {!project?.archived ? (
+        <RequirePermission resource="archive" action="batch" fallback={null}>
+          <button
+            onClick={async () => {
+              if (!project?.id) return;
+              const ok = confirm("Archive this project?");
+              if (!ok) return;
+              try {
+                setProject(p => ({ ...p, archived: true }));
+                await patch(`/api/projects/${project.id}`, { archived: true });
+              } catch (e) {
+                setProject(p => ({ ...p, archived: false }));
+                console.error(e);
+                alert("Archiving failed. Check console.");
+              }
+            }}
+            className="px-3 py-1 rounded border"
+            aria-label="Archive project"
+          >
+            📦 Archive
+          </button>
+        </RequirePermission>
+      ) : (
+        <RequirePermission resource="archive" action="batch" fallback={null}>
+          <button
+            onClick={handleUnarchiveProject}
+            className="px-3 py-1 rounded border"
+            aria-label="Unarchive project"
+          >
+            ♻️ Unarchive
+          </button>
+        </RequirePermission>
+      )}
+    </div>
+  );
+}
+
+
+Success check:
+
+Open any archived project as Admin → Unarchive button shows; click → badge disappears and API PATCH { archived: false } succeeds.
+
+Switch to Viewer using the DevAuthSwitcher → Unarchive button is hidden.
+
+Attempting to unarchive via API without permission still fails on the backend.
+
+Next: wait for user
+
+Mini lesson: keep the front end permissive model a “UI cache” of the backend truth. Using level in RBAC lets you treat multiple actions (archive/unarchive/batch) as one capability without sprinkling new flags everywhere.

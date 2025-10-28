@@ -58,6 +58,7 @@ export const apiService = {
   createProject: (data) => api.post('/projects', data),
   updateProject: (id, data) => api.patch(`/projects/${id}`, data),
   archiveProject: (id) => api.patch(`/projects/${id}`, { archived: true }),
+  unarchiveProject: (id) => api.patch(`/projects/${id}`, { archived: false }),
   deleteProject: (id) => api.delete(`/projects/${id}`),
 
   // Tasks

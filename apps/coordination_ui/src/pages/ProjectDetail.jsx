@@ -41,6 +41,18 @@ export default function ProjectDetail() {
     }
   });
 
+  const unarchiveMutation = useMutation({
+    mutationFn: () => apiService.unarchiveProject(projectId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["project", projectId] });
+      qc.invalidateQueries({ queryKey: ["projects"] });
+      push("success", "Project unarchived successfully");
+    },
+    onError: (error) => {
+      push("error", error?.response?.data?.error?.message || "Failed to unarchive project");
+    }
+  });
+
   const breadcrumbs = [
     { label: 'Projects', path: '/' },
     { label: project?.name || 'Project', path: `/project/${projectId}` }
@@ -64,13 +76,21 @@ export default function ProjectDetail() {
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <RequirePermission resource="archive" action="batch" fallback={null}>
-            {!project?.archived && (
+            {!project?.archived ? (
               <button 
                 className="btn btn-secondary" 
                 onClick={() => setShowArchiveConfirm(true)}
                 style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
               >
                 📦 Archive
+              </button>
+            ) : (
+              <button 
+                className="btn btn-primary" 
+                onClick={() => unarchiveMutation.mutate()}
+                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
+                ♻️ Unarchive
               </button>
             )}
           </RequirePermission>
