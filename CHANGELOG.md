@@ -6,6 +6,8 @@
 - Task attachments (files): POST/GET /api/tasks/:id/files with 10MB limit and MIME allowlist.
 - Tasks list `attachments_count` (RBAC-aware, no existence leak).
 - Frontend AttachmentsPanel + 📎 badge behind `taskAttachments` flag.
+- **Secure file downloads:** GET /api/task-files/:fileId/download with audit trail.
+- **Audit table:** `file_downloads` tracks all downloads (user_id, ip, user_agent, timestamp).
 
 ### API Layer
 - **POST /api/tasks/:id/files** - Upload file attachment
@@ -18,6 +20,13 @@
   - Returns array of attachments with id, taskId, url, filename, mime, size, createdAt, createdBy
   - Returns 200 on success, 403 (permission), 404 (task not found)
 
+- **GET /api/task-files/:fileId/download** - Secure file download with audit trail
+  - RBAC enforcement (tasks.files.read permission)
+  - File lookup by ID only (prevents path traversal)
+  - Audit logging to file_downloads table (tracks user_id, ip, user_agent, timestamp)
+  - Streams file with proper Content-Type and Content-Disposition headers
+  - Returns 200 (file stream), 403 (permission), 404 (file not found), 500 (stream error)
+
 - **GET /api/tasks** - Enhanced task list
   - Added `attachments_count` field (conditionally exposed based on tasks.files.read permission)
 
@@ -28,7 +37,7 @@
 ### Frontend Components
 - **AttachmentsPanel.jsx**
   - Compact inline upload button
-  - File list with download links
+  - File list with secure download links (uses /api/task-files/:id/download endpoint)
   - Upload states: loading ("Uploading…") and error handling
   - Protected by `<FeatureGate feature="taskAttachments">`
   - RoutePermission guard for tasks.files.read

@@ -44,6 +44,24 @@ Get all file attachments for a task.
 - 403: Missing permission
 - 404: Task not found
 
+### GET /api/task-files/:fileId/download
+Secure file download with RBAC enforcement and audit trail.
+
+**Auth**: Required  
+**Permission**: tasks.files.read
+
+**Security Features**:
+- File lookup by ID only (prevents path traversal)
+- RBAC enforcement
+- Audit logging to `file_downloads` table (tracks user_id, ip, user_agent, timestamp)
+- Streams file with proper Content-Disposition header
+
+**Responses**:
+- 200: File stream with headers `Content-Type` and `Content-Disposition: attachment`
+- 403: Missing permission
+- 404: File not found (database or disk)
+- 500: Download failed (stream error)
+
 ## MIME Type Allowlist
 - `application/pdf`
 - `image/jpeg`
@@ -70,14 +88,22 @@ All endpoints tested via cURL with the following scenarios:
 **Findings**: No security issues. RBAC layering, endpoint behavior, and data integrity all confirmed correct.
 
 ## Frontend Implementation
-- **AttachmentsPanel.jsx**: Compact inline upload button with file list
+- **AttachmentsPanel.jsx**: Compact inline upload button with file list, secure download links
 - **TaskItem.jsx**: 📎 badge on task list (feature-gated + RBAC-guarded, count > 0 only)
 - **Feature Flag**: taskAttachments (default: true for internal testing)
 - **States Handled**: loading, empty, error
 - **React Query**: Invalidates ["task", taskId, "files"] and ["tasks", "list"] on upload
+- **Download Links**: Use secure endpoint `/api/task-files/:fileId/download` (not direct URL)
+
+## Audit Trail
+The `file_downloads` table tracks all file downloads:
+- `file_id`: Reference to task_files.id (CASCADE on delete)
+- `user_id`: User who downloaded the file
+- `ip`: Request IP address
+- `user_agent`: Browser/client user agent
+- `downloaded_at`: Timestamp (default NOW())
 
 ## Future Work
-- Signed download endpoint with audit logging
 - Delete endpoint (soft-delete) with tasks.files.delete permission
 - Automated regression tests
 - Magic byte validation for enhanced security
