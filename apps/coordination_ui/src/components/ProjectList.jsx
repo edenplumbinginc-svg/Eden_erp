@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiService } from '../services/api';
 import { ChartSkeleton } from './LoadingSkeleton';
 import { useHasPermission } from '../hooks/usePermissions';
+import RequirePermission from './RequirePermission';
 import FeatureGate from './FeatureGate';
 import { getBoolParam, setBoolParam } from '../lib/urlState';
 

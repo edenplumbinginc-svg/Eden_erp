@@ -47,6 +47,7 @@ import { ThemeProvider } from './components/ThemeProvider';
 import ProtectedCheck from "./pages/ops/ProtectedCheck";
 import DevAuthSwitcher from './components/DevAuthSwitcher';
 import RoutePermission from './components/RoutePermission';
+import ProjectCreate from './pages/ProjectCreate';
 
 const queryClient = new QueryClient();
 
@@ -160,6 +161,16 @@ function AppContent() {
                           onRefresh={loadProjects}
                           onSelectProject={handleProjectSelect}
                         />
+                      </RoutePermission>
+                    </RequireAuth>
+                  }
+                />
+                <Route
+                  path="/projects/new"
+                  element={
+                    <RequireAuth>
+                      <RoutePermission resource="projects" action="create">
+                        <ProjectCreate />
                       </RoutePermission>
                     </RequireAuth>
                   }
