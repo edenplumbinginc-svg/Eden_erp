@@ -1,5 +1,5 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
 import { apiService } from '../services/api';
 import SummaryCard from '../components/SummaryCard';
 import TasksByStatusChart from '../components/TasksByStatusChart';
@@ -8,9 +8,11 @@ import RecentActivityFeed from '../components/RecentActivityFeed';
 import { useHasPermission } from '../hooks/usePermissions';
 import GlassHeader from '../ui/GlassHeader';
 import { ButtonPress } from '../ui/MotionPrimitives';
+import CreateTaskModal from '../components/CreateTaskModal';
 
 export default function DashboardPage() {
   const canCreateTask = useHasPermission('task.create');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const { data: statusData = [], isLoading: statusLoading } = useQuery({
     queryKey: ['tasks_by_status'],
@@ -38,13 +40,21 @@ export default function DashboardPage() {
         subtitle={`${totalTasks} active tasks · ${overdueCount} overdue · Real-time insights`}
       >
         {canCreateTask && (
-          <Link to="/tasks/new" style={{ textDecoration: 'none' }}>
-            <ButtonPress className="btn btn-primary">
-              + Create Task
-            </ButtonPress>
-          </Link>
+          <ButtonPress 
+            className="btn btn-primary"
+            onClick={() => setIsCreateModalOpen(true)}
+            style={{ minWidth: '40px', minHeight: '40px' }}
+            aria-label="Create new task"
+          >
+            + New Task
+          </ButtonPress>
         )}
       </GlassHeader>
+      
+      <CreateTaskModal 
+        isOpen={isCreateModalOpen} 
+        onClose={() => setIsCreateModalOpen(false)} 
+      />
       
       <div className="section">
         {totalTasks === 0 && !statusLoading && (
