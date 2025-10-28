@@ -537,3 +537,25 @@ export const escalationEvents = pgTable("escalation_events", {
         index("idx_esc_events_incident").using("btree", table.incidentId.asc().nullsLast()),
         index("idx_esc_events_created").using("btree", table.createdAt.desc().nullsFirst()),
 ]);
+
+export const taskVoiceNotes = pgTable("task_voice_notes", {
+        id: uuid().defaultRandom().primaryKey().notNull(),
+        taskId: uuid("task_id").notNull(),
+        fileUrl: text("file_url").notNull(),
+        durationSeconds: integer("duration_seconds").notNull(),
+        createdBy: uuid("created_by"),
+        createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+        foreignKey({
+                        columns: [table.taskId],
+                        foreignColumns: [tasks.id],
+                        name: "task_voice_notes_task_id_fkey"
+                }).onDelete("cascade"),
+        foreignKey({
+                        columns: [table.createdBy],
+                        foreignColumns: [users.id],
+                        name: "task_voice_notes_created_by_fkey"
+                }),
+        index("idx_voice_notes_task").using("btree", table.taskId.asc().nullsLast()),
+        index("idx_voice_notes_created").using("btree", table.createdAt.desc().nullsFirst()),
+]);
