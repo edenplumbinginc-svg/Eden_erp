@@ -1,6 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getStatusLabel } from '../constants/statusLabels';
+import FeatureGate from './FeatureGate';
+import RequirePermission from './RequirePermission';
 
 export default function TaskItem({ t }) {
   const navigate = useNavigate();
@@ -25,6 +27,24 @@ export default function TaskItem({ t }) {
                 {originIcon} {t.origin}
               </span>
             )}
+            <FeatureGate feature="voiceToText">
+              <RequirePermission resource="voice" action="read" fallback={null}>
+                {t.voice_notes_count > 0 && (
+                  <span 
+                    title={`${t.voice_notes_count} voice note${t.voice_notes_count > 1 ? 's' : ''}`}
+                    className="inline-flex items-center text-xs border rounded px-1.5 py-0.5"
+                    style={{
+                      borderColor: 'var(--md-primary)',
+                      backgroundColor: 'var(--md-primary-container)',
+                      color: 'var(--md-on-primary-container)',
+                      fontWeight: 500
+                    }}
+                  >
+                    🎙️ {t.voice_notes_count}
+                  </span>
+                )}
+              </RequirePermission>
+            </FeatureGate>
           </div>
           {t.description && (
             <p className="text-body text-muted mt-1" style={{

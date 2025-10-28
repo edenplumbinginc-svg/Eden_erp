@@ -30,6 +30,11 @@ Implemented comprehensive voice notes feature for Tasks module with MediaRecorde
   - Includes id, taskId, url, durationSeconds, createdAt, createdBy
   - Returns 200 on success, 403 (permission), 404 (task not found)
 
+- **GET /api/tasks** - Enhanced task list
+  - Added `voice_notes_count` field to each task item
+  - Subquery counts voice notes per task (0 if none)
+  - Enables frontend badge display without extra API calls
+
 ### RBAC Layer
 - **voice.create permission:** Assigned to 7 roles
   - Admin, Ops Lead, Field Ops, Project Manager, Contributor, Office Admin, Estimator
@@ -59,6 +64,13 @@ Implemented comprehensive voice notes feature for Tasks module with MediaRecorde
   - Protected by `<FeatureGate feature="voiceToText">`
   - Separate RBAC guards for record (voice.create) and view (voice.read)
   - Auto-refresh list after successful upload
+
+- **TaskItem.jsx Badge**
+  - 🎙️ badge shows voice note count on task list
+  - Feature-gated (voiceToText flag) + RBAC-guarded (voice.read permission)
+  - Only visible when task has voice notes (count > 0)
+  - Styled with primary color theme
+  - Defense-in-depth: no existence leak for unauthorized users
 
 ### Feature Flag
 - **voiceToText:** Defaults to **FALSE** (internal-only)

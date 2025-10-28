@@ -189,6 +189,7 @@ async function fetchTasks(filters) {
       t.due_at, t.created_at, t.updated_at,
       t.tags, t.origin, t.project_id, t.department,
       t.is_overdue, t.needs_idle_reminder,
+      (SELECT COUNT(*)::int FROM task_voice_notes vn WHERE vn.task_id = t.id) AS voice_notes_count,
       CASE 
         WHEN t.status IN ('todo', 'open') AND t.ball_in_court IS NOT NULL 
              AND t.updated_at < now() - INTERVAL '3 days'

@@ -26,6 +26,15 @@ Voice Notes allows users to record and attach audio notes to tasks. This feature
 - See duration (formatted as M:SS, e.g., "1:34")
 - See relative timestamps (e.g., "2 hours ago")
 
+### Task List Badge
+- Tasks with voice notes show a **🎙️ N** badge in the task list
+- Badge only visible when:
+  - Feature flag `voiceToText` is **ON**
+  - User has `tasks.voice.read` permission
+  - Task has at least 1 voice note
+- Badge shows count (e.g., "🎙️ 2" for 2 voice notes)
+- Hover badge to see full count text
+
 ### Storage
 - Files stored in `tmp_uploads/` directory
 - Unique UUID filenames prevent conflicts
@@ -73,11 +82,14 @@ Roles with **create** permission:
 - Office Admin
 - Estimator
 
-### voice.read (Can Play/View)
+### voice.read (Can Play/View + See Badge)
 Roles with **read** permission:
 - **All roles** (including Viewer, Accounting, etc.)
 
-**Note:** Frontend automatically hides controls based on permissions using `<RequirePermission>` guards.
+**Note:** 
+- Frontend automatically hides controls based on permissions using `<RequirePermission>` guards
+- Users with `tasks.voice.read` permission see the 🎙️ badge on task lists (when flag is ON)
+- Users without permission see no badge (defense-in-depth: no existence leak)
 
 ---
 
@@ -231,8 +243,7 @@ List all voice notes for a task.
 2. **Waveform Visualization** - Show audio waveform during playback
 3. **Delete/Edit** - Allow users to delete voice notes
 4. **Search** - Search transcribed voice notes
-5. **Badge** - Show 🎙️ badge on Task List when voice notes exist
-6. **Compression** - Server-side audio compression to reduce file sizes
+5. **Compression** - Server-side audio compression to reduce file sizes
 
 ### Not Currently Supported:
 - ❌ Transcription (manual or automatic)
