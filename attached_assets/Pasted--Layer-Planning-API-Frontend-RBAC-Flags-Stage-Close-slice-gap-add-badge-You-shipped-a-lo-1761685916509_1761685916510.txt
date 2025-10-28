@@ -1,0 +1,80 @@
+[Layer: Planning→API→Frontend→RBAC→Flags] [Stage: Close slice gap — add 🎙️ badge]
+
+You shipped a lot. But by our AC, the Task List badge is still missing. Vertical slice isn’t “done” until that’s in or AC is amended. Easiest path: add a voiceNotesCount to the tasks list API and render a gated badge.
+
+Patch plan (internal-only, fast)
+
+API layer (routes/tasks.js — list endpoint)
+Add the count column:
+
+-- In your SELECT for GET /api/tasks (alias task table as t)
+(SELECT COUNT(*)::int FROM task_voice_notes vn WHERE vn.task_id = t.id) AS voice_notes_count
+
+
+Return it in each task item (voiceNotesCount in JSON). No schema change.
+
+RBAC
+No new rule needed for the count, but in the UI we will only show the badge if the user has tasks.voice.read and the feature flag is ON.
+
+Frontend: Task item badge
+In apps/coordination_ui/src/components/TaskItem.jsx (or wherever each task row renders):
+
+import FeatureGate from "../components/FeatureGate";
+import RequirePermission from "../components/RequirePermission";
+
+// inside the row header/metadata area:
+<FeatureGate feature="voiceToText">
+  <RequirePermission resource="voice" action="read" fallback={null}>
+    {task.voiceNotesCount > 0 && (
+      <span title="Voice notes present" className="ml-2 inline-flex items-center text-xs border rounded px-1.5 py-0.5">
+        🎙️ {task.voiceNotesCount}
+      </span>
+    )}
+  </RequirePermission>
+</FeatureGate>
+
+
+Ensure your task-fetch hook preserves the new voiceNotesCount field.
+
+Feature flag
+features.json continues with "voiceToText": false by default. Turn ON only to test internally.
+
+Smoke (copy–paste)
+
+1) API returns count
+
+curl -s 'http://localhost:3000/api/tasks?limit=5' \
+ -H 'X-Dev-User-Email: test@edenplumbing.com' \
+ -H 'X-Dev-User-Id: 855546bf-f53d-4538-b8d5-cd30f5c157a2' \
+ -H 'X-Dev-Role: Admin' | jq '.items[] | {id, voiceNotesCount}'
+
+
+Expect integers ≥0.
+
+2) UI badge rules
+
+Flag OFF → no badge anywhere.
+
+Flag ON, role Admin (has tasks.voice.read) → rows with voiceNotesCount>0 show 🎙️ N.
+
+Flag ON, role Viewer without tasks.voice.read → badge hidden even if count > 0.
+
+Commit hints
+
+feat(api): include voiceNotesCount in GET /tasks
+
+feat(frontend): 🎙️ badge on TaskItem (flag+RBAC guarded)
+
+docs: update VOICE_NOTES.md (badge behavior + RBAC)
+
+DoD delta to mark slice COMPLETE
+
+ Tasks list shows 🎙️ badge when voiceNotesCount>0 (flag ON + tasks.voice.read).
+
+ GET /api/tasks returns voiceNotesCount.
+
+ Smoke screenshots: list with/without badge; Viewer role (hidden).
+
+ CHANGELOG updated; Notion slice → Shipped.
+
+Mini-lesson: badges are “existence leaks” if ungated. We gate by flag + tasks.voice.read, so unauthorized users neither see nor infer the presence of audio. Defense-in-depth stays intact.
