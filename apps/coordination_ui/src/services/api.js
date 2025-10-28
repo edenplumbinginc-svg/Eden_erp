@@ -161,6 +161,27 @@ export const adminApi = {
 // Export the raw axios instance for direct use
 export { api };
 
+// Helper for DELETE requests with proper dev headers
+export async function del(url) {
+  const headers = { 'Content-Type': 'application/json' };
+  
+  // Add dev headers in development mode
+  if (import.meta.env.DEV) {
+    const devUser = devAuth.getCurrentUser();
+    if (devUser && devUser.email) {
+      headers['X-Dev-User-Email'] = devUser.email;
+      headers['X-Dev-User-Id'] = devUser.id;
+      const devRole = localStorage.getItem('dev.role') || 'Admin';
+      headers['X-Dev-Role'] = devRole;
+    }
+  }
+  
+  const res = await fetch(url, { method: 'DELETE', headers });
+  if (res.status === 204) return { ok: true };
+  const err = await res.json().catch(() => ({}));
+  throw { status: res.status, ...err };
+}
+
 // Dev Auth Control - allows switching users to test different permissions
 let currentDevUser = {
   email: 'test@edenplumbing.com',

@@ -1,0 +1,91 @@
+Step: Add a flagged, RBAC-guarded Hard Delete control on Project Detail (internal-only).
+
+Why it matters: Backend DELETE is shipped. This wires a safe UI that only appears when (a) user has permission, (b) project is archived, and (c) the internal feature flag is ON. No external gates touched.
+
+Inputs needed: apps/coordination_ui/src/pages/ProjectDetail.jsx, services/api.js, existing RequirePermission, FeatureGate.
+
+Command (LAYER: Frontend + RBAC + Feature Flags — STAGE: Hard-delete control)
+
+Add a tiny delete helper:
+
+// apps/coordination_ui/src/services/api.js
+export async function del(url) {
+  const res = await fetch(url, { method: "DELETE", headers: { ...devHeaders } });
+  if (res.status === 204) return { ok: true };
+  const err = await res.json().catch(() => ({}));
+  throw { status: res.status, ...err };
+}
+
+
+Wire the button (visible only when archived + permitted + flag on):
+
+// apps/coordination_ui/src/pages/ProjectDetail.jsx
+import FeatureGate from "../components/FeatureGate";
+import RequirePermission from "../components/RequirePermission";
+import { del } from "../services/api";
+import { useNavigate } from "react-router-dom";
+
+// inside component:
+const nav = useNavigate();
+
+async function handleHardDelete(project) {
+  // double-confirm by code to reduce accidents
+  const check = prompt(`Type the project CODE to permanently delete:\n${project.code}`);
+  if (check !== project.code) return;
+
+  try {
+    await del(`/api/projects/${project.id}`);
+    // optional: toast “Project deleted”
+    nav("/projects");
+  } catch (e) {
+    if (e.status === 409) alert("Must archive first before hard delete.");
+    else if (e.status === 403) alert("You don’t have permission to delete projects.");
+    else if (e.status === 404) alert("Project not found.");
+    else alert("Delete failed. Check console.");
+    // console.error(e);
+  }
+}
+
+// in the header/actions area where Archive/Unarchive lives:
+{project?.archived && (
+  <FeatureGate feature="hardDeleteProjects">
+    <RequirePermission resource="delete" action="project" fallback={null}>
+      <button
+        onClick={() => handleHardDelete(project)}
+        className="px-3 py-1 border rounded"
+        aria-label="Permanently delete project"
+        title="Requires typing the exact project code"
+      >
+        🗑️ Delete (hard)
+      </button>
+    </RequirePermission>
+  </FeatureGate>
+)}
+
+
+Keep the flag OFF by default (internal toggles only):
+
+// apps/coordination_ui/src/config/features.json
+{
+  "voiceToText": false,
+  "hardDeleteProjects": false,
+  "includeArchivedToggle": true,
+  "rbacDevBanner": true
+}
+
+
+Flip to true only when you’re testing internally.
+
+Success check:
+
+With hardDeleteProjects: false → no Delete button anywhere.
+
+Set flag true, role = Admin, project is archived → button appears; typing exact code deletes and returns to list.
+
+Viewer (or any role lacking delete) → button hidden; direct DELETE returns 403.
+
+Trying on a non-archived project (via API) → 409 “must_archive_first”.
+
+Next: wait for user
+
+Mini lesson (safety triad): feature flag (visibility), RBAC (authority), backend check (truth). All three must say “yes” for destructive actions; that’s how we keep internal work fast and external blast radius near zero.

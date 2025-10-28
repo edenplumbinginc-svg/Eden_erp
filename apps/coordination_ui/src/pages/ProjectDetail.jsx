@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiService } from "../services/api";
+import { apiService, del } from "../services/api";
 import Breadcrumbs from "../components/Breadcrumbs";
 import { getStatusLabel } from "../constants/statusLabels";
 import RequirePermission from "../components/RequirePermission";
@@ -53,6 +53,28 @@ export default function ProjectDetail() {
       push("error", error?.response?.data?.error?.message || "Failed to unarchive project");
     }
   });
+
+  async function handleHardDelete(project) {
+    const check = prompt(`Type the project CODE to permanently delete:\n${project.code}`);
+    if (check !== project.code) return;
+
+    try {
+      await del(`/api/projects/${project.id}`);
+      push("success", "Project permanently deleted");
+      navigate('/');
+    } catch (e) {
+      if (e.status === 409) {
+        push("error", "Must archive first before hard delete");
+      } else if (e.status === 403) {
+        push("error", "You don't have permission to delete projects");
+      } else if (e.status === 404) {
+        push("error", "Project not found");
+      } else {
+        push("error", "Delete failed. Check console.");
+        console.error(e);
+      }
+    }
+  }
 
   const breadcrumbs = [
     { label: 'Projects', path: '/' },
@@ -114,6 +136,21 @@ export default function ProjectDetail() {
               </button>
             )}
           </RequirePermission>
+          {project?.archived && (
+            <FeatureGate feature="hardDeleteProjects">
+              <RequirePermission resource="delete" action="project" fallback={null}>
+                <button
+                  onClick={() => handleHardDelete(project)}
+                  className="btn btn-secondary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#dc2626' }}
+                  aria-label="Permanently delete project"
+                  title="Requires typing the exact project code"
+                >
+                  🗑️ Delete (hard)
+                </button>
+              </RequirePermission>
+            </FeatureGate>
+          )}
           <button 
             className="btn btn-secondary" 
             onClick={() => navigate('/')}
