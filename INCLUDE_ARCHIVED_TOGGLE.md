@@ -381,6 +381,17 @@ curl http://localhost:3000/api/projects \
 3. Test `window.history.replaceState` in browser console
 4. Check for React strict mode double-render issues
 
+### Issue: "No routes matched location" error with archived=1
+
+**Cause:** URL encoding issue causing `/%3Farchived=1` instead of `/?archived=1`
+
+**Fixed in:** urlState.js now uses `u.pathname + u.search + u.hash` instead of `u.toString()`
+
+**Manual Fix (if needed):**
+1. Clear malformed URL by navigating to `/` manually
+2. Restart frontend workflow
+3. Verify `setBoolParam` uses pathname+search pattern
+
 ### Issue: Archived projects still visible by default
 
 **Cause:** `getBoolParam` returning true incorrectly

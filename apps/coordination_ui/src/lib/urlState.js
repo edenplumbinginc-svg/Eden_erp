@@ -9,5 +9,5 @@ export function setBoolParam(name, val) {
   const u = new URL(window.location.href);
   if (val) u.searchParams.set(name, "1");
   else u.searchParams.delete(name);
-  window.history.replaceState({}, "", u.toString());
+  window.history.replaceState({}, "", u.pathname + u.search + u.hash);
 }
