@@ -1,0 +1,83 @@
+Step: Plan the next vertical slice in Notion — Tasks → Voice Notes (flagged, internal-only).
+
+Why it matters: You asked for voice-to-transcript. We’ll keep it internal, ship a working “record & attach & playback” first (behind a flag), then add transcription later without touching existing flows.
+
+Inputs needed: Notion → ERP Master Plan → Slices database.
+
+Command (LAYER: Planning — STAGE: AC + pages + test script)
+
+In Slices → New.
+
+Title: Tasks — Voice Notes (Flagged, Internal)
+
+Properties:
+
+Module: Tasks
+
+Status: Planned
+
+Flag?: ✅ Checked (uses voiceToText)
+
+Pages Impacted: Task Detail, Task List (badge), Task API
+
+RBAC Impact: tasks.voice.create, tasks.voice.read (frontend hides; backend enforces)
+
+Backend Changes (short): POST /api/tasks/:id/voice-notes (multipart, max 2 min / 5 MB, webm/ogg/mp4), GET list; store file URL + duration; no external transcription yet.
+
+Frontend Changes (short): Record/Stop/Save UI on Task Detail behind <FeatureGate feature="voiceToText">; show waveform placeholder; playback list with duration; badge on Task List when task has voice notes.
+
+In the AC field, paste exactly:
+
+AC — Tasks: Voice Notes (Flagged, Internal)
+1) Visibility & Guarding
+   - Feature flag `voiceToText` must be ON for UI to appear.
+   - Button block visible only if role has `tasks.voice.create`; playback requires `tasks.voice.read`.
+   - Backend returns 403 for unauthorized create/read.
+
+2) Recording & Upload (Internal)
+   - UI provides Record → Stop → Save flow (MediaRecorder).
+   - Accepts max 2 minutes OR 5 MB, whichever first; shows countdown.
+   - On Save, uploads multipart to POST /api/tasks/:id/voice-notes; server returns {id, url, duration, createdAt}.
+
+3) Playback & Listing
+   - Task Detail shows a list of voice notes with timestamp, duration, and a Play control.
+   - Task List shows a small badge “🎙️” when any voice notes exist (feature-flagged).
+   - Delete/hard-delete NOT included in this slice.
+
+4) Error & States
+   - If mic permission denied → inline guidance; Save disabled.
+   - Large/long recording → client blocks with message; server also enforces 413 (payload too large).
+   - Network/server errors show non-blocking toast; no partial UI states linger.
+
+5) API Contract (v1, internal)
+   - POST /api/tasks/:id/voice-notes  (multipart: file, duration)
+     → 201 { item: { id, taskId, url, duration, createdAt } }, 400/403/413 on error.
+   - GET /api/tasks/:id/voice-notes
+     → 200 { items: [ { id, url, duration, createdAt } ] }
+
+6) Tests & Docs
+   - Smoke: Admin can record+save+play; Viewer can play (if `tasks.voice.read`) but cannot record.
+   - Feature flag OFF → no recording UI, no badge; direct endpoints still RBAC-enforced.
+   - Add `VOICE_NOTES.md` with usage, limits, and RBAC notes.
+
+
+In Test Scripts → New, link to this slice and paste:
+
+Test — Voice Notes (Flagged, Internal)
+Given: Flag ON, role = Admin
+1) Open any Task Detail → “Record” visible.
+2) Click Record → countdown starts; Stop within 10s.
+3) Click Save → 201; note appears with duration; Play works.
+
+Negative:
+A) Flag OFF → “Record” hidden; badge hidden.
+B) Viewer role → Play works (if `tasks.voice.read`), Record hidden; POST returns 403.
+C) Over-limit (simulate >2min or >5MB) → client blocks; if forced, server 413.
+
+Artifacts:
+- 3 screenshots: recording UI, saved note list, Task List badge.
+
+
+Success check: Reply “Slice card created” (or screenshot). The Slices entry shows AC, impacted pages, RBAC, backend/frontend notes, and a linked Test Script.
+
+Next: wait for user
