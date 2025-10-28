@@ -7,6 +7,7 @@ import { getStatusLabel } from "../constants/statusLabels";
 import RequirePermission from "../components/RequirePermission";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { useToaster } from "../components/Toaster";
+import FeatureGate from "../components/FeatureGate";
 
 export default function ProjectDetail() {
   const { projectId } = useParams();
@@ -75,6 +76,16 @@ export default function ProjectDetail() {
           <div className="text-body text-muted">Code: {project?.code}</div>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <FeatureGate feature="voiceToText">
+            <button 
+              className="btn btn-secondary" 
+              onClick={() => alert('Voice note feature coming soon!')}
+              style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+              aria-label="Record voice note (dev)"
+            >
+              🎙️ Voice note (dev)
+            </button>
+          </FeatureGate>
           <RequirePermission resource="archive" action="batch" fallback={null}>
             {!project?.archived ? (
               <button 

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { hasFeature, type FeatureKey } from "@/lib/featureFlags";
+import { hasFeature, type FeatureKey } from "../lib/featureFlags";
 
 export default function FeatureGate({
   feature,

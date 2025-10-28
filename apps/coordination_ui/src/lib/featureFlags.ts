@@ -1,4 +1,4 @@
-import features from "@/config/features.json";
+import features from "../config/features.json";
 
 export type FeatureKey = keyof typeof features;
 
