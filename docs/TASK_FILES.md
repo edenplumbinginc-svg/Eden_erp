@@ -1,171 +1,76 @@
-# Task Files Feature - Technical Documentation
-
-**Status:** 🚧 **Data Layer Complete** (API/RBAC/Frontend pending)  
-**Date:** 2025-10-28  
-**Branch:** `slice/tasks-attachments-v1`
-
----
+# Task File Attachments
 
 ## Overview
+The Task File Attachments system allows users to upload and manage file attachments on tasks with comprehensive RBAC enforcement and security validation.
 
-Generic file attachments for tasks, supporting PDF, JPG, PNG with 10MB size limit. Following the same defense-in-depth pattern as voice notes.
+## Features
+- **File Upload**: POST `/api/tasks/:id/files` with multipart/form-data
+- **File List**: GET `/api/tasks/:id/files` returns array of attachments
+- **RBAC**: Two-tier permission system:
+  - `tasks.files.create`: Upload files (Admin, Ops Lead, Field Ops, PM, Contributor, Office Admin)
+  - `tasks.files.read`: View/list files (all roles)
+- **Security**:
+  - MIME type allowlist (PDF, JPEG, PNG, WebP, HEIC, HEIF, CSV, XLSX)
+  - 10MB file size limit enforced by multer
+  - Defense-in-depth: attachments_count field conditionally exposed based on permission
+  - Automatic cleanup of rejected files
+- **Storage**: Disk storage in `uploads/task-files/:taskId/:uuid.ext`
+- **Database**: task_files table with ON DELETE CASCADE
 
-**Current Implementation:** ✅ Database schema only  
-**Planned Layers:** API → RBAC → Frontend → Feature Flag → Tests → Docs
+## Endpoints
 
----
+### POST /api/tasks/:id/files
+Upload a file attachment.
 
-## Database Schema
+**Auth**: Required  
+**Permission**: tasks.files.create  
+**Body**: multipart/form-data with `file` field
 
-### Table: `task_files`
+**Responses**:
+- 201: `{ item: { id, taskId, url, filename, mime, size, createdAt, createdBy } }`
+- 400: No file or disallowed MIME type
+- 403: Missing permission
+- 404: Task not found
+- 413: File too large (>10MB)
 
-```sql
-CREATE TABLE task_files (
-  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  task_id      UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-  url          TEXT NOT NULL,        -- storage URL or path
-  filename     TEXT NOT NULL,        -- original filename for UX
-  mime         TEXT NOT NULL,        -- server-validated MIME type
-  size         INTEGER NOT NULL,     -- bytes
-  created_by   UUID NOT NULL REFERENCES users(id),
-  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
-  CONSTRAINT task_files_size_max CHECK (size > 0 AND size <= 10485760)
-);
-```
+### GET /api/tasks/:id/files
+Get all file attachments for a task.
 
-### Indexes
+**Auth**: Required  
+**Permission**: tasks.files.read
 
-**Hot path index** (list by task, newest-first):
-```sql
-CREATE INDEX idx_task_files_task_created_at
-  ON task_files (task_id, created_at DESC);
-```
+**Responses**:
+- 200: `{ items: [...] }`
+- 403: Missing permission
+- 404: Task not found
 
-**Quick count index** (for badge counts):
-```sql
-CREATE INDEX idx_task_files_task_id
-  ON task_files (task_id);
-```
+## MIME Type Allowlist
+- `application/pdf`
+- `image/jpeg`
+- `image/png`
+- `image/webp`
+- `image/heic`
+- `image/heif`
+- `text/csv`
+- `application/csv`
+- `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` (.xlsx)
 
-### Constraints
+## Testing
+All endpoints tested via cURL with the following scenarios:
+- ✅ 201: Upload PDF
+- ✅ 200: GET files list
+- ✅ 400: Disallowed MIME type (.exe)
+- ✅ 413: Oversize file (>10MB)
+- ✅ 404: Task not found
+- ✅ Defense-in-depth: attachments_count field visible only with permission
 
-**Size Limit (10 MB):**
-```sql
-CHECK (size > 0 AND size <= 10485760)
-```
+## Architect Review
+**Status**: PASS  
+**Date**: 2025-10-28  
+**Findings**: No security issues. RBAC layering, endpoint behavior, and data integrity all confirmed correct.
 
-**Foreign Keys:**
-- `task_id` → `tasks(id)` with `ON DELETE CASCADE` (no orphans)
-- `created_by` → `users(id)` (uploader tracking)
-
----
-
-## Design Decisions
-
-### Why 10MB Limit?
-- Balance between usability (large PDFs, high-res photos) and abuse prevention
-- Enforced at **both** database and application layers (defense-in-depth)
-- Server will reject uploads >10MB with **413 Payload Too Large**
-
-### Why CASCADE DELETE?
-- When a task is deleted, its files should disappear automatically
-- Prevents orphaned files cluttering storage
-- Matches voice notes pattern for consistency
-
-### Why Store MIME Type?
-- Server validates actual MIME (not just file extension)
-- Prevents malicious file uploads disguised as PDFs
-- Enables proper Content-Type headers on download/preview
-
-### Why Separate Indexes?
-1. **Hot path** (task_id, created_at DESC):
-   - Used by `GET /api/tasks/:id/files` (list files for a task)
-   - Chronological sorting without table scan
-   
-2. **Quick count** (task_id):
-   - Used by task list badge query: `SELECT COUNT(*) WHERE task_id = ?`
-   - Enables fast `attachments_count` subquery
-   - Same pattern as `voice_notes_count`
-
----
-
-## Migration
-
-### Applied
-✅ **2025-10-28:** Created `task_files` table with indexes and constraints
-
-### Rollback (if needed)
-```sql
-DROP INDEX IF EXISTS idx_task_files_task_id;
-DROP INDEX IF EXISTS idx_task_files_task_created_at;
-DROP TABLE IF EXISTS task_files;
-```
-
----
-
-## Verification
-
-### Table Structure
-```bash
-# Columns
-id           | uuid                     | NOT NULL | gen_random_uuid()
-task_id      | uuid                     | NOT NULL |
-url          | text                     | NOT NULL |
-filename     | text                     | NOT NULL |
-mime         | text                     | NOT NULL |
-size         | integer                  | NOT NULL |
-created_by   | uuid                     | NOT NULL |
-created_at   | timestamptz              | NOT NULL | now()
-```
-
-### Constraints
-```
-✅ task_files_size_max: CHECK ((size > 0) AND (size <= 10485760))
-✅ task_files_task_id_fkey: FOREIGN KEY (task_id) → tasks(id) ON DELETE CASCADE
-✅ task_files_created_by_fkey: FOREIGN KEY (created_by) → users(id)
-```
-
-### Indexes
-```
-✅ task_files_pkey (PRIMARY KEY on id)
-✅ idx_task_files_task_created_at (task_id, created_at DESC)
-✅ idx_task_files_task_id (task_id)
-```
-
----
-
-## Next Steps (Planned)
-
-### Layer 2: API + RBAC
-- [ ] `POST /api/tasks/:id/files` (multipart upload, 10MB limit)
-- [ ] `GET /api/tasks/:id/files` (list files for task)
-- [ ] `GET /api/tasks` enhancement (add `attachments_count` subquery)
-- [ ] RBAC permissions: `tasks.files.create`, `tasks.files.read`
-- [ ] Middleware: size validation, MIME filtering, 413/400/403 errors
-
-### Layer 3: Frontend Components
-- [ ] FileUpload.jsx (drag-drop, file picker, upload progress)
-- [ ] FilesList.jsx (display, download, preview)
-- [ ] TaskDetail.jsx integration (below comments)
-- [ ] TaskItem.jsx badge (📎 N when attachments exist)
-
-### Layer 4: Feature Flag
-- [ ] `taskAttachments` in `features.json` (default OFF for safe rollout)
-- [ ] FeatureGate wrapper for UI components
-
-### Layer 5: Tests + Docs
-- [ ] Curl tests (upload, list, size limit, RBAC)
-- [ ] Frontend smoke tests
-- [ ] Update CHANGELOG.md
-
----
-
-**Definition of Done (for full vertical slice):**
-- [x] Database schema created
-- [ ] API endpoints functional (201/200/400/403/413)
-- [ ] RBAC enforced (create/read permissions)
-- [ ] Frontend uploads/lists files
-- [ ] Badge shows count on task list
-- [ ] Feature flag OFF by default
-- [ ] All tests passing
-- [ ] Documentation complete
+## Future Work
+- Download endpoint (GET /api/files/:taskId/:fileId)
+- Delete endpoint (DELETE /api/files/:fileId)
+- Automated regression tests
+- Frontend UI components
