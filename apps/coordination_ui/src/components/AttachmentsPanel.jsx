@@ -29,7 +29,7 @@ function AttachmentsUploader({ taskId, onUploaded }) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["task", taskId, "files"] });
-      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["tasks", "list"] });
       onUploaded?.();
     },
     onError: (error) => {
@@ -50,7 +50,7 @@ function AttachmentsUploader({ taskId, onUploaded }) {
 
   return (
     <div
-      className="border rounded-xl p-4 mt-3"
+      className="border rounded-xl p-4"
       onDragOver={(e) => e.preventDefault()}
       onDrop={onDrop}
     >
@@ -62,13 +62,10 @@ function AttachmentsUploader({ taskId, onUploaded }) {
           onChange={onSelect}
           accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.csv,.xlsx"
         />
-        <label 
-          htmlFor="task-file" 
-          className="cursor-pointer px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 transition-colors"
-          style={{ cursor: m.isPending ? 'not-allowed' : 'pointer' }}
-        >
-          {m.isPending ? "Uploading..." : "Upload file"}
+        <label htmlFor="task-file" className="cursor-pointer px-3 py-2 rounded-lg border">
+          Upload file
         </label>
+        {m.isPending && <span className="text-xs opacity-70">Uploading…</span>}
         {m.isError && <span className="text-xs text-red-600">Upload failed</span>}
       </div>
       <p className="mt-2 text-xs opacity-70">
