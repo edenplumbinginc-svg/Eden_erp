@@ -9,13 +9,9 @@ import FeatureGate from './FeatureGate';
 import { getBoolParam, setBoolParam } from '../lib/urlState';
 
 function ProjectList({ projects = [], onRefresh, onSelectProject }) {
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [formData, setFormData] = useState({ name: '', code: '' });
-  const [loading, setLoading] = useState(false);
   const [showArchived, setShowArchived] = useState(() => getBoolParam("archived", false));
   const navigate = useNavigate();
 
-  const canCreateProject = useHasPermission('project.create');
   const canEditProject = useHasPermission('project.edit');
   const canDeleteProject = useHasPermission('project.delete');
 
@@ -33,26 +29,6 @@ function ProjectList({ projects = [], onRefresh, onSelectProject }) {
   });
 
   const totalTasks = taskStats.reduce((sum, s) => sum + s.count, 0);
-
-  const handleCreate = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      await apiService.createProject(formData);
-      setFormData({ name: '', code: '' });
-      setShowCreateForm(false);
-      onRefresh();
-    } catch (err) {
-      const errorMsg = err.response?.data?.error || err.message || 'Unknown error';
-      if (errorMsg.includes('duplicate key') || errorMsg.includes('unique constraint')) {
-        alert('A project with this code already exists. Please use a different code.');
-      } else {
-        alert('Failed to create project: ' + errorMsg);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this project?')) return;
@@ -137,42 +113,12 @@ function ProjectList({ projects = [], onRefresh, onSelectProject }) {
               </label>
             </FeatureGate>
           </div>
-          {canCreateProject && (
-            <button className="btn btn-primary" onClick={() => setShowCreateForm(!showCreateForm)}>
-              {showCreateForm ? 'Cancel' : 'New Project'}
-            </button>
-          )}
+          <RequirePermission resource="projects" action="create" fallback={null}>
+            <Link to="/projects/new" className="btn btn-primary">
+              New Project
+            </Link>
+          </RequirePermission>
         </div>
-
-      {showCreateForm && (
-        <form className="form" onSubmit={handleCreate} style={{ marginBottom: '20px' }}>
-          <div className="form-group">
-            <label>Project Name</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
-              placeholder="e.g., Q1 Marketing Campaign"
-            />
-          </div>
-          <div className="form-group">
-            <label>Project Code (optional)</label>
-            <input
-              type="text"
-              value={formData.code}
-              onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-              placeholder="e.g., MKT-2025-Q1"
-            />
-            <p className="text-muted" style={{ fontSize: '12px', marginTop: '4px' }}>
-              Must be unique if provided
-            </p>
-          </div>
-          <button type="submit" className="btn btn-success" disabled={loading}>
-            {loading ? 'Creating...' : 'Create Project'}
-          </button>
-        </form>
-      )}
 
       {visibleProjects.length === 0 ? (
         <div className="text-center" style={{padding: 'var(--space-6) 0'}}>
@@ -186,11 +132,13 @@ function ProjectList({ projects = [], onRefresh, onSelectProject }) {
               : 'All projects are currently archived. Toggle "Include archived" to view them.'
             }
           </p>
-          {canCreateProject && projects.length === 0 && (
-            <button className="btn btn-primary" onClick={() => setShowCreateForm(true)}>
-              + New Project
-            </button>
-          )}
+          <RequirePermission resource="projects" action="create" fallback={null}>
+            {projects.length === 0 && (
+              <Link to="/projects/new" className="btn btn-primary">
+                + New Project
+              </Link>
+            )}
+          </RequirePermission>
         </div>
       ) : (
         <div className="project-grid">
