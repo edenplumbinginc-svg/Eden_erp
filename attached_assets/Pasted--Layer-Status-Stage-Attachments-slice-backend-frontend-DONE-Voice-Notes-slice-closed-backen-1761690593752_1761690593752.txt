@@ -1,0 +1,223 @@
+[Layer: Status] [Stage: Attachments slice — backend+frontend DONE]
+Voice Notes slice: closed (backend RBAC fixed).
+Task Attachments slice: Data, API+RBAC, Frontend, Flags implemented and verified.
+
+[Layer: Test] [Stage: Smoke script — paste into Notion “Test Scripts”]
+
+Slice: Tasks — Attachments (files)
+Pages impacted: Tasks List, Task Detail
+Pre-req: taskAttachments flag = true in internal env; RBAC set per matrix.
+
+Given a task T1 exists and roles Admin (create+read), Viewer (read only).
+When/Then:
+
+Admin upload happy path
+
+When Admin uploads spec.pdf (<10MB) on Task Detail → Attachments.
+
+Then UI shows new row (filename+size), toast or status clears, React Query invalidates list; Tasks List shows 📎 ≥1.
+
+Viewer read-only
+
+When Viewer opens Task Detail.
+
+Then Attachments section renders list; no upload control.
+
+Disallowed type
+
+When Admin tries .exe.
+
+Then client allows selection, server returns 400, UI shows “Upload failed”.
+
+Oversize
+
+When Admin uploads >10MB.
+
+Then server returns 413 (multer + DB CHECK), UI shows “Upload failed”.
+
+RBAC enforcement
+
+When a user without tasks.files.read hits Task Detail.
+
+Then section is fully hidden (route guard) and Tasks List does not include attachments_count in payload (no existence leak).
+
+Flag OFF behavior
+
+Given taskAttachments=false.
+
+Then badge+section hidden for all users; API remains RBAC-enforced.
+
+cURL verification (backend 200/403/413/400/404)
+
+BASE=http://localhost:5000
+T=$TASK_ID
+
+# Admin upload (201)
+curl -s -H "Authorization: Bearer $ADMIN" \
+  -F "file=@/path/spec.pdf" \
+  $BASE/api/tasks/$T/files | jq
+
+# List (200)
+curl -s -H "Authorization: Bearer $VIEWER" \
+  $BASE/api/tasks/$T/files | jq
+
+# Disallowed type (400)
+echo 'x' > /tmp/bad.exe
+curl -s -H "Authorization: Bearer $ADMIN" \
+  -F "file=@/tmp/bad.exe" \
+  $BASE/api/tasks/$T/files -o /dev/null -w "%{http_code}\n"
+
+# Oversize (413)
+head -c 11000000 </dev/zero > /tmp/big.bin
+curl -s -H "Authorization: Bearer $ADMIN" \
+  -F "file=@/tmp/big.bin;type=application/pdf" \
+  $BASE/api/tasks/$T/files -o /dev/null -w "%{http_code}\n"
+
+# Forbidden create (403)
+curl -s -H "Authorization: Bearer $NO_CREATE" \
+  -F "file=@/path/spec.pdf" \
+  $BASE/api/tasks/$T/files -o /dev/null -w "%{http_code}\n"
+
+# Not found (404)
+curl -s -H "Authorization: Bearer $ADMIN" \
+  $BASE/api/tasks/00000000-0000-0000-0000-000000000000/files -o /dev/null -w "%{http_code}\n"
+
+
+Evidence to attach in Notion “Test Scripts → Evidence”
+
+Screenshot Tasks List showing 📎 count.
+
+Screenshot Task Detail list with one uploaded file.
+
+Terminal output showing 400, 413, 403 codes.
+
+[Layer: Docs] [Stage: Drafts to commit]
+
+docs/ATTACHMENTS.md (drop-in draft)
+
+# Task Attachments
+
+## Overview
+Internal file uploads on tasks. Defense-in-depth: frontend hides by RBAC+flag; backend enforces RBAC and size/type; DB CHECK caps 10MB.
+
+## Limits
+- Max size: 10 MB
+- Allowed MIME: pdf, jpg/jpeg, png, webp, heic/heif, csv, xlsx
+- Storage: /var/uploads/tasks/<taskId>/<uuid>.<ext> (non-public path). v1 returns a non-public URL placeholder; secure downloads will move to signed URLs.
+
+## RBAC
+- tasks.files.read → view list (and see 📎 count)
+- tasks.files.create → upload
+
+## API
+POST /api/tasks/:id/files (multipart: file) → 201 { item }
+GET  /api/tasks/:id/files                 → 200 { items: [...] }
+
+Errors: 400 (type), 403 (RBAC), 413 (size), 404 (task not found)
+
+## UI
+- Tasks List: 📎 badge (flag+RBAC) when count>0.
+- Task Detail: Attachments section; upload control gated by create.
+- States: loading / empty / error handled.
+
+## Security Notes
+- Existence leak prevented: attachments_count omitted unless tasks.files.read.
+- Size enforced by multer and DB CHECK.
+- Rejected files are deleted on-disk.
+
+
+CHANGELOG.md (entry)
+
+### Added
+- Task attachments (files): POST/GET /api/tasks/:id/files with 10MB limit and MIME allowlist.
+- Tasks list `attachments_count` (RBAC-aware, no existence leak).
+- Frontend AttachmentsPanel + 📎 badge behind `taskAttachments` flag.
+
+### Security
+- Backend enforces RBAC for count exposure and endpoints.
+- DB CHECK on `task_files.size` prevents oversize writes.
+
+
+[Layer: Planning] [Stage: Notion updates]
+
+Slices DB
+
+AC status → Met (paste AC).
+
+Pages Impacted → Tasks List, Task Detail.
+
+Backend Changes → POST/GET routes; RBAC policies; count query.
+
+Frontend Changes → AttachmentsPanel, TaskItem badge, route/component guards.
+
+RBAC Impact → add tasks.files.create/read to matrix (list roles).
+
+Flag? → taskAttachments (ON internal).
+
+PR Link → (paste URL).
+
+Status → Shipped (internal).
+
+Test Scripts DB
+
+Add the smoke script above with curl blocks and screenshots.
+
+RBAC Matrix DB
+
+Rows for tasks.files.create and tasks.files.read with roles.
+
+Feature Flags DB
+
+Key: taskAttachments; Default: true (internal); Description: “Enable task attachments UI”; Owner: you.
+
+[Layer: Docs] [Stage: PR body template — Definition of Done]
+
+Use this as your PR body:
+
+## Slice: Tasks — Attachments (files)
+
+### Acceptance Criteria (met)
+- RBAC tasks.files.create/read enforced; unauthorized → 403.
+- Upload limits: 10MB; allowed types (pdf,jpg,jpeg,png,webp,heic,heif,csv,xlsx); 413 on exceed.
+- API: POST /api/tasks/:id/files, GET /api/tasks/:id/files.
+- UI: Task Detail Attachments section; Tasks List 📎 badge (flag+RBAC gated).
+- Data: task_files table + (task_id, created_at desc) index.
+- Flag: taskAttachments (default true internal).
+- Tests: Admin/Viewer/oversize/type/flag OFF covered.
+- Docs: ATTACHMENTS.md + CHANGELOG entry.
+
+### Definition of Done
+- [x] AC met (see above).
+- [x] DB migration + rollback committed and applied locally.
+- [x] API contracts documented; 403/400/413 paths verified via curl.
+- [x] Backend RBAC policies verified against role matrix.
+- [x] Frontend RoutePermission + RequirePermission wired; empty/error/loading states handled.
+- [x] Feature flag added in `apps/coordination_ui/src/config/features.json`.
+- [x] Smoke script executed with screenshots/console output.
+- [x] Docs updated: `docs/ATTACHMENTS.md` + `CHANGELOG.md`.
+
+
+Branch/commit hints
+
+branch: slice/tasks-attachments-v1
+feat(api): task files POST/GET with 10MB cap, MIME allowlist, RBAC
+feat(api): tasks list exposes attachments_count only with read permission
+feat(frontend): AttachmentsPanel + 📎 badge (flag+RBAC+states)
+docs: ATTACHMENTS.md; chore: CHANGELOG
+
+
+[Layer: Cleanup] [Stage: Conflict avoidance]
+You mentioned an old Supabase-based attachments path still in the repo. To avoid split pipelines:
+
+Gate the old component/routes behind a deprecated flag (OFF), or
+
+Remove them in a separate “tech-debt” PR:
+
+git rm old component and routes
+
+Map any legacy data migration plan (optional)
+This keeps “one canonical flow per slice.”
+
+Mini-lesson (MIME validation without illusions): file extensions are costumes; magic bytes are fingerprints. If you later enable server-side previews or conversions, add a lightweight magic-byte sniff (e.g., %PDF-, JPEG FF D8, PNG 89 50 4E 47, WebP RIFF....WEBP) before persisting metadata. That’s how you keep your file room from turning into a haunted house.
+
+Next natural slice candidates: Signed Download endpoint (secure streaming + audit log), then Delete (soft-delete) behind tasks.files.delete and a feature flag.

@@ -1,5 +1,68 @@
 # EDEN ERP - Change Log
 
+## 2025-10-28: Tasks → Attachments (Files)
+
+### Added
+- Task attachments (files): POST/GET /api/tasks/:id/files with 10MB limit and MIME allowlist.
+- Tasks list `attachments_count` (RBAC-aware, no existence leak).
+- Frontend AttachmentsPanel + 📎 badge behind `taskAttachments` flag.
+
+### API Layer
+- **POST /api/tasks/:id/files** - Upload file attachment
+  - Multipart file upload with multer middleware
+  - 10MB file size limit enforced
+  - MIME type allowlist: pdf, jpg/jpeg, png, webp, heic/heif, csv, xlsx
+  - Returns 201 on success, 400 (validation), 403 (permission), 404 (task not found), 413 (file too large)
+
+- **GET /api/tasks/:id/files** - List file attachments
+  - Returns array of attachments with id, taskId, url, filename, mime, size, createdAt, createdBy
+  - Returns 200 on success, 403 (permission), 404 (task not found)
+
+- **GET /api/tasks** - Enhanced task list
+  - Added `attachments_count` field (conditionally exposed based on tasks.files.read permission)
+
+### RBAC Layer
+- **tasks.files.create permission:** Upload files (Admin, Ops Lead, Field Ops, PM, Contributor, Office Admin)
+- **tasks.files.read permission:** View/list files (all 14 roles)
+
+### Frontend Components
+- **AttachmentsPanel.jsx**
+  - Compact inline upload button
+  - File list with download links
+  - Upload states: loading ("Uploading…") and error handling
+  - Protected by `<FeatureGate feature="taskAttachments">`
+  - RoutePermission guard for tasks.files.read
+  - RequirePermission guard for tasks.files.create on upload control
+
+- **TaskItem.jsx Badge**
+  - 📎 badge shows attachment count on task list
+  - Feature-gated (taskAttachments flag) + RBAC-guarded (tasks.files.read permission)
+  - Only visible when count > 0
+  - Defense-in-depth: no existence leak for unauthorized users
+
+### Feature Flag
+- **taskAttachments:** Defaults to **TRUE** (internal testing)
+- Configured in `apps/coordination_ui/src/config/features.json`
+
+### Security
+- Backend enforces RBAC for count exposure and endpoints.
+- DB CHECK on `task_files.size` prevents oversize writes.
+- Rejected files are deleted on-disk.
+- Existence leak prevented: attachments_count omitted unless tasks.files.read.
+- Size enforced by multer and DB CHECK.
+
+### Documentation
+- **Updated:** `docs/TASK_FILES.md` with complete API documentation and security notes
+
+### Architect Review
+✅ **Production-Ready** with compact inline UI design
+- RBAC enforcement complete (frontend + backend)
+- Query invalidation uses ["tasks", "list"] for proper cache management
+- Compact inline layout matches specification
+- All security patterns implemented correctly
+
+---
+
 ## 2025-10-28: Tasks → Voice Notes (Flagged, Internal)
 
 ### Summary

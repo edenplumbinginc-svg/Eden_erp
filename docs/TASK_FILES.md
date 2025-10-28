@@ -69,8 +69,15 @@ All endpoints tested via cURL with the following scenarios:
 **Date**: 2025-10-28  
 **Findings**: No security issues. RBAC layering, endpoint behavior, and data integrity all confirmed correct.
 
+## Frontend Implementation
+- **AttachmentsPanel.jsx**: Compact inline upload button with file list
+- **TaskItem.jsx**: 📎 badge on task list (feature-gated + RBAC-guarded, count > 0 only)
+- **Feature Flag**: taskAttachments (default: true for internal testing)
+- **States Handled**: loading, empty, error
+- **React Query**: Invalidates ["task", taskId, "files"] and ["tasks", "list"] on upload
+
 ## Future Work
-- Download endpoint (GET /api/files/:taskId/:fileId)
-- Delete endpoint (DELETE /api/files/:fileId)
+- Signed download endpoint with audit logging
+- Delete endpoint (soft-delete) with tasks.files.delete permission
 - Automated regression tests
-- Frontend UI components
+- Magic byte validation for enhanced security
