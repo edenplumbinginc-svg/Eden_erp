@@ -46,6 +46,7 @@ import RoutesDashboard from './pages/ops/RoutesDashboard';
 import { ThemeProvider } from './components/ThemeProvider';
 import ProtectedCheck from "./pages/ops/ProtectedCheck";
 import DevAuthSwitcher from './components/DevAuthSwitcher';
+import RoutePermission from './components/RoutePermission';
 
 const queryClient = new QueryClient();
 
@@ -153,11 +154,13 @@ function AppContent() {
                   path="/"
                   element={
                     <RequireAuth>
-                      <ProjectList
-                        projects={projects}
-                        onRefresh={loadProjects}
-                        onSelectProject={handleProjectSelect}
-                      />
+                      <RoutePermission resource="projects" action="read">
+                        <ProjectList
+                          projects={projects}
+                          onRefresh={loadProjects}
+                          onSelectProject={handleProjectSelect}
+                        />
+                      </RoutePermission>
                     </RequireAuth>
                   }
                 />
@@ -225,7 +228,9 @@ function AppContent() {
                   path="/project/:projectId" 
                   element={
                     <RequireAuth>
-                      <ProjectDetail />
+                      <RoutePermission resource="projects" action="read">
+                        <ProjectDetail />
+                      </RoutePermission>
                     </RequireAuth>
                   } 
                 />

@@ -1,0 +1,99 @@
+[Mode: Execution]
+
+Step: Add a **RoutePermission** guard and protect the Projects routes.
+
+Why it matters: Component-level guards hide buttons; route guards stop whole pages from rendering when the role lacks read access. This prevents deep-link leaks and reduces future refactors.
+
+Inputs needed: The router file (e.g., `apps/coordination_ui/src/App.jsx` or wherever your `<Routes>` live), paths to `ProjectsPage` and `ProjectDetail`.
+
+Command (Layer: RBAC → Route Guards — starting up)
+
+1. Create `apps/coordination_ui/src/components/RoutePermission.jsx`
+
+```jsx
+// Layer: RBAC → Route Guard (frontend)
+import React from "react";
+// Prefer relative imports to avoid alias issues; adjust paths as needed:
+import { can } from "../lib/can";         // if alias works: "@/lib/can"
+import { getCurrentRole } from "../lib/authRole"; // if alias works: "@/lib/authRole"
+
+export default function RoutePermission({ resource, action = "read", children, fallback = null }) {
+  const role = getCurrentRole();
+  const allowed = can(role, resource, action);
+  return allowed ? <>{children}</> : (fallback ?? <Forbidden />); // default 403
+}
+
+function Forbidden() {
+  return (
+    <div style={{ padding: 24 }}>
+      <h2>403 — Not allowed</h2>
+      <p>You don’t have permission to view this page.</p>
+    </div>
+  );
+}
+```
+
+2. Wrap your Projects routes (React Router v6 example).
+   Open your routes file (often `src/App.jsx`), and wrap the elements:
+
+```jsx
+import { Routes, Route } from "react-router-dom";
+import RoutePermission from "./components/RoutePermission"; // adjust relative path
+import ProjectsPage from "./pages/Projects.jsx";            // adjust as needed
+import ProjectDetail from "./pages/ProjectDetail.jsx";
+
+export default function App() {
+  return (
+    <Routes>
+      <Route
+        path="/projects"
+        element={
+          <RoutePermission resource="projects" action="read">
+            <ProjectsPage />
+          </RoutePermission>
+        }
+      />
+      <Route
+        path="/projects/:id"
+        element={
+          <RoutePermission resource="projects" action="read">
+            <ProjectDetail />
+          </RoutePermission>
+        }
+      />
+      {/* ...other routes */}
+    </Routes>
+  );
+}
+```
+
+If you define routes via an array, wrap the `element` the same way.
+
+3. Optional: Dedicated 403 page.
+   If you prefer a custom page, replace the inline `Forbidden` with:
+
+```jsx
+// apps/coordination_ui/src/pages/Forbidden.jsx
+export default function Forbidden() {
+  return (
+    <div className="p-6">
+      <h1 className="text-xl font-semibold">403 — Forbidden</h1>
+      <p className="mt-2 text-sm text-gray-600">
+        You don’t have permission to access this page.
+      </p>
+    </div>
+  );
+}
+```
+
+…and pass `<Forbidden />` as `fallback` to `RoutePermission`.
+
+Success check:
+
+* Set role to **Inventory Manager** (your `rbac.json` has `projects.read: false`) → navigating to `/projects` or `/projects/:id` shows the 403 fallback.
+* Set role to **Viewer** (has `projects.read: true`) → routes render normally.
+* Backend still enforces authorization; API calls remain protected.
+
+Next: wait for user
+
+Mini lesson: Page guards (route-level) and widget guards (component-level) form a pinch point. The route guard gives you a single “deny early” chokepoint; the component guards handle finer-grained controls inside the page. After you confirm this compiles with your router file, we’ll add the “Include archived” list toggle under the feature flag and wire its query param (`?archived=include`) so filters survive refresh.
