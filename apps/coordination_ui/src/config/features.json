@@ -1,0 +1,6 @@
+{
+  "voiceToText": false,
+  "hardDeleteProjects": false,
+  "includeArchivedToggle": true,
+  "rbacDevBanner": true
+}

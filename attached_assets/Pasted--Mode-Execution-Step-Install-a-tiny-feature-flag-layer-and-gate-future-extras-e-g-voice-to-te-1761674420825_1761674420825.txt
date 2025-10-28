@@ -1,0 +1,75 @@
+[Mode: Execution]
+
+Step: Install a tiny feature flag layer and gate future extras (e.g., voice-to-text) behind it.
+
+Why it matters: Flags let us ship experimental features without churning RBAC or UI. You flip a JSON switch; code doesn’t need refactors.
+
+Inputs needed: Replit access to apps/coordination_ui.
+
+Command (Layer: Feature Flags — starting up)
+
+Create apps/coordination_ui/src/config/features.json
+
+{
+  "voiceToText": false,
+  "hardDeleteProjects": false,
+  "includeArchivedToggle": true,
+  "rbacDevBanner": true
+}
+
+
+Create apps/coordination_ui/src/lib/featureFlags.ts
+
+// Layer: Feature Flags → helper
+import features from "@/config/features.json";
+
+export type FeatureKey = keyof typeof features;
+
+export function hasFeature(key: FeatureKey): boolean {
+  return Boolean((features as Record<string, unknown>)[key]);
+}
+
+
+Create apps/coordination_ui/src/components/FeatureGate.tsx
+
+// Layer: Feature Flags → component gate
+import type { ReactNode } from "react";
+import { hasFeature, type FeatureKey } from "@/lib/featureFlags";
+
+export default function FeatureGate({
+  feature,
+  children,
+  fallback = null,
+}: {
+  feature: FeatureKey;
+  children: ReactNode;
+  fallback?: ReactNode;
+}) {
+  return hasFeature(feature) ? <>{children}</> : <>{fallback}</>;
+}
+
+
+Quick smoke (temporary): show a dev-only voice button on Project Detail
+
+// apps/coordination_ui/src/pages/ProjectDetail.jsx (or .tsx)
+import FeatureGate from "@/components/FeatureGate";
+
+// inside your component JSX header/actions area:
+<FeatureGate feature="voiceToText">
+  <button className="px-3 py-1 rounded border" aria-label="Record voice note (dev)">
+    🎙️ Voice note (dev)
+  </button>
+</FeatureGate>
+
+
+Save, then flip "voiceToText": true in features.json to see the button appear via hot reload.
+
+Success check:
+
+Toggling voiceToText between false/true cleanly hides/shows the test button with no code changes.
+
+No TypeScript/compile errors; app hot reloads.
+
+Next: wait for user
+
+Mini lesson (feature flags): keep flags coarse and named by capability (“voiceToText”), not by UI element (“showMicIcon”). When we wire the real voice-to-text next, we’ll drop it under this gate and add telemetry so you can measure usage before turning it on by default.
