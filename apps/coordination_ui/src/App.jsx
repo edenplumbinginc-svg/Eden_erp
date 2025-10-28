@@ -45,6 +45,7 @@ import RouteMap from './pages/RouteMap';
 import RoutesDashboard from './pages/ops/RoutesDashboard';
 import { ThemeProvider } from './components/ThemeProvider';
 import ProtectedCheck from "./pages/ops/ProtectedCheck";
+import DevAuthSwitcher from './components/DevAuthSwitcher';
 
 const queryClient = new QueryClient();
 
@@ -121,6 +122,7 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-background">
+      <DevAuthSwitcher onUserChange={() => window.location.reload()} />
       <EdenHeader />
       
       <div className="container">
