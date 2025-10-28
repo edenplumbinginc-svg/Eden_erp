@@ -1,0 +1,113 @@
+[Mode: Execution]
+
+Step: Add a guarded **Archive Project** control (soft-delete) on the Project Detail page.
+
+Why it matters: Destructive actions must be permissioned and reversible. “Archive” ships faster than hard-delete, avoids data loss, and exercises your hybrid RBAC end-to-end.
+
+Inputs needed: Path to `ProjectDetail` component, existing `api` client (you already edited it for dev headers), project `id` available in the component.
+
+Command (Layers: RBAC guard + Frontend UI — component stage)
+
+1. Ensure your API client has `patch`:
+
+```js
+// apps/coordination_ui/src/services/api.js
+export async function patch(url, body) {
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      // dev headers already present here from your fix
+      ...devHeaders
+    },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error(`PATCH ${url} failed: ${res.status}`);
+  return res.json();
+}
+```
+
+2. Create the permission wrapper if not already present:
+
+```tsx
+// apps/coordination_ui/src/components/RequirePermission.tsx
+import type { ReactNode } from "react";
+import { can } from "@/lib/can";
+import { getCurrentRole } from "@/lib/authRole";
+
+export default function RequirePermission({
+  resource, action, children, fallback = null
+}: { resource: any; action: string; children: ReactNode; fallback?: ReactNode }) {
+  const role = getCurrentRole();
+  return can(role, resource, action) ? <>{children}</> : <>{fallback}</>;
+}
+```
+
+3. Add a guarded Archive button to Project Detail:
+
+```tsx
+// apps/coordination_ui/src/pages/ProjectDetail.jsx
+import RequirePermission from "@/components/RequirePermission";
+import { patch } from "@/services/api"; // adjust path if different
+import { useState } from "react";
+
+export default function ProjectDetail(props) {
+  // assume you already load `project` from params/query
+  const [project, setProject] = useState(props.project || null);
+
+  async function handleArchiveProject() {
+    if (!project?.id) return;
+    try {
+      // optimistic UI
+      setProject(p => ({ ...p, archived: true }));
+      await patch(`/api/projects/${project.id}`, { archived: true });
+      // optional: navigate back or show toast
+      // navigate("/projects"); // if you have a router hook
+      console.info("Project archived");
+    } catch (e) {
+      // rollback if server rejected
+      setProject(p => ({ ...p, archived: false }));
+      console.error(e);
+      alert("Archiving failed. Check console for details.");
+    }
+  }
+
+  return (
+    <div className="flex items-center justify-between">
+      <h1 className="text-xl font-semibold">
+        {project?.name} {project?.archived ? <span className="ml-2 text-xs px-2 py-1 border rounded">Archived</span> : null}
+      </h1>
+
+      {/* Guarded destructive control */}
+      <RequirePermission resource="archive" action="project" fallback={null}>
+        {!project?.archived && (
+          <button
+            onClick={handleArchiveProject}
+            className="px-3 py-1 rounded border"
+            aria-label="Archive project"
+          >
+            Archive
+          </button>
+        )}
+      </RequirePermission>
+    </div>
+  );
+}
+```
+
+4. (Optional but tidy) Hide archived projects in list views until you add an “Include archived” toggle:
+
+```jsx
+// wherever you map projects
+const visible = projects.filter(p => !p.archived);
+```
+
+Success check:
+
+* As **Admin** or any role with `archive.level !== "none"` in `rbac.json`, the Archive button is visible; as **Viewer**, it’s hidden.
+* Clicking Archive sends `PATCH /api/projects/:id` with `{ archived: true }` and you see the Archived badge or the project disappears from lists.
+* Server still enforces auth; attempts without permission fail at the API.
+
+Next: wait for user
+
+Mini lesson: soft-delete (archive) reduces blast radius. Ship archive first, observe real usage, then add hard-delete behind a separate permission and a two-step confirm. After you confirm this works, we’ll add a small `features.json` + `hasFeature()` so voice-to-text lands behind a flag without touching RBAC again.
