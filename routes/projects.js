@@ -11,8 +11,11 @@ const { withTx } = require('../lib/tx');
 const { audit } = require('../utils/audit');
 
 const CreateProjectSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  code: z.string().optional()
+  name: z.string().min(1, "Name is required").max(80, "Name max 80 chars"),
+  code: z.string().regex(/^[A-Z0-9-]{1,12}$/, "Code must be A-Z, 0-9, dash, max 12 chars"),
+  client: z.string().max(120, "Client max 120 chars").optional(),
+  startDate: z.string().datetime().optional(),
+  notes: z.string().max(1000, "Notes max 1000 chars").optional()
 });
 
 const UpdateProjectSchema = z.object({
@@ -120,17 +123,21 @@ router.get('/:id', authenticate, requirePerm('project.view'), async (req, res) =
 // Create project
 router.post('/', authenticate, requirePerm('project.create'), validate(CreateProjectSchema), async (req, res) => {
   try {
-    const { name, code } = req.data;
+    const { name, code, client, startDate, notes } = req.data;
     const r = await pool.query(
-      `INSERT INTO public.projects (name, code, status)
-       VALUES ($1,$2,'active')
-       RETURNING id, name, code, status, created_at`,
-      [name, code ?? null]
+      `INSERT INTO public.projects (name, code, client, start_date, notes, status, archived)
+       VALUES ($1, $2, $3, $4, $5, 'active', false)
+       RETURNING id, name, code, client, start_date AS "startDate", notes, status, archived, created_at`,
+      [name, code, client ?? null, startDate ?? null, notes ?? null]
     );
     const project = r.rows[0];
-    await audit(req.user?.id, 'project.create', `project:${project.id}`, { name, code });
+    await audit(req.user?.id, 'project.create', `project:${project.id}`, { name, code, client });
     res.status(201).json(project);
   } catch (e) {
+    // Handle duplicate code constraint violation
+    if (e.code === '23505' && e.constraint === 'projects_code_key') {
+      return res.status(409).json({ error: 'duplicate_code', message: 'Project code already exists' });
+    }
     res.status(500).json({ error: e.message });
   }
 });
