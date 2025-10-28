@@ -1,0 +1,239 @@
+[Mode: Execution]
+Step: Harden every `projects.map` call by coercing data to a real array at the call-site (stops the “projects.map is not a function” crashes on Dashboard/AllTasks/Projects).
+Why it matters: Your fetch layers sometimes return `{data:[…]}` or `{items:[…]}` (or an object on error). Coercing to an array in the components guarantees safe rendering and removes the Sentry spam immediately.
+Inputs needed: Your editor. Apply the patch below as-is.
+
+Command (unified diff — copy/paste to apply manually):
+
+```diff
+--- a/apps/coordination_ui/src/pages/SimpleProjectsPage.jsx
++++ b/apps/coordination_ui/src/pages/SimpleProjectsPage.jsx
+@@
+ import { useDeltaSync } from '../hooks/useDeltaSync';
+ import { useHasPermission } from '../hooks/usePermissions';
+ import { Loading } from '../components/ui/PageStates';
+ 
+ export default function SimpleProjectsPage() {
+   const { items: projects, loading, forceRefresh } = useDeltaSync('/api/projects', {
+     key: 'projects',
+     intervalMs: 30000,
+     initialLimit: 30
+   });
++  // Normalize to an array no matter what the fetch shape is
++  const toArray = (x) =>
++    Array.isArray(x) ? x
++    : Array.isArray(x?.data) ? x.data
++    : Array.isArray(x?.items) ? x.items
++    : [];
++  const list = toArray(projects);
+ 
+   const canCreate = useHasPermission('project.create');
+ 
+-  if (loading && projects.length === 0) {
++  if (loading && list.length === 0) {
+     return <Loading />;
+   }
+@@
+-          <p style={{ 
++          <p style={{
+             fontSize: '14px', 
+             color: 'var(--md-text-secondary)',
+             margin: 0
+           }}>
+-            Background refresh every 30s • {projects.length} projects loaded
++            Background refresh every 30s • {list.length} projects loaded
+           </p>
+         </div>
+@@
+-      {projects.length === 0 ? (
++      {list.length === 0 ? (
+         <div style={{
+           textAlign: 'center',
+           padding: '48px 24px',
+           backgroundColor: 'var(--md-surface)',
+           borderRadius: '8px',
+           border: '1px solid var(--md-divider)'
+         }}>
+@@
+-      ) : (
++      ) : (
+         <div style={{ 
+           display: 'grid',
+           gap: '12px'
+         }}>
+-          {projects.map(project => (
++          {list.map(project => (
+             <Link
+               key={project.id}
+               to={`/projects/${project.id}`}
+               style={{
+                 display: 'block',
+```
+
+```diff
+--- a/apps/coordination_ui/src/pages/ProjectListPage.tsx
++++ b/apps/coordination_ui/src/pages/ProjectListPage.tsx
+@@
+ import { useNavigate } from 'react-router-dom';
+ import { projectApi, reportApi } from '../lib/api';
+ 
+ export function ProjectListPage() {
+   const navigate = useNavigate();
+   const [projects, setProjects] = useState<any[]>([]);
+   const [statusReport, setStatusReport] = useState<any[]>([]);
+@@
+   useEffect(() => {
+     loadData();
+   }, []);
+ 
+   const loadData = async () => {
++    const toArray = <T=any>(x:any): T[] =>
++      Array.isArray(x) ? x
++      : Array.isArray(x?.data) ? x.data
++      : Array.isArray(x?.items) ? x.items
++      : [];
+     try {
+       setLoading(true);
+       const [projectsData, reportData] = await Promise.all([
+         projectApi.list(),
+         reportApi.taskStatus()
+       ]);
+-      setProjects(projectsData);
+-      setStatusReport(reportData);
++      setProjects(toArray(projectsData));
++      setStatusReport(toArray(reportData));
+       setError('');
+     } catch (err: any) {
+       setError(err.message);
+     } finally {
+       setLoading(false);
+     }
+   };
+```
+
+```diff
+--- a/apps/coordination_ui/src/components/ProjectList.jsx
++++ b/apps/coordination_ui/src/components/ProjectList.jsx
+@@
+ function ProjectList({ projects, onRefresh, onSelectProject }) {
++  const toArray = (x) =>
++    Array.isArray(x) ? x
++    : Array.isArray(x?.data) ? x.data
++    : Array.isArray(x?.items) ? x.items
++    : [];
++  const list = toArray(projects);
+@@
+-      {projects.length === 0 ? (
++      {list.length === 0 ? (
+         <div className="text-center" style={{padding: 'var(--space-6) 0'}}>
+@@
+-        <div className="project-grid">
+-          {projects.map((project) => (
++        <div className="project-grid">
++          {list.map((project) => (
+             <div key={project.id} className="project-item">
+```
+
+```diff
+--- a/apps/coordination_ui/src/components/TaskForm.jsx
++++ b/apps/coordination_ui/src/components/TaskForm.jsx
+@@
+ export default function TaskForm({ onSubmit, onCancel, initialData = {}, submitLabel = "Create Task", isSubmitting = false }) {
+@@
+-  const { data: projects = [] } = useQuery({
++  const { data: projectsRaw = [] } = useQuery({
+     queryKey: ['projects'],
+     queryFn: async () => {
+       const res = await apiService.getProjects();
+-      return res.data || [];
++      // Pass through raw; normalize below so we handle {data:[]}, {items:[]}, [].
++      return res?.data ?? res;
+     }
+   });
+ 
+-  const { data: users = [] } = useQuery({
++  const { data: usersRaw = [] } = useQuery({
+     queryKey: ['users'],
+     queryFn: async () => {
+       const res = await apiService.getUsers();
+-      return res.data || [];
++      return res?.data ?? res;
+     }
+   });
++  const toArray = (x) =>
++    Array.isArray(x) ? x
++    : Array.isArray(x?.data) ? x.data
++    : Array.isArray(x?.items) ? x.items
++    : [];
++  const projects = toArray(projectsRaw);
++  const users = toArray(usersRaw);
+@@
+-            {projects.map(p => (
++            {projects.map(p => (
+               <option key={p.id} value={p.id}>
+                 {p.title || p.name || p.id}
+               </option>
+             ))}
+           </select>
+@@
+-            {users.map(u => (
++            {users.map(u => (
+               <option key={u.id} value={u.id}>
+                 {u.email}
+               </option>
+             ))}
+           </select>
+         </div>
+```
+
+```diff
+--- a/apps/coordination_ui/src/components/TasksFilters.jsx
++++ b/apps/coordination_ui/src/components/TasksFilters.jsx
+@@
+-  const { data: users = [], isLoading: usersLoading } = useQuery({
++  const { data: usersRaw = [], isLoading: usersLoading } = useQuery({
+     queryKey: ['users'],
+-    queryFn: () => apiService.getUsers().then(res => res.data)
++    queryFn: () => apiService.getUsers().then(res => res?.data ?? res)
+   });
+ 
+-  const { data: projects = [], isLoading: projectsLoading } = useQuery({
++  const { data: projectsRaw = [], isLoading: projectsLoading } = useQuery({
+     queryKey: ['projects'],
+-    queryFn: () => apiService.getProjects().then(res => res.data)
++    queryFn: () => apiService.getProjects().then(res => res?.data ?? res)
+   });
++  const toArray = (x) =>
++    Array.isArray(x) ? x
++    : Array.isArray(x?.data) ? x.data
++    : Array.isArray(x?.items) ? x.items
++    : [];
++  const projects = toArray(projectsRaw);
++  const users = toArray(usersRaw);
+@@
+-              {projects.map(p => (
++              {projects.map(p => (
+                 <option key={p.id} value={p.id}>
+                   {p.name}
+                 </option>
+               ))}
+             </select>
+           </div>
+@@
+-              {users.map(u => (
++              {users.map(u => (
+                 <option key={u.id} value={u.id}>
+                   {u.email}
+                 </option>
+               ))}
+             </select>
+           </div>
+```
+
+Success check:
+
+* Reload `/dashboard`, `/alltasks`, and `/projects`: no “projects.map is not a function” errors; Sentry stops spiking.
+* Projects dropdowns in **TaskForm** and **TasksFilters** render without crashing even if the API returns `{data:[…]}` or `{items:[…]}`.
+* Creating a task no longer explodes due to a projects-array assumption in the UI.
+
+Next: If any of these files live at slightly different paths in your tree, tell me the exact path and I’ll adjust the diff. After this lands, I recommend a tiny follow-up to normalize at the **source** (your `apiService.getProjects()` / `projectApi.list()`) so every consumer gets a guaranteed array by default.
