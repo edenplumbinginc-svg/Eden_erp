@@ -161,42 +161,77 @@ export const devAuth = {
     return currentDevUser;
   },
   
-  // Preset test users for different RBAC roles
+  // Preset test users for all 14 RBAC roles
   presets: {
     admin: {
       email: 'admin@edenplumbing.com',
+      id: '11111111-1111-1111-1111-111111111111',
+      role: 'Admin'
+    },
+    ops_lead: {
+      email: 'ops.lead@edenplumbing.com',
       id: '22222222-2222-2222-2222-222222222222',
-      role: 'Administrator'
+      role: 'Ops Lead'
     },
-    ops: {
-      email: 'ops@edenplumbing.com',
-      id: '855546bf-f53d-4538-b8d5-cd30f5c157a2',
-      role: 'Operations'
+    scheduler: {
+      email: 'scheduler@edenplumbing.com',
+      id: '33333333-3333-3333-3333-333333333333',
+      role: 'Scheduler'
     },
-    estimator: {
-      email: 'estimator@edenplumbing.com',
+    field_ops: {
+      email: 'field.ops@edenplumbing.com',
       id: '44444444-4444-4444-4444-444444444444',
-      role: 'Estimator'
+      role: 'Field Ops'
     },
-    procurement: {
-      email: 'procurement@edenplumbing.com',
+    project_manager: {
+      email: 'pm@edenplumbing.com',
       id: '55555555-5555-5555-5555-555555555555',
-      role: 'Procurement'
+      role: 'Project Manager'
     },
-    coord: {
-      email: 'coord@edenplumbing.com',
+    client_guest: {
+      email: 'guest@clientcompany.com',
       id: '66666666-6666-6666-6666-666666666666',
-      role: 'Coordination'
+      role: 'Client Guest'
     },
-    hr: {
-      email: 'hr@edenplumbing.com',
+    contributor: {
+      email: 'contributor@edenplumbing.com',
       id: '77777777-7777-7777-7777-777777777777',
-      role: 'HR'
+      role: 'Contributor'
+    },
+    accounting: {
+      email: 'accounting@edenplumbing.com',
+      id: '88888888-8888-8888-8888-888888888888',
+      role: 'Accounting'
     },
     viewer: {
       email: 'viewer@edenplumbing.com',
-      id: '11111111-1111-1111-1111-111111111111',
-      role: 'Read-Only Viewer'
+      id: '99999999-9999-9999-9999-999999999999',
+      role: 'Viewer'
+    },
+    inventory_manager: {
+      email: 'inventory@edenplumbing.com',
+      id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      role: 'Inventory Manager'
+    },
+    trainer: {
+      email: 'trainer@edenplumbing.com',
+      id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+      role: 'Trainer'
+    },
+    office_admin: {
+      email: 'office@edenplumbing.com',
+      id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+      role: 'Office Admin'
+    },
+    estimator: {
+      email: 'estimator@edenplumbing.com',
+      id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+      role: 'Estimator'
+    },
+    subcontractor: {
+      email: 'sub@contractorco.com',
+      id: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
+      role: 'Subcontractor'
     }
   }
 };
