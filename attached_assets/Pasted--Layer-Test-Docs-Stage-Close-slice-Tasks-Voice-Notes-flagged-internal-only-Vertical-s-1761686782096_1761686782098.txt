@@ -1,0 +1,178 @@
+[Layer: Test+Docs] [Stage: Close slice — Tasks → Voice Notes (flagged, internal-only)]
+
+Vertical slice looks shipped end-to-end, including the 🎙️ badge. Let’s lock it with tests + docs so we don’t loop back.
+
+# Acceptance Criteria → Evidence
+
+**AC 1 — Visibility & Guards**
+
+* `voiceToText` flag OFF → no Record UI, no 🎙️ badge.
+* `voiceToText` flag ON → UI appears; RBAC gates Record (create) and viewing (read).
+
+**AC 2 — Recording & Upload**
+
+* Record → Stop → Save uploads ≤120s or ≤5 MB; returns `{ id, url, duration, createdAt }`.
+
+**AC 3 — Playback & Listing**
+
+* Task Detail shows list with duration + Play.
+* Task List shows 🎙️ badge when `voice_notes_count > 0` (flag+RBAC gated).
+
+**AC 4 — Errors**
+
+* Mic denied → inline guidance; Save disabled.
+* Over-limit → client blocks; server 413.
+* Network/server → toast; UI remains consistent.
+
+**AC 5 — API Contracts (v1)**
+
+* `POST /api/tasks/:id/voice-notes` (multipart: `file`, `duration`) → 201 `{ item }` or 400/403/413.
+* `GET /api/tasks/:id/voice-notes` → 200 `{ items: [...] }`.
+
+**AC 6 — Tests & Docs**
+
+* Smoke pass for Admin + Viewer.
+* `VOICE_NOTES.md` and CHANGELOG updated.
+
+# Smoke script (copy–paste to Notion “Test Scripts”)
+
+**Given**: `features.json → voiceToText: true`, role = **Admin**
+**When**: Open Task Detail → click **Record** → speak 5–10s → **Stop** → **Save**
+**Then**: 201 created; note appears with duration; Play works; Task List shows `🎙️ 1`.
+
+**Negative A (Flag OFF)**
+Set `voiceToText: false` → reload Task Detail + Task List → Record UI and badge are **hidden**.
+
+**Negative B (Viewer)**
+Flag ON; switch role to Viewer (dev banner).
+
+* Task Detail: Record UI hidden (if `tasks.voice.create` not granted to Viewer).
+* If your RBAC grants `tasks.voice.read` to Viewer, playback is allowed; a `POST` attempt via curl returns 403.
+
+**Negative C (Over-limit)**
+Try recording >120 s or upload >5 MB file → client blocks; forced POST returns 413.
+
+**Artifacts**
+3 screenshots: Recording UI, Saved list with one note, Task List showing `🎙️ N`.
+
+# Curl checks (internal dev headers)
+
+> Replace `{TASK_ID}` and `{BIG_PATH}` as needed.
+
+**List notes**
+
+```bash
+curl -s http://localhost:3000/api/tasks/{TASK_ID}/voice-notes \
+  -H 'X-Dev-User-Email: test@edenplumbing.com' \
+  -H 'X-Dev-User-Id: 855546bf-f53d-4538-b8d5-cd30f5c157a2' \
+  -H 'X-Dev-Role: Admin' | jq
+```
+
+**Unauthorized create (Viewer)**
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" -X POST \
+  -F "file=@sample.webm" -F "duration=8" \
+  http://localhost:3000/api/tasks/{TASK_ID}/voice-notes \
+  -H 'X-Dev-User-Email: viewer@example.com' \
+  -H 'X-Dev-User-Id: d5196861-7d09-40d7-a3cc-c683394a40f9' \
+  -H 'X-Dev-Role: Viewer'
+# expect: 403
+```
+
+**Payload too large**
+
+```bash
+# create a 6MB file for test
+dd if=/dev/urandom of=big.raw bs=1M count=6
+curl -s -o /dev/null -w "%{http_code}\n" -X POST \
+  -F "file=@big.raw;type=audio/webm" -F "duration=10" \
+  http://localhost:3000/api/tasks/{TASK_ID}/voice-notes \
+  -H 'X-Dev-User-Email: test@edenplumbing.com' \
+  -H 'X-Dev-User-Id: 855546bf-f53d-4538-b8d5-cd30f5c157a2' \
+  -H 'X-Dev-Role: Admin'
+# expect: 413
+```
+
+**Tasks list returns count**
+
+```bash
+curl -s 'http://localhost:3000/api/tasks?limit=5' \
+  -H 'X-Dev-User-Email: test@edenplumbing.com' \
+  -H 'X-Dev-User-Id: 855546bf-f53d-4538-b8d5-cd30f5c157a2' \
+  -H 'X-Dev-Role: Admin' \
+  | jq '.items[] | {id, voiceNotesCount: (.voice_notes_count // .voiceNotesCount)}'
+```
+
+# PR summary (paste into PR)
+
+**Title:** feature(tasks): Voice Notes v1 (flagged) + 🎙️ badge (internal)
+
+**Why:** Internal-only audio notes for tasks. Flag-gated for safe rollout; RBAC enforced; badge completes the slice.
+
+**Definition of Done**
+
+* [x] AC met (see Notion “Tasks — Voice Notes (Flagged, Internal)”).
+* [x] DB migration/table present: `task_voice_notes` (FK tasks, cascade delete).
+* [x] API contracts documented:
+
+  * POST `/api/tasks/:id/voice-notes` → 201/400/403/413
+  * GET `/api/tasks/:id/voice-notes` → 200
+  * GET `/api/tasks` includes `voice_notes_count`
+* [x] Backend RBAC verified: `tasks.voice.create`, `tasks.voice.read`.
+* [x] Frontend: `<RoutePermission>` and `<RequirePermission>` wired; Record UI + Badge gated; empty/error/loading handled.
+* [x] Feature flag `voiceToText` in `src/config/features.json` (default **OFF**).
+* [x] Smoke script executed with screenshots/console.
+* [x] Docs updated: `VOICE_NOTES.md` + CHANGELOG.
+
+# RBAC Matrix deltas (add to Notion)
+
+| Role              | Resource | Action | Allowed | Notes                     |
+| ----------------- | -------- | ------ | ------- | ------------------------- |
+| Admin             | voice    | create | true    | Can record/upload         |
+| Admin             | voice    | read   | true    | Can list/play             |
+| Ops Lead          | voice    | create | true    |                           |
+| Ops Lead          | voice    | read   | true    |                           |
+| Field Ops         | voice    | create | true    | Mobile recording          |
+| Field Ops         | voice    | read   | true    |                           |
+| Project Manager   | voice    | create | true    |                           |
+| Project Manager   | voice    | read   | true    |                           |
+| Contributor       | voice    | create | true    |                           |
+| Contributor       | voice    | read   | true    |                           |
+| Office Admin      | voice    | create | true    |                           |
+| Office Admin      | voice    | read   | true    |                           |
+| Estimator         | voice    | create | true    | Optional                  |
+| Estimator         | voice    | read   | true    |                           |
+| *Others* (if any) | voice    | read   | true    | If you opted “read = all” |
+
+Adjust to match your current role set.
+
+# CHANGELOG snippet (append)
+
+```
+## 2025-10-28 — Tasks: Voice Notes (Internal, Flagged)
+Layers: Data ✅ API ✅ RBAC ✅ Frontend ✅ Flags ✅ Test ✅ Docs ✅
+- DB: task_voice_notes table (FK tasks, cascade; indexes on task_id, created_at).
+- API: POST/GET /api/tasks/:id/voice-notes with size/time/MIME validation.
+- List: GET /api/tasks adds voice_notes_count.
+- Frontend: VoiceRecorder, VoiceNotesList; 🎙️ badge on Task List.
+- Security: Feature flag OFF by default; RBAC on create/read; existence leak prevented via flag+RBAC.
+```
+
+# Notion updates
+
+* **Slices → “Tasks — Voice Notes (Flagged, Internal)”**: set **Status = Shipped**, attach smoke screenshots.
+* **Test Scripts**: mark run **PASS**; link evidence.
+* **Feature Flags**: ensure `voiceToText` = **false** (default).
+
+---
+
+[Layer: Planning] [Stage: Queue next slice]
+
+Pick one, same cadence:
+
+1. **Transcription (flagged)** — add async Whisper pipeline (`POST /voice-notes/:id/transcribe` + `GET transcript`), UI shows text + copy; RBAC: `voice.transcribe`.
+2. **Task attachments (files)** — generic file uploads (PDF/JPG/PNG) with size/type validation; badge + count; delete flow with archive-first.
+3. **RBAC sync audit** — script to diff `rbac.json` vs DB role_permissions and alert on drift.
+
+Whichever you choose, I’ll lay down the AC and smoke in Notion and we slice it cleanly.
