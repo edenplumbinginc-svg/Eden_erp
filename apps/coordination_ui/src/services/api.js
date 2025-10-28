@@ -18,6 +18,18 @@ api.interceptors.request.use((config) => {
     config.headers['Authorization'] = `Bearer ${token}`;
   }
   
+  // Development mode: Send dev user headers for auth bypass
+  if (import.meta.env.DEV) {
+    const devUser = devAuth.getCurrentUser();
+    if (devUser && devUser.email) {
+      config.headers['X-Dev-User-Email'] = devUser.email;
+      config.headers['X-Dev-User-Id'] = devUser.id;
+      // Also send role for RBAC (backend might use this)
+      const devRole = localStorage.getItem('dev.role') || 'Admin';
+      config.headers['X-Dev-Role'] = devRole;
+    }
+  }
+  
   // Propagate Sentry trace context to backend for distributed tracing
   const activeSpan = Sentry.getActiveSpan();
   if (activeSpan) {
