@@ -559,3 +559,28 @@ export const taskVoiceNotes = pgTable("task_voice_notes", {
         index("idx_voice_notes_task").using("btree", table.taskId.asc().nullsLast()),
         index("idx_voice_notes_created").using("btree", table.createdAt.desc().nullsFirst()),
 ]);
+
+export const taskFiles = pgTable("task_files", {
+        id: uuid().defaultRandom().primaryKey().notNull(),
+        taskId: uuid("task_id").notNull(),
+        url: text().notNull(),
+        filename: text().notNull(),
+        mime: text().notNull(),
+        size: integer().notNull(),
+        createdBy: uuid("created_by").notNull(),
+        createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+        foreignKey({
+                        columns: [table.taskId],
+                        foreignColumns: [tasks.id],
+                        name: "task_files_task_id_fkey"
+        }).onDelete("cascade"),
+        foreignKey({
+                        columns: [table.createdBy],
+                        foreignColumns: [users.id],
+                        name: "task_files_created_by_fkey"
+        }),
+        check("task_files_size_max", sql`${table.size} > 0 AND ${table.size} <= 10485760`),
+        index("idx_task_files_task_created_at").using("btree", table.taskId.asc().nullsLast(), table.createdAt.desc().nullsFirst()),
+        index("idx_task_files_task_id").using("btree", table.taskId.asc().nullsLast()),
+]);

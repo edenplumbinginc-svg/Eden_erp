@@ -1,0 +1,62 @@
+[Layer: Data] [Stage: Migration + Rollback prepared]
+
+**Scope:** Create `task_files` table + indexes. Pure DDL. No API/RBAC yet.
+
+### Migration filename
+
+`migrations/20251028_1100_create_task_files.sql`
+
+### UP
+
+```sql
+-- 1) Table: task_files
+CREATE TABLE IF NOT EXISTS task_files (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  task_id      UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  url          TEXT NOT NULL,                       -- storage URL or path (signed on read if needed)
+  filename     TEXT NOT NULL,                       -- original name for UX
+  mime         TEXT NOT NULL,                       -- server-validated mime (not just extension)
+  size         INTEGER NOT NULL,                    -- bytes
+  created_by   UUID NOT NULL REFERENCES users(id),  -- uploader
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  -- Defense-in-depth
+  CONSTRAINT task_files_size_max CHECK (size > 0 AND size <= 10485760) -- <= 10 MB
+);
+
+-- 2) Hot path index: list by task newest-first
+CREATE INDEX IF NOT EXISTS idx_task_files_task_created_at
+  ON task_files (task_id, created_at DESC);
+
+-- Optional helper for quick counts (used by list badges)
+CREATE INDEX IF NOT EXISTS idx_task_files_task_id
+  ON task_files (task_id);
+```
+
+### DOWN
+
+```sql
+DROP INDEX IF EXISTS idx_task_files_task_id;
+DROP INDEX IF EXISTS idx_task_files_task_created_at;
+DROP TABLE IF EXISTS task_files;
+```
+
+**Notes**
+
+* Size limit enforced at DB too (`CHECK`), matching AC (10 MB).
+* MIME is stored (validated server-side later). We’re not constraining MIME in DB to avoid future type churn.
+* `ON DELETE CASCADE` ensures attachments disappear with their task, avoiding orphans.
+
+---
+
+**Next LAYER→STAGE (planned):** API+RBAC — `POST /api/tasks/:id/files` (multipart) + `GET /api/tasks/:id/files`, middleware `requirePermission('tasks.files.create'|'tasks.files.read')`, request-size limits (10 MB), MIME/type filter, 413/400/403 paths, and **attachments_count** subquery added to task list.
+
+**Commit hint**
+
+```
+feat(data): create task_files table + indexes (10MB check)
+```
+
+**Branch**
+`slice/tasks-attachments-v1`
+
+Mini-lesson (why CHECK at DB?): App servers are bouncers; databases are the fire doors. If a second bouncer (DB) won’t let oversize payloads through, you don’t rely on perfect app code to keep you safe.
