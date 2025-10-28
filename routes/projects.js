@@ -113,7 +113,8 @@ router.get('/', authenticate, requirePerm('project.view'), async (req, res) => {
 router.get('/:id', authenticate, requirePerm('project.view'), async (req, res) => {
   try {
     const r = await pool.query(
-      'SELECT id, name, code, status, created_at, archived FROM public.projects WHERE id = $1',
+      `SELECT id, name, code, client, start_date AS "startDate", notes, status, archived, created_at 
+       FROM public.projects WHERE id = $1`,
       [req.params.id]
     );
     if (r.rowCount === 0) return res.status(404).json({ error: 'project not found' });
