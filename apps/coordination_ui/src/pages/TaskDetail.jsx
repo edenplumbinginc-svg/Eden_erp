@@ -14,6 +14,9 @@ import ConfirmDialog from "../components/ConfirmDialog";
 import TagsEditor from "../components/TagsEditor";
 import BallHistoryPanel from "../components/BallHistoryPanel";
 import TaskSlaBanner from "../components/TaskSlaBanner";
+import VoiceRecorder from "../components/VoiceRecorder";
+import VoiceNotesList from "../components/VoiceNotesList";
+import FeatureGate from "../components/FeatureGate";
 import { getStatusLabel } from "../constants/statusLabels";
 import { useHasPermission } from "../hooks/usePermissions";
 import RequirePermission from "../components/RequirePermission";
@@ -603,6 +606,23 @@ export default function TaskDetail() {
           </div>
         </div>
       </div>
+
+      <FeatureGate feature="voiceToText">
+        <div className="space-y-6">
+          <RequirePermission resource="voice" action="create" fallback={null}>
+            <VoiceRecorder 
+              taskId={taskId} 
+              onSuccess={() => {
+                qc.invalidateQueries({ queryKey: ['voiceNotes', taskId] });
+              }}
+            />
+          </RequirePermission>
+          
+          <RequirePermission resource="voice" action="read" fallback={null}>
+            <VoiceNotesList taskId={taskId} />
+          </RequirePermission>
+        </div>
+      </FeatureGate>
 
       <HandoffModal
         isOpen={handoffModalOpen}

@@ -81,6 +81,12 @@ export const apiService = {
   initAttachmentUpload: (taskId, data) => api.post(`/tasks/${taskId}/attachments/init`, data).then(res => res.data),
   completeAttachmentUpload: (taskId, data) => api.post(`/tasks/${taskId}/attachments/complete`, data).then(res => res.data),
 
+  // Voice Notes
+  getVoiceNotes: (taskId) => api.get(`/tasks/${taskId}/voice-notes`).then(res => res.data),
+  uploadVoiceNote: (taskId, formData) => api.post(`/tasks/${taskId}/voice-notes`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }).then(res => res.data),
+
   // Ball Handoff
   handoffBall: (taskId, data) => api.post(`/tasks/${taskId}/ball`, data),
   getBallHistory: (taskId) => api.get(`/tasks/${taskId}/ball`),
