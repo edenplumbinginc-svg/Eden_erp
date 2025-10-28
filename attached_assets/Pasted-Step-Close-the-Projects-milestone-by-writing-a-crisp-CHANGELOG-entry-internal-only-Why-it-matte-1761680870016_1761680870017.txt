@@ -1,0 +1,65 @@
+Step: Close the Projects milestone by writing a crisp CHANGELOG entry (internal-only).
+
+Why it matters: This locks evidence that the vertical slice is complete and keeps the team from circling back. It also signals that flags stay OFF unless we’re actively testing.
+
+Inputs needed: Repo access in Replit.
+
+Command:
+
+# From repo root
+mkdir -p docs
+cat >> docs/CHANGELOG.md <<'MD'
+
+## 2025-10-28 — Projects Module (Internal) — Vertical Slice COMPLETE
+LAYER STATUS: Planning ✅  Data ✅  API ✅  RBAC ✅  Frontend ✅  Flags ✅  Test ✅  Docs ✅
+
+Shipped
+- Create Project: POST /api/projects (Zod validation, unique code, 201 on success).
+- Edit Project: PATCH /api/projects/:id (partial update, 200; 409 on duplicate code).
+- Read Project: GET /api/projects/:id returns name, code, client, startDate, notes, archived.
+- Archive/Unarchive: PATCH archived true/false + “Archived” badge.
+- Hard Delete (internal): DELETE /api/projects/:id (requires archived=true); atomic guard.
+- Route guards: <RoutePermission> on /projects and /projects/:id (+ /projects/new, /projects/:id/edit).
+- Component guards: <RequirePermission> on Archive/Unarchive/Edit/Delete controls.
+- Feature flags: features.json with voiceToText=false, hardDeleteProjects=false, includeArchivedToggle=true.
+- Include Archived toggle (list): URL-state persisted (?archived=1), hot-reload friendly.
+
+Defense-in-Depth
+1) Frontend UX cache (rbac.json) hides controls.
+2) RoutePermission blocks entire pages.
+3) Backend RBAC (DB policies) enforces on API.
+4) DB constraints (unique code) + atomic DELETE WHERE archived=true.
+
+Internal-Only Safeguards
+- Dev auth headers enabled in API client; no public exposure.
+- hardDeleteProjects flag DEFAULT OFF; enable only for internal testing.
+- Voice-to-text reserved behind flag.
+
+Smoke Evidence (abridged)
+- Create (Admin): 201 → redirects to detail in UI.
+- Duplicate code: 409 duplicate_code.
+- Viewer create/edit/delete: 403 forbidden.
+- Archive → Unarchive: PATCH flips archived and UI badge.
+- Hard delete: 204 only when archived=true; 409 otherwise.
+
+Docs Added
+- ROUTE_PERMISSION_GUARDS.md
+- INCLUDE_ARCHIVED_TOGGLE.md
+- RBAC_TESTING.md
+
+Notes
+- Relative imports used to avoid Vite alias drift.
+- URL helper fixed to write pathname+search to prevent “%3F” encoding.
+- Keep flags coarse (capability-level), not widget-level.
+
+MD
+
+git add docs/CHANGELOG.md
+git commit -m "docs(docs): Close Projects vertical slice — CRUD+Archive+RBAC+Flags complete (internal)"
+
+
+Success check: docs/CHANGELOG.md exists with today’s entry; commit created.
+
+Next: wait for user
+
+Mini dev lesson: closing slices in a CHANGELOG is more than ceremony—it’s cognitive garbage collection. Paired with flags default-OFF, it guarantees internal work stays internal while we queue the next slice cleanly (suggested next: Tasks — voice notes (flagged), same cadence).
