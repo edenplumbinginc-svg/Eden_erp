@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import NotificationsBell from "./NotificationsBell";
-import RoleBadge from "./RoleBadge";
 import { useHasPermission } from "../hooks/usePermissions";
 import { useAuth } from "../hooks/AuthProvider";
 import { ThemeToggle } from "./ThemeProvider";
@@ -94,9 +93,8 @@ export default function EdenHeader() {
             </NavLink>
           </nav>
 
-          {/* Right: Notifications, Role Badge, Settings */}
+          {/* Right: Notifications, Settings */}
           <div className="flex items-center gap-3">
-            <RoleBadge />
             <NotificationsBell />
             
             {/* Settings Dropdown */}
