@@ -35,7 +35,7 @@ export default function TasksFilters() {
 
   const { data: projects = [], isLoading: projectsLoading } = useQuery({
     queryKey: ['projects'],
-    queryFn: () => apiService.getProjects().then(res => res.data)
+    queryFn: () => apiService.getProjects().then(res => res.data?.items || [])
   });
 
   useEffect(() => {
