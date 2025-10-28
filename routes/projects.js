@@ -18,7 +18,8 @@ const CreateProjectSchema = z.object({
 const UpdateProjectSchema = z.object({
   name: z.string().min(1).optional(),
   code: z.string().optional(),
-  status: z.enum(['active', 'inactive', 'archived']).optional()
+  status: z.enum(['active', 'inactive', 'archived']).optional(),
+  archived: z.boolean().optional()
 }).refine(data => Object.keys(data).length > 0, {
   message: "At least one field must be provided"
 });
@@ -106,7 +107,7 @@ router.get('/', authenticate, requirePerm('project.view'), async (req, res) => {
 router.get('/:id', authenticate, requirePerm('project.view'), async (req, res) => {
   try {
     const r = await pool.query(
-      'SELECT id, name, code, status, created_at FROM public.projects WHERE id = $1',
+      'SELECT id, name, code, status, created_at, archived FROM public.projects WHERE id = $1',
       [req.params.id]
     );
     if (r.rowCount === 0) return res.status(404).json({ error: 'project not found' });
@@ -137,7 +138,7 @@ router.post('/', authenticate, requirePerm('project.create'), validate(CreatePro
 // Update project
 router.patch('/:id', authenticate, requirePerm('project.edit'), validate(UpdateProjectSchema), async (req, res) => {
   try {
-    const { name, code, status } = req.data;
+    const { name, code, status, archived } = req.data;
     const updates = [];
     const values = [];
     let idx = 1;
@@ -145,12 +146,13 @@ router.patch('/:id', authenticate, requirePerm('project.edit'), validate(UpdateP
     if (name !== undefined) { updates.push(`name = $${idx++}`); values.push(name); }
     if (code !== undefined) { updates.push(`code = $${idx++}`); values.push(code); }
     if (status !== undefined) { updates.push(`status = $${idx++}`); values.push(status); }
+    if (archived !== undefined) { updates.push(`archived = $${idx++}`); values.push(archived); }
 
     values.push(req.params.id);
     const r = await pool.query(
       `UPDATE public.projects SET ${updates.join(', ')} 
        WHERE id = $${idx} 
-       RETURNING id, name, code, status, created_at`,
+       RETURNING id, name, code, status, created_at, archived`,
       values
     );
     if (r.rowCount === 0) return res.status(404).json({ error: 'project not found' });
