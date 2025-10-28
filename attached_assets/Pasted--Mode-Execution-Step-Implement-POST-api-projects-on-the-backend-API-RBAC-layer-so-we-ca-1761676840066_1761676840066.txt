@@ -1,0 +1,126 @@
+[Mode: Execution]
+
+Step: Implement `POST /api/projects` on the backend (API + RBAC layer) so we can ship the “Create Project” slice end-to-end next.
+
+Why it matters: Vertical slice = plan → DB/API → UI/guards → tests. We’ve planned; this gives us the server contract with real RBAC before we build the form.
+
+Inputs needed: Your backend Express routes (the file that currently handles `/api/projects` — e.g., `server/routes/projects.js`), your DB helper (pg/knex/prisma), and your auth middleware (the same one used on `PATCH /api/projects/:id`).
+
+Command (API layer — add create endpoint)
+
+1. Open your projects router file (e.g., `server/routes/projects.js`). Add this near your other routes:
+
+```js
+// server/routes/projects.js
+const express = require("express");
+const { z } = require("zod");
+const router = express.Router();
+
+// Use your existing helpers/middleware:
+const db = require("../db");                 // <-- adjust to your DB helper
+const { requireAuth } = require("../middleware/auth"); // <-- existing auth
+// If you already have a backend permission checker, import it here:
+// const { assertPermission } = require("../middleware/permissions");
+
+const CreateProjectSchema = z.object({
+  name: z.string().min(1).max(80),
+  code: z.string().regex(/^[A-Z0-9-]{1,12}$/,"Code must be A–Z, 0–9, dash, max 12"),
+  client: z.string().min(1).max(120).optional(),
+  startDate: z.string().datetime().optional(),   // ISO date string
+  notes: z.string().max(1000).optional()
+});
+
+router.post("/", requireAuth, async (req, res) => {
+  try {
+    // 1) BACKEND RBAC — replace with your real permission check.
+    // If you have assertPermission(userId, resource, action), use it:
+    // await assertPermission(req.user.id, "projects", "create");
+    // Temporary dev-friendly guard using role (dev headers already set in your app):
+    const role = (req.user?.role || req.headers["x-dev-role"] || "").toString();
+    const allowedRoles = new Set(["Admin","Ops Lead","Project Manager","Office Admin"]); // align to your DB policy
+    if (!allowedRoles.has(role)) return res.status(403).json({ error: "forbidden" });
+
+    // 2) Validate input
+    const body = CreateProjectSchema.parse(req.body);
+
+    // 3) Insert (Postgres example with node-postgres)
+    // Ensure your DB has a UNIQUE index on projects.code and default archived = false.
+    const q = `
+      INSERT INTO projects (name, code, client, start_date, notes, archived)
+      VALUES ($1, $2, $3, $4, $5, false)
+      RETURNING id, name, code, client, start_date AS "startDate", notes, archived
+    `;
+    const params = [body.name, body.code, body.client ?? null, body.startDate ?? null, body.notes ?? null];
+    const { rows } = await db.query(q, params);
+
+    return res.status(201).json({ item: rows[0] });
+  } catch (err) {
+    // Zod validation
+    if (err?.issues) {
+      return res.status(400).json({ error: "validation_error", details: err.issues });
+    }
+    // Postgres unique violation
+    if (err?.code === "23505") {
+      return res.status(409).json({ error: "duplicate_code" });
+    }
+    console.error("POST /api/projects failed:", err);
+    return res.status(500).json({ error: "server_error" });
+  }
+});
+
+module.exports = router;
+```
+
+2. (Optional but recommended) Ensure DB uniqueness on `code` so duplicates return 409. Create a migration like:
+
+```sql
+-- migrations/20251028_add_unique_code_to_projects.sql
+ALTER TABLE projects
+  ADD CONSTRAINT projects_code_unique UNIQUE (code);
+```
+
+Your table should already have `archived BOOLEAN NOT NULL DEFAULT FALSE`. If not, add it here too.
+
+Success check:
+Run these from your dev shell (port numbers match your stack: UI 5000, API 3000):
+
+* Create (Admin):
+
+```bash
+curl -s -X POST http://localhost:3000/api/projects \
+  -H 'Content-Type: application/json' \
+  -H 'X-Dev-User-Email: test@edenplumbing.com' \
+  -H 'X-Dev-User-Id: 855546bf-f53d-4538-b8d5-cd30f5c157a2' \
+  -H 'X-Dev-Role: Admin' \
+  -d '{"name":"East Wing Renovation","code":"EWR-01","client":"Manorcore","startDate":"2025-11-01","notes":"Phase 1"}' | jq
+```
+
+Expected: `201` and `{ item: { id, name, code, archived:false, ... } }`.
+
+* Duplicate code → `409`:
+
+```bash
+curl -s -X POST http://localhost:3000/api/projects \
+  -H 'Content-Type: application/json' \
+  -H 'X-Dev-User-Email: test@edenplumbing.com' \
+  -H 'X-Dev-User-Id: 855546bf-f53d-4538-b8d5-cd30f5c157a2' \
+  -H 'X-Dev-Role: Admin' \
+  -d '{"name":"Another","code":"EWR-01"}' | jq
+```
+
+* Unauthorized (Inventory Manager) → `403`:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" -X POST http://localhost:3000/api/projects \
+  -H 'Content-Type: application/json' \
+  -H 'X-Dev-User-Email: test@edenplumbing.com' \
+  -H 'X-Dev-User-Id: 855546bf-f53d-4538-b8d5-cd30f5c157a2' \
+  -H 'X-Dev-Role: Inventory Manager' \
+  -d '{"name":"Blocked","code":"BLK-01"}'
+```
+
+Expected: `403`.
+
+Next: wait for user
+
+Mini lesson (layer discipline): API contracts stabilize the UI. By finalizing `POST /api/projects` with RBAC and a unique constraint, the form becomes straightforward: wrap `/projects/new` in `<RoutePermission resource="projects" action="create">`, show the guarded “New Project” button, submit to this endpoint, then redirect to the new detail page.
