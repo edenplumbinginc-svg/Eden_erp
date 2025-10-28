@@ -13,6 +13,9 @@ const { maybeAutoCloseParent } = require('../services/taskAutoClose');
 const { handoffTask } = require('../services/handoff');
 const { parseQuery, fetchTasks } = require('../services/taskQuery');
 const { createNotification } = require('../services/notifications');
+const multer = require('multer');
+const path = require('path');
+const { v4: uuidv4 } = require('uuid');
 
 // Zod validation schemas
 const UpdateTaskSchema = z.object({
@@ -825,5 +828,205 @@ router.post('/:id/handoff', authenticate, requirePerm('task.edit'), validate(Han
     res.status(500).json({ ok: false, error: e.message });
   }
 });
+
+// ============================================================================
+// Voice Notes Endpoints
+// ============================================================================
+
+// Multer configuration for voice note uploads
+const voiceNoteStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'tmp_uploads/');
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `${uuidv4()}${ext}`);
+  }
+});
+
+const voiceNoteUpload = multer({
+  storage: voiceNoteStorage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB max file size
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept only audio/* MIME types (webm, ogg, mp4)
+    const allowedMimeTypes = [
+      'audio/webm',
+      'audio/ogg',
+      'audio/mp4',
+      'audio/mpeg',
+      'audio/wav',
+      'video/webm', // Some browsers send webm as video
+      'video/mp4'   // Some browsers send mp4 as video
+    ];
+    
+    if (allowedMimeTypes.includes(file.mimetype) || file.mimetype.startsWith('audio/')) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Invalid file type. Only audio files are allowed (webm, ogg, mp4). Received: ${file.mimetype}`));
+    }
+  }
+});
+
+// POST /api/tasks/:id/voice-notes - Upload voice note
+router.post('/:id/voice-notes', 
+  authenticate, 
+  requirePerm('voice.create'),
+  (req, res, next) => {
+    voiceNoteUpload.single('file')(req, res, (err) => {
+      if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(413).json({ 
+            ok: false, 
+            error: 'File too large. Maximum size is 5MB.' 
+          });
+        }
+        return res.status(400).json({ 
+          ok: false, 
+          error: err.message 
+        });
+      } else if (err) {
+        return res.status(400).json({ 
+          ok: false, 
+          error: err.message 
+        });
+      }
+      next();
+    });
+  },
+  async (req, res) => {
+    try {
+      const taskId = req.params.id;
+      const file = req.file;
+      const durationSeconds = parseInt(req.body.duration_seconds || req.body.durationSeconds, 10);
+      
+      // Validate file was uploaded
+      if (!file) {
+        return res.status(400).json({ 
+          ok: false, 
+          error: 'No file uploaded. Please include a file in the request.' 
+        });
+      }
+      
+      // Validate duration_seconds
+      if (!durationSeconds || isNaN(durationSeconds)) {
+        return res.status(400).json({ 
+          ok: false, 
+          error: 'duration_seconds is required and must be a valid number.' 
+        });
+      }
+      
+      if (durationSeconds > 120) {
+        return res.status(400).json({ 
+          ok: false, 
+          error: 'Voice note duration exceeds maximum of 120 seconds.' 
+        });
+      }
+      
+      if (durationSeconds < 1) {
+        return res.status(400).json({ 
+          ok: false, 
+          error: 'Voice note duration must be at least 1 second.' 
+        });
+      }
+      
+      // Check if task exists
+      const taskCheck = await pool.query(
+        'SELECT id FROM public.tasks WHERE id = $1 AND deleted_at IS NULL',
+        [taskId]
+      );
+      
+      if (taskCheck.rowCount === 0) {
+        return res.status(404).json({ 
+          ok: false, 
+          error: 'Task not found' 
+        });
+      }
+      
+      // Get created_by from authenticated user
+      const createdBy = req.user?.id || deriveStableUUID(req.headers['x-dev-user-email'] || 'system@edenplumbing.com');
+      
+      // Build file URL (relative path from project root)
+      const fileUrl = `/tmp_uploads/${file.filename}`;
+      
+      // Insert voice note record
+      const result = await pool.query(
+        `INSERT INTO public.task_voice_notes (task_id, file_url, duration_seconds, created_by)
+         VALUES ($1, $2, $3, $4)
+         RETURNING id, task_id as "taskId", file_url as url, duration_seconds as "durationSeconds", 
+                   created_at as "createdAt", created_by as "createdBy"`,
+        [taskId, fileUrl, durationSeconds, createdBy]
+      );
+      
+      const voiceNote = result.rows[0];
+      
+      // Audit log
+      await audit(createdBy, 'voice_note.create', `task:${taskId}`, { 
+        voiceNoteId: voiceNote.id,
+        duration: durationSeconds,
+        fileSize: file.size
+      });
+      
+      res.status(201).json({ 
+        ok: true, 
+        item: voiceNote
+      });
+      
+    } catch (e) {
+      console.error('Voice note upload error:', e);
+      res.status(500).json({ 
+        ok: false, 
+        error: e.message 
+      });
+    }
+  }
+);
+
+// GET /api/tasks/:id/voice-notes - List voice notes for a task
+router.get('/:id/voice-notes', 
+  authenticate, 
+  requirePerm('voice.read'),
+  async (req, res) => {
+    try {
+      const taskId = req.params.id;
+      
+      // Check if task exists
+      const taskCheck = await pool.query(
+        'SELECT id FROM public.tasks WHERE id = $1 AND deleted_at IS NULL',
+        [taskId]
+      );
+      
+      if (taskCheck.rowCount === 0) {
+        return res.status(404).json({ 
+          ok: false, 
+          error: 'Task not found' 
+        });
+      }
+      
+      // Query voice notes for this task
+      const result = await pool.query(
+        `SELECT id, task_id as "taskId", file_url as url, duration_seconds as "durationSeconds",
+                created_at as "createdAt", created_by as "createdBy"
+         FROM public.task_voice_notes
+         WHERE task_id = $1
+         ORDER BY created_at DESC`,
+        [taskId]
+      );
+      
+      res.status(200).json({ 
+        ok: true, 
+        items: result.rows 
+      });
+      
+    } catch (e) {
+      console.error('Voice notes list error:', e);
+      res.status(500).json({ 
+        ok: false, 
+        error: e.message 
+      });
+    }
+  }
+);
 
 module.exports = router;
