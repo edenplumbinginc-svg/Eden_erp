@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/AuthProvider';
 import { supabase } from '../lib/supabaseClient';
+import * as Sentry from '@sentry/react';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -327,6 +328,27 @@ export default function LoginPage() {
             </Link>
             {' '}· It's free!
           </p>
+        </div>
+
+        {/* Sentry Code Mapping Test Button */}
+        <div style={{ marginTop: 'var(--space-2)', textAlign: 'center' }}>
+          <button
+            type="button"
+            onClick={() => {
+              console.log('[Sentry Test] Triggering test error from LoginPage.jsx');
+              Sentry.captureException(new Error('CODEMAP_TEST: This is a test error from LoginPage.jsx to verify GitHub code mapping'));
+            }}
+            className="btn"
+            style={{
+              fontSize: '11px',
+              padding: 'var(--space-1) var(--space-2)',
+              backgroundColor: 'rgba(255, 152, 0, 0.1)',
+              color: '#ff9800',
+              border: '1px dashed #ff9800',
+            }}
+          >
+            🔧 Test Sentry Code Mapping
+          </button>
         </div>
       </div>
     </div>
