@@ -5,7 +5,7 @@ import { apiService } from '../services/api';
 import { ChartSkeleton } from './LoadingSkeleton';
 import { useHasPermission } from '../hooks/usePermissions';
 
-function ProjectList({ projects, onRefresh, onSelectProject }) {
+function ProjectList({ projects = [], onRefresh, onSelectProject }) {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [formData, setFormData] = useState({ name: '', code: '' });
   const [loading, setLoading] = useState(false);
