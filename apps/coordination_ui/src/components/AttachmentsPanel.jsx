@@ -22,7 +22,7 @@ function AttachmentsUploader({ taskId, onUploaded }) {
     mutationFn: async (file) => {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await api.post(`/api/tasks/${taskId}/files`, fd, {
+      const res = await api.post(`/tasks/${taskId}/files`, fd, {
         headers: { "Content-Type": "multipart/form-data" }
       });
       return res.data.item;
@@ -79,11 +79,11 @@ function AttachmentsUploader({ taskId, onUploaded }) {
 }
 
 export default function AttachmentsPanel() {
-  const { id: taskId } = useParams();
+  const { taskId } = useParams();
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["task", taskId, "files"],
     queryFn: async () => {
-      const res = await api.get(`/api/tasks/${taskId}/files`);
+      const res = await api.get(`/tasks/${taskId}/files`);
       return res.data.items;
     },
     staleTime: 30_000,
