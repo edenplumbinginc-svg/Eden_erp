@@ -1,0 +1,359 @@
+[Layer: Planning] [Stage: Start next vertical slice]
+
+Slice: Tasks — Attachments: Soft Delete (+ Undelete)
+Why: Safety net before “hard delete”; aligns with Page Coverage Rule (filters + destructive actions).
+Pages impacted: Tasks List (📎), Task Detail (Attachments).
+
+Acceptance Criteria (AC)
+
+Data: task_files.deleted_at TIMESTAMPTZ NULL (soft-delete). Non-deleted = deleted_at IS NULL.
+
+API (RBAC-enforced)
+
+DELETE /api/task-files/:id → 200 { ok: true } (sets deleted_at=now()); 403/404.
+
+POST /api/task-files/:id/restore → 200 { ok: true } (sets deleted_at=NULL); 403/404.
+
+GET /api/tasks/:taskId/files?include=archived
+
+Default: non-deleted only.
+
+With include=archived: include both, ordered deleted_at IS NULL DESC, created_at DESC.
+
+Counts: tasks list attachments_count counts non-deleted only, RBAC-aware (omit field if no tasks.files.read).
+
+RBAC: tasks.files.delete (Admin, PM, Ops Lead) required for delete/restore.
+
+Frontend
+
+Attachments list shows an Archive action per row (if tasks.files.delete).
+
+Toggle “Include archived” (list shows archived with a struck/“Archived” badge).
+
+Download remains available for archived items (read permission).
+
+Flag-gated: taskFilesDelete (default OFF).
+
+Tests: Admin delete/restore path; Viewer cannot see Archive action; counts update; include-archived toggle; 403/404 paths.
+
+Docs: Update ATTACHMENTS.md and CHANGELOG.md.
+
+[Layer: Data] [Stage: Migration + Rollback prepared]
+
+Filename migrations/20251028_1300_soft_delete_task_files.sql
+
+UP
+
+ALTER TABLE task_files
+  ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+
+-- Visible list index (hot path)
+CREATE INDEX IF NOT EXISTS idx_task_files_visible
+  ON task_files (task_id, created_at DESC)
+  WHERE deleted_at IS NULL;
+
+-- For “include archived” ordering
+CREATE INDEX IF NOT EXISTS idx_task_files_deleted_created
+  ON task_files (task_id, deleted_at, created_at DESC);
+
+
+DOWN
+
+DROP INDEX IF EXISTS idx_task_files_deleted_created;
+DROP INDEX IF EXISTS idx_task_files_visible;
+ALTER TABLE task_files DROP COLUMN IF EXISTS deleted_at;
+
+
+[Layer: API + RBAC] [Stage: Contracts + handlers]
+
+Contracts
+
+DELETE /api/task-files/:id (needs tasks.files.delete)
+
+POST /api/task-files/:id/restore (needs tasks.files.delete)
+
+GET /api/tasks/:taskId/files?include=archived (needs tasks.files.read)
+
+Changes to existing list endpoint (routes/taskFiles.js) – excerpt:
+
+router.get(
+  '/',
+  requirePermission('tasks.files', 'read'),
+  async (req, res) => {
+    const { id: taskId } = req.params;
+    const includeArchived = req.query.include === 'archived';
+
+    const base = `
+      select id, task_id as "taskId", url, filename, mime, size,
+             created_at as "createdAt", deleted_at as "deletedAt"
+        from task_files
+       where task_id = $1
+    `;
+
+    const sql = includeArchived
+      ? `${base} order by (deleted_at is null) desc, created_at desc`
+      : `${base} and deleted_at is null order by created_at desc`;
+
+    const items = await db.any(sql, [taskId]);
+    res.json({ items });
+  }
+);
+
+
+New routes (routes/taskFilesAdmin.js) – soft delete + restore:
+
+import express from 'express';
+import { requirePermission } from '../middleware/rbac.js';
+import * as db from '../db/index.js';
+
+const router = express.Router();
+
+router.delete('/:id',
+  requirePermission('tasks.files', 'delete'),
+  async (req, res) => {
+    const row = await db.oneOrNone(
+      `update task_files
+          set deleted_at = now()
+        where id = $1 and deleted_at is null
+        returning id, task_id as "taskId"`,
+      [req.params.id]
+    );
+    if (!row) return res.sendStatus(404);
+    return res.json({ ok: true });
+  }
+);
+
+router.post('/:id/restore',
+  requirePermission('tasks.files', 'delete'),
+  async (req, res) => {
+    const row = await db.oneOrNone(
+      `update task_files
+          set deleted_at = null
+        where id = $1 and deleted_at is not null
+        returning id, task_id as "taskId"`,
+      [req.params.id]
+    );
+    if (!row) return res.sendStatus(404);
+    return res.json({ ok: true });
+  }
+);
+
+export default router;
+
+
+Wire-up
+
+import taskFilesAdmin from './routes/taskFilesAdmin.js';
+app.use('/api/task-files', taskFilesAdmin); // DELETE/restore
+
+
+Task list attachments_count – RBAC-aware & non-deleted only (services/taskQuery.js)
+
+-- when user has tasks.files.read:
+(SELECT COUNT(*)::int
+   FROM task_files tf
+  WHERE tf.task_id = t.id
+    AND tf.deleted_at IS NULL) AS attachments_count,
+
+
+Keep the conditional inclusion logic you used for voice notes to avoid existence leak.
+
+cURL verification
+
+BASE=http://localhost:5000
+T=$TASK_ID
+F=$FILE_ID
+
+# Delete (200)
+curl -s -X DELETE -H "Authorization: Bearer $ADMIN" \
+  $BASE/api/task-files/$F | jq
+
+# Restore (200)
+curl -s -X POST -H "Authorization: Bearer $ADMIN" \
+  $BASE/api/task-files/$F/restore | jq
+
+# Forbidden (403)
+curl -s -X DELETE -H "Authorization: Bearer $NO_DELETE" \
+  $BASE/api/task-files/$F -o /dev/null -w "%{http_code}\n"
+
+# List default excludes archived
+curl -s -H "Authorization: Bearer $VIEW" \
+  "$BASE/api/tasks/$T/files" | jq
+
+# List include archived
+curl -s -H "Authorization: Bearer $VIEW" \
+  "$BASE/api/tasks/$T/files?include=archived" | jq
+
+
+[Layer: RBAC] [Stage: Matrix delta]
+
+Add permission tasks.files.delete
+
+Roles: Admin, PM, Ops Lead (tune to your matrix)
+
+Update DB role-permissions and rbac.json UX cache.
+
+[Layer: Frontend + RBAC] [Stage: UI updates]
+
+Feature flag
+apps/coordination_ui/src/config/features.json
+
+{
+  "voiceToText": false,
+  "taskAttachments": true,
+  "taskFilesDelete": false
+}
+
+
+AttachmentsPanel.jsx – deltas only:
+
+import { useState } from "react";
+import { RequirePermission } from "@/components/permissions";
+import FeatureGate from "@/components/FeatureGate";
+import api from "@/services/api";
+
+// ...inside component
+const [includeArchived, setIncludeArchived] = useState(false);
+
+const { data, isLoading, isError, refetch } = useQuery({
+  queryKey: ["task", taskId, "files", { includeArchived }],
+  queryFn: async () => {
+    const q = includeArchived ? "?include=archived" : "";
+    const res = await api.get(`/tasks/${taskId}/files${q}`);
+    return res.data.items;
+  }
+});
+
+// Toggle
+<FeatureGate feature="taskFilesDelete">
+  <div className="flex items-center gap-3 mb-2">
+    <label className="text-xs flex items-center gap-2">
+      <input
+        type="checkbox"
+        checked={includeArchived}
+        onChange={(e)=>setIncludeArchived(e.target.checked)}
+      />
+      Include archived
+    </label>
+  </div>
+</FeatureGate>
+
+// Row actions (Archive / Restore)
+<li key={it.id} className={`flex items-center justify-between border rounded-lg p-2 ${it.deletedAt ? "opacity-60" : ""}`}>
+  <div className="min-w-0">
+    <div className="truncate text-sm">
+      {it.filename} {it.deletedAt && <span className="ml-2 text-[10px] uppercase tracking-wide">Archived</span>}
+    </div>
+    <div className="text-xs opacity-70">{humanFileSize(it.size)} • {it.mime}</div>
+  </div>
+  <div className="flex items-center gap-3">
+    <a href={`/api/task-files/${it.id}/download`} className="text-sm underline" rel="noopener">Download</a>
+
+    <FeatureGate feature="taskFilesDelete">
+      <RequirePermission resource="tasks.files" action="delete" fallback={null}>
+        {!it.deletedAt ? (
+          <button
+            className="text-sm px-2 py-1 border rounded"
+            onClick={async ()=>{
+              await api.delete(`/task-files/${it.id}`);
+              refetch();
+              // also update tasks list count
+              qc.invalidateQueries({ queryKey: ["tasks","list"] });
+            }}>
+            Archive
+          </button>
+        ) : (
+          <button
+            className="text-sm px-2 py-1 border rounded"
+            onClick={async ()=>{
+              await api.post(`/task-files/${it.id}/restore`);
+              refetch();
+              qc.invalidateQueries({ queryKey: ["tasks","list"] });
+            }}>
+            Restore
+          </button>
+        )}
+      </RequirePermission>
+    </FeatureGate>
+  </div>
+</li>
+
+
+Badge behavior
+No UI change; count updates automatically since it reflects non-deleted only.
+
+[Layer: Test] [Stage: Smoke script]
+
+Admin uploads file → 📎 increments. Archive it → list hides it by default; 📎 decrements. Toggle “Include archived” → row reappears with “Archived” badge; Restore → row returns; 📎 increments.
+
+Viewer (no delete perm) sees no Archive/Restore buttons; can toggle Include archived only if flag ON (optional).
+
+403 on DELETE/restore with NO_DELETE token.
+
+404 when deleting an already-archived id again or unknown id.
+
+Flag OFF (taskFilesDelete=false) → no Archive/Restore UI and no toggle; API still RBAC-enforced.
+
+cURL
+
+# Archive then verify list
+curl -s -X DELETE -H "Authorization: Bearer $ADMIN" $BASE/api/task-files/$F
+curl -s -H "Authorization: Bearer $VIEW" $BASE/api/tasks/$T/files | jq   # file not present
+curl -s -H "Authorization: Bearer $VIEW" $BASE/api/tasks/$T/files?include=archived | jq  # file present with deletedAt
+
+# Restore
+curl -s -X POST -H "Authorization: Bearer $ADMIN" $BASE/api/task-files/$F/restore
+
+
+[Layer: Docs] [Stage: Updates ready]
+
+ATTACHMENTS.md additions
+
+Soft delete semantics, endpoints, RBAC.
+
+include=archived query behavior.
+
+Badge counts exclude archived.
+
+UI states and flag taskFilesDelete.
+
+CHANGELOG.md
+
+### Added
+- Soft delete for task files: DELETE /api/task-files/:id and POST /api/task-files/:id/restore (RBAC).
+- GET /api/tasks/:taskId/files supports ?include=archived.
+- Frontend: Archive/Restore actions and “Include archived” toggle behind taskFilesDelete flag.
+
+
+[Layer: Git/PR] [Stage: Branch + commits]
+
+Branch slice/tasks-attachments-soft-delete-v1
+Commits
+
+feat(data): soft delete column + indexes for task_files
+feat(api): DELETE /task-files/:id and POST /task-files/:id/restore (RBAC)
+feat(api): GET /tasks/:taskId/files supports ?include=archived
+feat(api): tasks list attachments_count excludes soft-deleted (RBAC-aware)
+feat(frontend): archive/restore UI + include-archived toggle (flag+RBAC)
+docs: ATTACHMENTS.md updated with soft delete; chore: CHANGELOG
+
+
+PR DoD
+
+ AC met (paste AC).
+
+ Migration + rollback applied.
+
+ API contracts documented; 403/404 verified.
+
+ RBAC tasks.files.delete assigned and enforced.
+
+ Frontend guards + states handled.
+
+ Flag taskFilesDelete added (default OFF).
+
+ Smoke script executed; evidence attached.
+
+ Docs updated.
+
+Mini-lesson (why soft delete first?): Hard deletes are forever; soft deletes buy you reversibility, auditability, and safer UX. The trap is “ghost data” leaking into aggregates—fix that with precise deleted_at IS NULL filters and indexes (and you just did).

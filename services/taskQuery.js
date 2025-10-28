@@ -189,9 +189,10 @@ async function fetchTasks(filters, userPermissions = []) {
     : '';
 
   // Defense-in-depth: Only include attachments_count if user has tasks.files.read permission
+  // Count excludes soft-deleted files (deleted_at IS NULL)
   const hasFilesRead = userPermissions.includes('tasks.files.read');
   const attachmentsCountSql = hasFilesRead
-    ? '(SELECT COUNT(*)::int FROM task_files tf WHERE tf.task_id = t.id) AS attachments_count,'
+    ? '(SELECT COUNT(*)::int FROM task_files tf WHERE tf.task_id = t.id AND tf.deleted_at IS NULL) AS attachments_count,'
     : '';
 
   const sql = `

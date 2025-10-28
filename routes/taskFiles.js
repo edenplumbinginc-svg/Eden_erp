@@ -197,10 +197,13 @@ router.post(
 );
 
 /**
- * GET /api/tasks/:id/files
+ * GET /api/tasks/:id/files?include=archived
  * List all file attachments for a task
  * 
  * RBAC: tasks.files.read
+ * 
+ * Query params:
+ * - include=archived: Include soft-deleted files (shows deletedAt timestamp)
  * 
  * Returns:
  * - 200 { items: [...] }
@@ -214,6 +217,7 @@ router.get(
   async (req, res) => {
     try {
       const taskId = req.params.id;
+      const includeArchived = req.query.include === 'archived';
 
       // Verify task exists (optional, maintains parity with POST)
       const taskResult = await pool.query(
@@ -225,13 +229,18 @@ router.get(
         return res.status(404).json({ error: 'Task not found' });
       }
 
-      // Fetch all files for this task
-      const filesResult = await pool.query(
-        `SELECT id, task_id, url, filename, mime, size, created_at, created_by
-         FROM task_files
-         WHERE task_id = $1
-         ORDER BY created_at DESC`,
-        [taskId]
+      // Fetch files for this task (with optional archived)
+      const baseQuery = `
+        SELECT id, task_id, url, filename, mime, size, created_at, created_by, deleted_at
+        FROM task_files
+        WHERE task_id = $1
+      `;
+
+      const sql = includeArchived
+        ? `${baseQuery} ORDER BY (deleted_at IS NULL) DESC, created_at DESC`
+        : `${baseQuery} AND deleted_at IS NULL ORDER BY created_at DESC`;
+
+      const filesResult = await pool.query(sql, [taskId]
       );
 
       return res.json({
@@ -243,7 +252,8 @@ router.get(
           mime: row.mime,
           size: row.size,
           createdAt: row.created_at,
-          createdBy: row.created_by
+          createdBy: row.created_by,
+          deletedAt: row.deleted_at
         }))
       });
 

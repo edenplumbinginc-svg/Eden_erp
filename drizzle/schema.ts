@@ -569,6 +569,7 @@ export const taskFiles = pgTable("task_files", {
         size: integer().notNull(),
         createdBy: uuid("created_by").notNull(),
         createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+        deletedAt: timestamp("deleted_at", { withTimezone: true, mode: 'string' }),
 }, (table) => [
         foreignKey({
                         columns: [table.taskId],
@@ -583,6 +584,7 @@ export const taskFiles = pgTable("task_files", {
         check("task_files_size_max", sql`${table.size} > 0 AND ${table.size} <= 10485760`),
         index("idx_task_files_task_created_at").using("btree", table.taskId.asc().nullsLast(), table.createdAt.desc().nullsFirst()),
         index("idx_task_files_task_id").using("btree", table.taskId.asc().nullsLast()),
+        index("idx_task_files_deleted_created").using("btree", table.taskId.asc().nullsLast(), table.deletedAt.asc().nullsLast(), table.createdAt.desc().nullsFirst()),
 ]);
 
 export const fileDownloads = pgTable("file_downloads", {
