@@ -584,3 +584,24 @@ export const taskFiles = pgTable("task_files", {
         index("idx_task_files_task_created_at").using("btree", table.taskId.asc().nullsLast(), table.createdAt.desc().nullsFirst()),
         index("idx_task_files_task_id").using("btree", table.taskId.asc().nullsLast()),
 ]);
+
+export const fileDownloads = pgTable("file_downloads", {
+        id: uuid().defaultRandom().primaryKey().notNull(),
+        fileId: uuid("file_id").notNull(),
+        userId: uuid("user_id").notNull(),
+        ip: text(), // Using text instead of inet for Drizzle compatibility
+        userAgent: text("user_agent"),
+        downloadedAt: timestamp("downloaded_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+        foreignKey({
+                        columns: [table.fileId],
+                        foreignColumns: [taskFiles.id],
+                        name: "file_downloads_file_id_fkey"
+        }).onDelete("cascade"),
+        foreignKey({
+                        columns: [table.userId],
+                        foreignColumns: [users.id],
+                        name: "file_downloads_user_id_fkey"
+        }),
+        index("idx_file_downloads_file_id").using("btree", table.fileId.asc().nullsLast()),
+]);

@@ -457,6 +457,7 @@ app.get('/api/users', async (_, res) => {
 app.use('/api/projects', require('./routes/projects'));
 app.use('/api/tasks', require('./routes/tasks'));
 app.use('/api/tasks/:id/files', require('./routes/taskFiles'));
+app.use('/api/task-files', require('./routes/taskFileDownload'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api', require('./routes/attachments'));

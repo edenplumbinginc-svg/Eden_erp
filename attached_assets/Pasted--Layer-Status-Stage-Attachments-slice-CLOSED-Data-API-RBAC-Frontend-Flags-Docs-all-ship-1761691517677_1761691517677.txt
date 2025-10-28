@@ -1,0 +1,180 @@
+[Layer: Status] [Stage: Attachments slice CLOSED]
+Data + API/RBAC + Frontend + Flags + Docs all shipped. Logs clean. RBAC no-leak verified. ✅
+
+[Layer: Planning] [Stage: Choose next vertical slice]
+
+Next slice (start now): Tasks — Secure Download (+ Audit)
+Purpose: close the loop on file safety. Serve downloads through the backend with RBAC checks and an audit trail; remove raw direct links.
+
+Acceptance Criteria (AC)
+
+API
+
+GET /api/task-files/:fileId/download
+
+AuthZ: tasks.files.read and access to owning task.
+
+→ 200 stream with Content-Disposition: attachment; filename="<original>"
+
+→ 403/404 as appropriate.
+
+Reject path traversal; only resolve files from DB by fileId.
+
+Audit
+
+Table: file_downloads(id uuid pk, file_id fk task_files.id, user_id fk users.id, ip inet, user_agent text, downloaded_at timestamptz default now()).
+
+One row per successful download.
+
+UI
+
+Task Detail list: replace href=item.url with href=/api/task-files/{id}/download.
+
+No visual change; respects existing guards (tasks.files.read + taskAttachments flag).
+
+RBAC
+
+Reuse tasks.files.read for download (no new permission).
+
+Tests
+
+Admin: 200 + audit row created.
+
+No read permission: 403.
+
+Unknown fileId: 404.
+
+Links hidden when flag OFF.
+
+Docs
+
+Update ATTACHMENTS.md with download flow + audit schema.
+
+CHANGELOG entry.
+
+Page coverage
+
+Task Detail (download link behavior).
+
+Tasks List (unchanged).
+
+[Layer: Data] [Stage: Migration ready]
+
+migrations/20251028_1200_create_file_downloads.sql
+
+CREATE TABLE IF NOT EXISTS file_downloads (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  file_id UUID NOT NULL REFERENCES task_files(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id),
+  ip INET,
+  user_agent TEXT,
+  downloaded_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_file_downloads_file_id ON file_downloads(file_id);
+
+
+[Layer: API+RBAC] [Stage: Contract]
+
+Route: GET /api/task-files/:fileId/download
+Success 200: file stream (no JSON).
+Errors: 403 (RBAC), 404 (missing), 500 (unexpected).
+
+cURL
+
+# 200
+curl -i -H "Authorization: Bearer $ADMIN" \
+  -o /tmp/out.any \
+  http://localhost:5000/api/task-files/$FILE_ID/download
+
+# 403
+curl -i -H "Authorization: Bearer $NO_READ" \
+  http://localhost:5000/api/task-files/$FILE_ID/download
+
+# 404
+curl -i -H "Authorization: Bearer $ADMIN" \
+  http://localhost:5000/api/task-files/00000000-0000-0000-0000-000000000000/download
+
+
+Handler sketch (Express)
+
+// routes/taskFileDownload.js
+import express from 'express';
+import fs from 'node:fs';
+import fsp from 'node:fs/promises';
+import { requirePermission } from '../middleware/rbac.js';
+import * as db from '../db/index.js';
+const router = express.Router();
+
+router.get('/:fileId/download', requirePermission('tasks.files', 'read'), async (req, res) => {
+  const f = await db.oneOrNone(
+    `select tf.id, tf.task_id, tf.url, tf.filename, tf.mime
+       from task_files tf where tf.id=$1`,
+    [req.params.fileId]
+  );
+  if (!f) return res.sendStatus(404);
+
+  // Optional: verify user can read the owning task (project/tenant checks as in your task routes)
+
+  // Map stored url → disk path (v1 convention)
+  const pathFromUrl = f.url.replace(/^\/secure\//, process.env.TASK_UPLOAD_ROOT + '/');
+  if (!fs.existsSync(pathFromUrl)) return res.sendStatus(404);
+
+  // Audit (best-effort)
+  db.none(
+    `insert into file_downloads(file_id, user_id, ip, user_agent)
+     values ($1,$2,$3,$4)`,
+    [f.id, req.user.id, req.ip, req.get('user-agent') || null]
+  ).catch(() => {});
+
+  res.setHeader('Content-Type', f.mime);
+  res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(f.filename)}"`);
+  const stream = fs.createReadStream(pathFromUrl);
+  stream.on('error', () => res.sendStatus(500));
+  stream.pipe(res);
+});
+
+export default router;
+
+
+Wire it
+
+import taskFileDownload from './routes/taskFileDownload.js';
+app.use('/api/task-files', taskFileDownload);
+
+
+[Layer: Frontend] [Stage: Small change]
+
+In AttachmentsPanel.jsx, change the download link to:
+
+<a href={`/api/task-files/${it.id}/download`} className="text-sm underline" rel="noopener">
+  Download
+</a>
+
+
+[Layer: Test] [Stage: Smoke]
+
+Run the three curl checks above.
+
+Confirm audit row via select count(*) from file_downloads where file_id = $1.
+
+[Layer: Docs] [Stage: DoD]
+
+Add audit table + download endpoint to ATTACHMENTS.md.
+
+CHANGELOG: “Secure download endpoint with RBAC + audit”.
+
+PR DoD (paste):
+
+ AC met (see Planning).
+
+ Migration applied.
+
+ 403/404 verified; 200 streams with filename.
+
+ Frontend updated to use secure endpoint.
+
+ Smoke script evidence attached.
+
+ Docs updated.
+
+Mini-lesson (why stream, not redirect): redirects expose storage topology; streaming keeps your app as the policy gate. When you later move to S3, swap the body stream for a short-lived signed URL (HTTP 302) only after logging the audit row—policy first, bytes second.

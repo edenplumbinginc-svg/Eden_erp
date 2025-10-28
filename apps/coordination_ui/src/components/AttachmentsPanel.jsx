@@ -96,8 +96,7 @@ export default function AttachmentsPanel() {
                   <div className="truncate text-sm">{it.filename}</div>
                   <div className="text-xs opacity-70">{humanFileSize(it.size)} • {it.mime}</div>
                 </div>
-                {/* v1 direct link; replace with signed download route later */}
-                <a href={it.url} className="text-sm underline" rel="noopener">
+                <a href={`/api/task-files/${it.id}/download`} className="text-sm underline" rel="noopener">
                   Download
                 </a>
               </li>
