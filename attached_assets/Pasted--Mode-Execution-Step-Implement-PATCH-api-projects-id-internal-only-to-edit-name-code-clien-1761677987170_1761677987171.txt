@@ -1,0 +1,115 @@
+[Mode: Execution]
+
+Step: Implement PATCH /api/projects/:id (internal-only) to edit name, code, client, startDate, notes — RBAC-gated by project.update.
+
+Why it matters: This finishes the “Edit Project” vertical slice server-side so the UI form can be trivial. Stays internal: dev headers + existing middleware, no external gates.
+
+Inputs needed: Backend routes file for projects, DB helper, auth/permission middleware, your projects table (has archived, client, start_date, notes, code unique).
+
+Command (Layers: API + RBAC — edit endpoint)
+
+Add validation and route:
+
+// server/routes/projects.js  (adjust paths/names to your repo)
+const { z } = require("zod");
+
+const UpdateProjectSchema = z.object({
+  name: z.string().min(1).max(80).optional(),
+  code: z.string().regex(/^[A-Z0-9-]{1,12}$/).optional(),
+  client: z.string().max(120).optional(),
+  startDate: z.string().datetime().optional(),   // ISO
+  notes: z.string().max(1000).optional(),
+});
+
+router.patch('/:id',
+  authenticate,
+  requirePerm('project.update'),                   // internal RBAC (DB-backed)
+  validate(UpdateProjectSchema),
+  async (req, res) => {
+    try {
+      const id = req.params.id;
+      const { name, code, client, startDate, notes } = req.data;
+
+      // Build dynamic UPDATE (node-postgres example)
+      const sets = [];
+      const args = [];
+      let i = 1;
+
+      if (name !== undefined) { sets.push(`name = $${i++}`); args.push(name); }
+      if (code !== undefined) { sets.push(`code = $${i++}`); args.push(code); }
+      if (client !== undefined) { sets.push(`client = $${i++}`); args.push(client || null); }
+      if (startDate !== undefined) { sets.push(`start_date = $${i++}`); args.push(startDate || null); }
+      if (notes !== undefined) { sets.push(`notes = $${i++}`); args.push(notes || null); }
+
+      if (sets.length === 0) return res.status(400).json({ error: "no_fields" });
+
+      // optional: sets.push(`updated_at = NOW()`);
+
+      const q = `
+        UPDATE projects
+           SET ${sets.join(', ')}
+         WHERE id = $${i}
+         RETURNING id, name, code, client, start_date AS "startDate", notes, status, archived, created_at
+      `;
+      args.push(id);
+
+      const r = await pool.query(q, args);
+      if (r.rowCount === 0) return res.status(404).json({ error: "not_found" });
+      return res.json({ item: r.rows[0] });
+    } catch (err) {
+      if (err?.issues) return res.status(400).json({ error: "validation_error", details: err.issues });
+      if (err?.code === "23505") return res.status(409).json({ error: "duplicate_code" }); // unique(code)
+      console.error("PATCH /api/projects/:id failed:", err);
+      return res.status(500).json({ error: "server_error" });
+    }
+  }
+);
+
+
+Ensure DB has a unique index on projects.code (skip if already added with Create slice):
+
+-- migrations/20251028_projects_code_unique.sql
+ALTER TABLE projects
+  ADD CONSTRAINT projects_code_unique UNIQUE (code);
+
+
+Smoke tests (internal; dev headers ok):
+
+# 1) Happy path (Admin)
+curl -s -X PATCH http://localhost:3000/api/projects/<ID> \
+  -H 'Content-Type: application/json' \
+  -H 'X-Dev-User-Email: test@edenplumbing.com' \
+  -H 'X-Dev-User-Id: 855546bf-f53d-4538-b8d5-cd30f5c157a2' \
+  -H 'X-Dev-Role: Admin' \
+  -d '{"name":"East Wing Phase 1","client":"Manorcore","notes":"Updated"}' | jq
+
+# 2) Duplicate code → 409
+curl -s -X PATCH http://localhost:3000/api/projects/<ID> \
+  -H 'Content-Type: application/json' \
+  -H 'X-Dev-User-Email: test@edenplumbing.com' \
+  -H 'X-Dev-User-Id: 855546bf-f53d-4538-b8d5-cd30f5c157a2' \
+  -H 'X-Dev-Role: Admin' \
+  -d '{"code":"EWR-01"}' | jq
+
+# 3) Unauthorized (Viewer) → 403
+curl -s -o /dev/null -w "%{http_code}\n" -X PATCH http://localhost:3000/api/projects/<ID> \
+  -H 'Content-Type: application/json' \
+  -H 'X-Dev-User-Email: viewer@example.com' \
+  -H 'X-Dev-User-Id: d5196861-7d09-40d7-a3cc-c683394a40f9' \
+  -H 'X-Dev-Role: Viewer' \
+  -d '{"name":"Should Fail"}'
+
+
+Success check:
+
+Admin gets 200 { item: … } with updated fields.
+
+Duplicate code returns 409 duplicate_code.
+
+Viewer receives 403.
+
+No schema or runtime errors in logs.
+
+Next: wait for user
+
+Context note: We’re staying internal-only. Dev auth headers + DB RBAC are the gates; no external rollout, no canary. After you confirm this endpoint passes the curl checks, I’ll give the Edit Project form and route guard (/projects/:id/edit) in one step to complete the slice.

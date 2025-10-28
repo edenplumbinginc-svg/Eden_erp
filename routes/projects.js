@@ -19,8 +19,11 @@ const CreateProjectSchema = z.object({
 });
 
 const UpdateProjectSchema = z.object({
-  name: z.string().min(1).optional(),
-  code: z.string().optional(),
+  name: z.string().min(1).max(80).optional(),
+  code: z.string().regex(/^[A-Z0-9-]{1,12}$/, "Code must be A-Z, 0-9, dash, max 12 chars").optional(),
+  client: z.string().max(120).optional(),
+  startDate: z.string().datetime().optional(),
+  notes: z.string().max(1000).optional(),
   status: z.enum(['active', 'inactive', 'archived']).optional(),
   archived: z.boolean().optional()
 }).refine(data => Object.keys(data).length > 0, {
@@ -145,29 +148,42 @@ router.post('/', authenticate, requirePerm('project.create'), validate(CreatePro
 // Update project
 router.patch('/:id', authenticate, requirePerm('project.edit'), validate(UpdateProjectSchema), async (req, res) => {
   try {
-    const { name, code, status, archived } = req.data;
+    const { name, code, client, startDate, notes, status, archived } = req.data;
     const updates = [];
     const values = [];
     let idx = 1;
 
     if (name !== undefined) { updates.push(`name = $${idx++}`); values.push(name); }
     if (code !== undefined) { updates.push(`code = $${idx++}`); values.push(code); }
+    if (client !== undefined) { updates.push(`client = $${idx++}`); values.push(client || null); }
+    if (startDate !== undefined) { updates.push(`start_date = $${idx++}`); values.push(startDate || null); }
+    if (notes !== undefined) { updates.push(`notes = $${idx++}`); values.push(notes || null); }
     if (status !== undefined) { updates.push(`status = $${idx++}`); values.push(status); }
     if (archived !== undefined) { updates.push(`archived = $${idx++}`); values.push(archived); }
 
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'no_fields', message: 'At least one field must be provided' });
+    }
+
     values.push(req.params.id);
     const r = await pool.query(
-      `UPDATE public.projects SET ${updates.join(', ')} 
+      `UPDATE public.projects 
+       SET ${updates.join(', ')} 
        WHERE id = $${idx} 
-       RETURNING id, name, code, status, created_at, archived`,
+       RETURNING id, name, code, client, start_date AS "startDate", notes, status, archived, created_at`,
       values
     );
-    if (r.rowCount === 0) return res.status(404).json({ error: 'project not found' });
+    if (r.rowCount === 0) return res.status(404).json({ error: 'not_found', message: 'Project not found' });
     const project = r.rows[0];
-    await audit(req.user?.id, 'project.update', `project:${project.id}`, { name, code, status });
+    await audit(req.user?.id, 'project.update', `project:${project.id}`, { name, code, client, status });
     res.json(project);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    // Handle duplicate code constraint violation
+    if (e.code === '23505' && e.constraint === 'projects_code_key') {
+      return res.status(409).json({ error: 'duplicate_code', message: 'Project code already exists' });
+    }
+    console.error('PATCH /api/projects/:id failed:', e);
+    res.status(500).json({ error: 'server_error', message: e.message });
   }
 });
 
