@@ -1,0 +1,93 @@
+[Mode: Planning]
+
+Step: Lock the order to avoid rework: (1) RBAC wiring kernel → (2) route guards → (3) component guards → (4) destructive ops (delete/archive) → (5) extras (voice-to-text) behind a feature flag.
+
+Why it matters: Permissions define surfaces. Building buttons/features before the guard rails guarantees refactors.
+
+Inputs needed: Where the user role comes from in your app (Auth context or token), paths for Project page/components.
+
+Command (architecture stance):
+
+* Layer focus: RBAC layer → Frontend guard kernel (starting up).
+* Decision: hard-delete is disabled by default; implement archive/soft-delete first. Voice-to-text ships later behind a feature flag.
+
+Success check: You can toggle a user role and see buttons/links appear/disappear without touching feature code.
+
+Next: move to Execution for the “RBAC wiring kernel”.
+
+---
+
+[Mode: Execution]
+
+Step: Add a tiny `can()` helper that reads your `rbac.json` and answers “is this role allowed to do X on Y?”.
+
+Why it matters: One canonical check prevents permission logic from leaking into dozens of components.
+
+Inputs needed: Replit access; the `rbac.json` you just created.
+
+Command (RBAC layer — guard kernel):
+
+1. Create `apps/coordination_ui/src/lib/can.ts` and paste:
+
+```ts
+// RBAC guard kernel
+// Layer: RBAC → Frontend guard (init)
+
+import rbac from "@/config/rbac.json";
+
+type Role = keyof typeof rbac;
+type Resource =
+  | "projects" | "tasks" | "comments" | "attachments"
+  | "scheduling" | "archive" | "delete" | "roleManagement";
+type Action = string;
+
+export function can(role: Role, resource: Resource, action: Action): boolean {
+  const roleDef: any = (rbac as any)[role];
+  if (!roleDef) return false;
+
+  const resDef: any = roleDef[resource];
+  if (!resDef) return false;
+
+  // Direct boolean action (e.g., edit, delete, assign)
+  if (typeof resDef[action] === "boolean") return !!resDef[action];
+
+  // Level-based permissions (e.g., { level: "full" | "limited" | "none" })
+  if (resDef.level) return resDef.level !== "none";
+
+  // Scope + common actions
+  // If a scope exists, allow read by default and any explicitly true action
+  if (resDef.scope) {
+    if (action === "read") return resDef.read === true;
+    return resDef[action] === true;
+  }
+
+  return false;
+}
+
+// Optional helper for scope-aware UIs later:
+export function scope(role: Role, resource: Resource): string | undefined {
+  const resDef: any = (rbac as any)[role]?.[resource];
+  return resDef?.scope || resDef?.level;
+}
+```
+
+2. Quick smoke test (temporary): in a dev-only spot (e.g., `apps/coordination_ui/src/main.tsx`), add then remove after verifying:
+
+```ts
+import { can } from "@/lib/can";
+
+console.log("RBAC smoke:",
+  can("Admin","projects","delete"),
+  can("Viewer","projects","delete"),
+  can("Ops Lead","tasks","assign")
+);
+```
+
+Success check:
+
+* Console prints: `true false true` for the three calls above.
+* App compiles; no type or import errors.
+
+Next: wait for user
+
+To proceed cleanly: paste your current Auth/User provider (where `user.role` lives) and the Project page/component where a Delete button would go. I’ll wire a `useRole()` hook + `RequirePermission` wrapper and then add a guarded Delete/Archive action without touching unrelated features. After that, we’ll add a simple `features.json` to gate voice-to-text so it can land later without churn.
