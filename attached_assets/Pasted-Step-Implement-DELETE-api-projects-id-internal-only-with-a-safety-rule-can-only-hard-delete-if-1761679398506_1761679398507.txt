@@ -1,0 +1,71 @@
+Step: Implement DELETE /api/projects/:id (internal-only) with a safety rule: can only hard-delete if archived = true.
+
+Why it matters: This finishes the Projects slice without external gates—RBAC-enforced, reversible path (archive first), and zero impact on non-internal users.
+
+Inputs needed: Backend routes file for projects, DB helper (pool/db), your auth + permission middleware.
+
+Command (LAYER: API + RBAC — STAGE: hard delete)
+
+Add the endpoint (adjust imports/paths to your repo):
+
+// server/routes/projects.js
+router.delete(
+  "/:id",
+  authenticate,
+  requirePerm("project.delete"), // your DB-backed permission
+  async (req, res) => {
+    try {
+      const id = req.params.id;
+
+      // 1) Ensure the project exists and is archived
+      const check = await pool.query(
+        `SELECT archived FROM projects WHERE id = $1`,
+        [id]
+      );
+      if (check.rowCount === 0) return res.status(404).json({ error: "not_found" });
+      if (check.rows[0].archived !== true) {
+        return res.status(409).json({ error: "must_archive_first" });
+      }
+
+      // 2) Delete
+      await pool.query(`DELETE FROM projects WHERE id = $1`, [id]);
+      return res.status(204).end();
+    } catch (err) {
+      console.error("DELETE /api/projects/:id failed:", err);
+      return res.status(500).json({ error: "server_error" });
+    }
+  }
+);
+
+
+Smoke tests (internal dev headers):
+
+# Pick an archived project ID (or archive one first via PATCH)
+PID=<ARCHIVED_PROJECT_ID>
+
+# Unauthorized role → 403
+curl -s -o /dev/null -w "%{http_code}\n" -X DELETE http://localhost:3000/api/projects/$PID \
+  -H 'X-Dev-User-Email: viewer@example.com' \
+  -H 'X-Dev-User-Id: d5196861-7d09-40d7-a3cc-c683394a40f9' \
+  -H 'X-Dev-Role: Viewer'
+
+# Not archived → 409 must_archive_first
+curl -s -X DELETE http://localhost:3000/api/projects/$PID_NOT_ARCHIVED \
+  -H 'X-Dev-User-Email: test@edenplumbing.com' \
+  -H 'X-Dev-User-Id: 855546bf-f53d-4538-b8d5-cd30f5c157a2' \
+  -H 'X-Dev-Role: Admin' | jq
+
+# Happy path (Admin, archived) → 204
+curl -s -o /dev/null -w "%{http_code}\n" -X DELETE http://localhost:3000/api/projects/$PID \
+  -H 'X-Dev-User-Email: test@edenplumbing.com' \
+  -H 'X-Dev-User-Id: 855546bf-f53d-4538-b8d5-cd30f5c157a2' \
+  -H 'X-Dev-Role: Admin'
+
+
+Success check:
+
+404 for unknown ID, 409 if not archived, 403 for roles lacking project.delete, and 204 when Admin deletes an archived project.
+
+Next: wait for user
+
+Mini lesson: Hard-delete is a sharp tool—requiring archived = true bakes “two-step intent” into the API. Frontend can still gate the Delete UI behind the hardDeleteProjects flag, but your backend remains the final authority.

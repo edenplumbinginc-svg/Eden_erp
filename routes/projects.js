@@ -188,16 +188,36 @@ router.patch('/:id', authenticate, requirePerm('project.edit'), validate(UpdateP
   }
 });
 
-// Delete project
+// Delete project - Safety rule: can only hard-delete if archived = true
 router.delete('/:id', authenticate, requirePerm('project.delete'), async (req, res) => {
   try {
-    const r = await pool.query('DELETE FROM public.projects WHERE id = $1 RETURNING id', [req.params.id]);
-    if (r.rowCount === 0) return res.status(404).json({ error: 'project not found' });
-    const projectId = r.rows[0].id;
-    await audit(req.user?.id, 'project.delete', `project:${projectId}`, {});
-    res.json({ deleted: true, id: projectId });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
+    const id = req.params.id;
+
+    // Atomic delete with archived=true predicate to prevent race conditions
+    const result = await pool.query(
+      'DELETE FROM public.projects WHERE id = $1 AND archived = true RETURNING id',
+      [id]
+    );
+
+    if (result.rowCount === 0) {
+      // Check if project exists at all
+      const exists = await pool.query(
+        'SELECT id FROM public.projects WHERE id = $1',
+        [id]
+      );
+      
+      if (exists.rowCount === 0) {
+        return res.status(404).json({ error: 'not_found', message: 'Project not found' });
+      } else {
+        return res.status(409).json({ error: 'must_archive_first', message: 'Project must be archived before deletion' });
+      }
+    }
+
+    await audit(req.user?.id, 'project.delete', `project:${id}`, {});
+    return res.status(204).end();
+  } catch (err) {
+    console.error('DELETE /api/projects/:id failed:', err);
+    return res.status(500).json({ error: 'server_error', message: err.message });
   }
 });
 
