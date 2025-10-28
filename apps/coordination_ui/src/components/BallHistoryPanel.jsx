@@ -22,15 +22,15 @@ function holdBadge(seconds = 0) {
 
 export default function BallHistoryPanel({ taskId }) {
   const qc = useQueryClient();
-  const { data, isLoading, error } = useQuery(
-    ['ball-history', taskId],
-    () => ballApi.getHistory(taskId),
-    { refetchInterval: 15000 }
-  );
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['ball-history', taskId],
+    queryFn: () => ballApi.getHistory(taskId),
+    refetchInterval: 15000
+  });
   
   const ack = useMutation({
     mutationFn: ({ eventId }) => ballApi.acknowledge(taskId, eventId),
-    onSuccess: () => qc.invalidateQueries(['ball-history', taskId]),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['ball-history', taskId] }),
   });
 
   if (isLoading) return <div className="p-4 border rounded-2xl">Loading responsibility chain…</div>;

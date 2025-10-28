@@ -9,16 +9,16 @@ function hhmmFromSeconds(s = 0) {
 }
 
 export default function TaskSlaBanner({ taskId, canNudge = false }) {
-  const { data, isLoading, error, refetch } = useQuery(
-    ['ball-late', taskId],
-    () => ballApi.getLate(taskId),
-    { refetchInterval: 15000 }
-  );
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['ball-late', taskId],
+    queryFn: () => ballApi.getLate(taskId),
+    refetchInterval: 15000
+  });
 
-  const nudge = useMutation(
-    () => ballApi.nudge(taskId),
-    { onSuccess: () => refetch() }
-  );
+  const nudge = useMutation({
+    mutationFn: () => ballApi.nudge(taskId),
+    onSuccess: () => refetch()
+  });
 
   if (isLoading || error) return null;
   const late = data?.late;

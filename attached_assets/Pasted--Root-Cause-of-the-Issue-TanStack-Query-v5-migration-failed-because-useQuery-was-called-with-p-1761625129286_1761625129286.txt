@@ -1,0 +1,429 @@
+# Root Cause of the Issue
+
+TanStack Query v5 migration failed because `useQuery` was called with positional arguments instead of the required single object parameter.
+
+### User clicks a task item, initiating navigation to the TaskDetail page.
+The user interaction triggers a navigation event to the specific task URL, which loads the `TaskDetail` component.
+
+```
+{'from': '/alltasks?', 'to': '/task/abde48fd-e1b3-4e35-9b7c-5dda44ec068a'}
+```
+(See @N/A)
+
+### TaskDetail component renders, including the TaskSlaBanner child component.
+The `TaskDetail` component is the entry point for the error, as it renders the component containing the faulty hook call.
+(See @apps/coordination_ui/src/pages/TaskDetail.jsx)
+
+### TaskSlaBanner executes useQuery with deprecated v4 positional arguments.
+The `useQuery` call uses the v4 signature: `useQuery(queryKey, queryFn, options)`. In v5, only the single object signature is supported.
+
+```javascript
+// TaskSlaBanner.jsx
+const { data, ... } = useQuery(
+  ['ball-late', taskId], // 1st arg: Array
+  () => ballApi.getLate(taskId),
+  { refetchInterval: 15000 }
+);
+```
+(See @apps/coordination_ui/src/components/TaskSlaBanner.jsx)
+
+### TanStack Query v5's useBaseQuery receives an array as the first argument.
+The `useQuery` wrapper passes the first argument (`['ball-late', taskId]`) directly to `useBaseQuery` as the `options` parameter.
+(See @node_modules/@tanstack/react-query/src/useQuery.ts)
+
+### useBaseQuery validates arguments, detects an array, and throws the migration error.
+The validation logic in v5 explicitly checks if the `options` argument is an object and not an array. Since the first argument passed was the `queryKey` array, the check fails and throws the error.
+
+```typescript
+// useBaseQuery.ts
+if (typeof options !== 'object' || Array.isArray(options)) {
+  throw new Error(
+    'Bad argument type. Starting with v5, only the "Object" form is allowed...'
+  )
+}
+```
+(See @node_modules/@tanstack/react-query/src/useBaseQuery.ts)
+
+# Solution Plan
+
+### 1. Fix TaskSlaBanner.jsx: Update useQuery to use object syntax with queryKey and queryFn properties instead of positional arguments
+(See @null)
+
+### 2. Fix TaskSlaBanner.jsx: Update useMutation to use object syntax with mutationFn property instead of positional arguments
+(See @null)
+
+### 3. Fix BallHistoryPanel.jsx: Update useQuery to use object syntax with queryKey and queryFn properties
+(See @null)
+
+### 4. Fix BallHistoryPanel.jsx: Update invalidateQueries to use object syntax with queryKey property
+(See @null)
+
+### 5. Fix CourtFlowPage.jsx: Update both useQuery calls to use object syntax with queryKey and queryFn properties
+(See @null)
+
+### 6. Fix CourtFlowPage.jsx: Update invalidateQueries to use object syntax with queryKey property
+(See @null)
+
+### 7. Fix PolicyTable.jsx: Update both invalidateQueries calls to use object syntax with queryKey property
+(See @null)
+# Raw Event Data
+
+## Tags
+
+- **browser:** Electron 30.0.3
+- **browser.name:** Electron
+- **environment:** production
+- **handled:** yes
+- **level:** error
+- **mechanism:** generic
+- **os:** Windows >=10
+- **os.name:** Windows
+- **release:** 7b028da
+- **replayId:** f42e6453fbb64723a8bf06db53b5e702
+- **transaction:** /task/bed6b061-1c52-4d09-b5be-2d753bcdc027
+- **url:** https://2713c1a8-c2ca-4411-ac2c-0a0e67fe0456-00-e7yxhv9hhk1n.riker.replit.dev/task/bed6b061-1c52-4d09-b5be-2d753bcdc027
+
+## Exceptions
+
+### Exception 1
+**Type:** React ErrorBoundary Error
+**Value:** Bad argument type. Starting with v5, only the "Object" form is allowed when calling query related functions. Please use the error stack to find the culprit call. More info here: https://tanstack.com/query/latest/docs/react/guides/migrating-to-v5#supports-a-single-signature-one-object
+
+#### Stacktrace
+
+```
+ TaskSlaBanner in TaskSlaBanner.jsx [Line 11] (In app)
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  return `${h}h ${m}m`;
+}
+
+export default function TaskSlaBanner({ taskId, canNudge = false }) {  <-- SUSPECT LINE
+  const { data, isLoading, error, refetch } = useQuery(
+    ['ball-late', taskId],
+    () => ballApi.getLate(taskId),
+    { refetchInterval: 15000 }
+  );
+------
+ Unknown function in div [Line null] (In app)
+------
+ TaskDetail in TaskDetail.jsx [Line 391] (In app)
+    </div>
+  );
+}
+
+export default function TaskDetail() {
+  const { taskId } = useParams();  <-- SUSPECT LINE
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const { push } = useToaster();
+
+  const canEditTask = useHasPermission('task.edit');
+------
+ RequireAuth in RequireAuth.jsx [Line 5] (In app)
+import React from "react";
+import { Navigate, useLocation } from "react-router-dom";
+import { me } from "../api/auth";
+
+export default function RequireAuth({ children }) {  <-- SUSPECT LINE
+  const loc = useLocation();
+  const [state, setState] = React.useState({ loading: true, user: null });
+
+  const DEV_BYPASS = import.meta.env?.VITE_AUTH_DEV_BYPASS === 'true';
+  
+------
+ RenderedRoute in ../../react-router/dist/development/chunk-OIYGIGL5.mjs [Line 5275] (Not in app)
+        children: this.props.component
+      }
+    )) : this.props.children;
+  }
+};
+function RenderedRoute({ routeContext, match, children }) {  <-- SUSPECT LINE
+  let dataRouterContext = React2.useContext(DataRouterContext);
+  if (dataRouterContext && dataRouterContext.static && dataRouterContext.staticContext && (match.route.errorElement || match.route.ErrorBoundary)) {
+    dataRouterContext.staticContext._deepestRenderedBoundaryId = match.route.id;
+  }
+  return /* @__PURE__ */ React2.createElement(RouteContext.Provider, { value: routeContext }, children);
+------
+ Routes in ../../react-router/dist/development/chunk-OIYGIGL5.mjs [Line 6123] (Not in app)
+    return null;
+  }
+  return /* @__PURE__ */ React3.createElement(NavigationContext.Provider, { value: navigationContext }, /* @__PURE__ */ React3.createElement {snip}
+}
+function Routes({
+  children,  <-- SUSPECT LINE
+  location
+}) {
+  return useRoutes(createRoutesFromChildren(children), location);
+}
+function Await({
+------
+ Unknown function in div [Line null] (In app)
+------
+ MotionDOMComponent in ../../../../../node_modules/framer-motion/dist/es/motion/index.mjs [Line 42] (Not in app)
+         * If we need to measure the element we load this functionality in a
+         * separate class component in order to gain access to getSnapshotBeforeUpdate.
+         */
+        let MeasureLayout;
+        const configAndProps = {
+            ...useContext(MotionConfigContext),  <-- SUSPECT LINE
+            ...props,
+            layoutId: useLayoutId(props),
+        };
+        const { isStatic } = configAndProps;
+        const context = useCreateMotionContext(props);
+------
+ PresenceChild in ../../../../../node_modules/framer-motion/dist/es/components/AnimatePresence/PresenceChild.mjs [Line 9] (Not in app)
+import { useId, useMemo } from 'react';
+import { PresenceContext } from '../../context/PresenceContext.mjs';
+import { useConstant } from '../../utils/use-constant.mjs';
+import { PopChild } from './PopChild.mjs';
+
+const PresenceChild = ({ children, initial, isPresent, onExitComplete, custom, presenceAffectsLayout, mode, anchorX, root }) => {  <-- SUSPECT LINE
+    const presenceChildren = useConstant(newChildrenMap);
+    const id = useId();
+    let isReusedContext = true;
+    let context = useMemo(() => {
+        isReusedContext = false;
+------
+ AnimatePresence in ../../../../../node_modules/framer-motion/dist/es/components/AnimatePresence/index.mjs [Line 44] (Not in app)
+ * once all `motion` components have finished animating out. Likewise, any components using
+ * `usePresence` all need to call `safeToRemove`.
+ *
+ * @public
+ */
+const AnimatePresence = ({ children, custom, initial = true, onExitComplete, presenceAffectsLayout = true, mode = "sync", propagate = false, {snip}  <-- SUSPECT LINE
+    const [isParentPresent, safeToRemove] = usePresence(propagate);
+    /**
+     * Filter any children that aren't ReactElements. We can only track components
+     * between renders with a props.key.
+     */
+------
+ Unknown function in div [Line null] (In app)
+------
+ Unknown function in div [Line null] (In app)
+------
+ AppContent in App.jsx [Line 52] (In app)
+import ProtectedCheck from "./pages/ops/ProtectedCheck";
+
+const queryClient = new QueryClient();
+
+function AppContent() {
+  const [projects, setProjects] = useState([]);  <-- SUSPECT LINE
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+------
+ ToasterProvider in Toaster.jsx [Line 5] (In app)
+import { createContext, useContext, useState, useCallback } from "react";
+
+const ToastCtx = createContext(null);
+
+export function ToasterProvider({ children }) {  <-- SUSPECT LINE
+  const [toasts, setToasts] = useState([]);
+  const push = useCallback((type, msg) => {
+    const id = Math.random().toString(36).slice(2);
+    setToasts(t => [...t, { id, type, msg }]);
+    if (type === "success" || type === "info") setTimeout(() => dismiss(id), 2500);
+------
+ AuthProvider in AuthProvider.jsx [Line 16] (In app)
+    throw new Error('useAuth must be used within AuthProvider');
+  }
+  return context;
+};
+
+export function AuthProvider({ children }) {  <-- SUSPECT LINE
+  const [session, setSession] = useState(null);
+  const [user, setUser] = useState(null);
+  const [permissions, setPermissions] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+------
+ Router in ../../react-router/dist/development/chunk-OIYGIGL5.mjs [Line 6066] (Not in app)
+    false,
+    `A <Route> is only ever to be used as the child of <Routes> element, never rendered directly. Please wrap your <Route> in a <Routes>.`
+  );
+}
+function Router({
+  basename: basenameProp = "/",  <-- SUSPECT LINE
+  children = null,
+  location: locationProp,
+  navigationType = "POP" /* Pop */,
+  navigator,
+  static: staticProp = false
+------
+```
+### Exception 2
+**Type:** Error
+**Value:** Bad argument type. Starting with v5, only the "Object" form is allowed when calling query related functions. Please use the error stack to find the culprit call. More info here: https://tanstack.com/query/latest/docs/react/guides/migrating-to-v5#supports-a-single-signature-one-object
+
+#### Stacktrace
+
+```
+ useBaseQuery in ../../../../../node_modules/@tanstack/react-query/src/useBaseQuery.ts [Line 46] (Not in app)
+  Observer: typeof QueryObserver,
+  queryClient?: QueryClient,
+): QueryObserverResult<TData, TError> {
+  if (process.env.NODE_ENV !== 'production') {
+    if (typeof options !== 'object' || Array.isArray(options)) {
+      throw new Error(  <-- SUSPECT LINE
+        'Bad argument type. Starting with v5, only the "Object" form is allowed when calling query related functions. Please use the error s {snip}
+      )
+    }
+  }
+
+ useQuery in ../../../../../node_modules/@tanstack/react-query/src/useQuery.ts [Line 51] (Not in app)
+  options: UseQueryOptions<TQueryFnData, TError, TData, TQueryKey>,
+  queryClient?: QueryClient,
+): UseQueryResult<NoInfer<TData>, TError>
+
+export function useQuery(options: UseQueryOptions, queryClient?: QueryClient) {
+  return useBaseQuery(options, QueryObserver, queryClient)  <-- SUSPECT LINE
+}
+ TaskSlaBanner in TaskSlaBanner.jsx [Line 12] (In app)
+  const m = Math.floor((s % 3600) / 60);
+  return `${h}h ${m}m`;
+}
+
+export default function TaskSlaBanner({ taskId, canNudge = false }) {
+  const { data, isLoading, error, refetch } = useQuery(  <-- SUSPECT LINE
+    ['ball-late', taskId],
+    () => ballApi.getLate(taskId),
+    { refetchInterval: 15000 }
+  );
+
+ renderWithHooks in ../../react-dom/cjs/react-dom.development.js [Line 15486] (Not in app)
+    } else {
+      ReactCurrentDispatcher$1.current = HooksDispatcherOnMountInDEV;
+    }
+  }
+
+  var children = Component(props, secondArg); // Check if there was a render phase update  <-- SUSPECT LINE
+
+  if (didScheduleRenderPhaseUpdateDuringThisPass) {
+    // Keep rendering in a loop for as long as render phase updates continue to
+    // be scheduled. Use a counter to prevent infinite loops.
+    var numberOfReRenders = 0;
+ mountIndeterminateComponent in ../../react-dom/cjs/react-dom.development.js [Line 20103] (Not in app)
+      ReactStrictModeWarnings.recordLegacyContextWarning(workInProgress, null);
+    }
+
+    setIsRendering(true);
+    ReactCurrentOwner$1.current = workInProgress;
+    value = renderWithHooks(null, workInProgress, Component, props, context, renderLanes);  <-- SUSPECT LINE
+    hasId = checkDidRenderIdHook();
+    setIsRendering(false);
+  }
+
+  {
+ beginWork in ../../react-dom/cjs/react-dom.development.js [Line 21626] (Not in app)
+  workInProgress.lanes = NoLanes;
+
+  switch (workInProgress.tag) {
+    case IndeterminateComponent:
+      {
+        return mountIndeterminateComponent(current, workInProgress, workInProgress.type, renderLanes);  <-- SUSPECT LINE
+      }
+
+    case LazyComponent:
+      {
+        var elementType = workInProgress.elementType;
+ beginWork$1 in ../../react-dom/cjs/react-dom.development.js [Line 27465] (Not in app)
+    // Before entering the begin phase, copy the work-in-progress onto a dummy
+    // fiber. If beginWork throws, we'll use this to reset the state.
+    var originalWorkInProgressCopy = assignFiberPropertiesInDEV(dummyFiber, unitOfWork);
+
+    try {
+      return beginWork(current, unitOfWork, lanes);  <-- SUSPECT LINE
+    } catch (originalError) {
+      if (didSuspendOrErrorWhileHydratingDEV() || originalError !== null && typeof originalError === 'object' && typeof originalError.then = {snip}
+        // Don't replay promises.
+        // Don't replay errors if we are hydrating and have already suspended or handled an error
+        throw originalError;
+ performUnitOfWork in ../../react-dom/cjs/react-dom.development.js [Line 26596] (Not in app)
+  setCurrentFiber(unitOfWork);
+  var next;
+
+  if ( (unitOfWork.mode & ProfileMode) !== NoMode) {
+    startProfilerTimer(unitOfWork);
+    next = beginWork$1(current, unitOfWork, subtreeRenderLanes);  <-- SUSPECT LINE
+    stopProfilerTimerIfRunningAndRecordDelta(unitOfWork, true);
+  } else {
+    next = beginWork$1(current, unitOfWork, subtreeRenderLanes);
+  }
+
+ workLoopSync in ../../react-dom/cjs/react-dom.development.js [Line 26505] (Not in app)
+
+
+function workLoopSync() {
+  // Already timed out, so perform work without checking if we need to yield.
+  while (workInProgress !== null) {
+    performUnitOfWork(workInProgress);  <-- SUSPECT LINE
+  }
+}
+
+function renderRootConcurrent(root, lanes) {
+  var prevExecutionContext = executionContext;
+ renderRootSync in ../../react-dom/cjs/react-dom.development.js [Line 26473] (Not in app)
+    markRenderStarted(lanes);
+  }
+
+  do {
+    try {
+      workLoopSync();  <-- SUSPECT LINE
+      break;
+    } catch (thrownValue) {
+      handleError(root, thrownValue);
+    }
+  } while (true);
+ recoverFromConcurrentError in ../../react-dom/cjs/react-dom.development.js [Line 25889] (Not in app)
+    {
+      errorHydratingContainer(root.containerInfo);
+    }
+  }
+
+  var exitStatus = renderRootSync(root, errorRetryLanes);  <-- SUSPECT LINE
+
+  if (exitStatus !== RootErrored) {
+    // Successfully finished rendering on retry
+    // The errors from the failed first attempt have been recovered. Add
+    // them to the collection of recoverable errors. We'll log them in the
+ performSyncWorkOnRoot in ../../react-dom/cjs/react-dom.development.js [Line 26135] (Not in app)
+    // attempt, we'll give up and commit the resulting tree.
+    var errorRetryLanes = getLanesToRetrySynchronouslyOnError(root);
+
+    if (errorRetryLanes !== NoLanes) {
+      lanes = errorRetryLanes;
+      exitStatus = recoverFromConcurrentError(root, errorRetryLanes);  <-- SUSPECT LINE
+    }
+  }
+
+  if (exitStatus === RootFatalErrored) {
+    var fatalError = workInProgressRootFatalError;
+ flushSyncCallbacks in ../../react-dom/cjs/react-dom.development.js [Line 12042] (Not in app)
+
+      for (; i < queue.length; i++) {
+        var callback = queue[i];
+
+        do {
+          callback = callback(isSync);  <-- SUSPECT LINE
+        } while (callback !== null);
+      }
+
+      syncQueue = null;
+      includesLegacySyncCallbacks = false;
+ <anonymous> in ../../react-dom/cjs/react-dom.development.js [Line 25690] (Not in app)
+          // We don't support running callbacks in the middle of render
+          // or commit so we need to check against that.
+          if ((executionContext & (RenderContext | CommitContext)) === NoContext) {
+            // Note that this would still prematurely flush the callbacks
+            // if this happens outside render or commit phase (e.g. in an event).
+            flushSyncCallbacks();  <-- SUSPECT LINE
+          }
+        });
+      }
+    }
+
+```
