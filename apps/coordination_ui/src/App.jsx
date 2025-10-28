@@ -80,7 +80,7 @@ function AppContent() {
     setError(null);
     try {
       const response = await apiService.getProjects();
-      setProjects(response.data);
+      setProjects(response.data?.items || []);
     } catch (err) {
       console.error('Error loading projects:', err);
       console.error('Error response:', err.response);

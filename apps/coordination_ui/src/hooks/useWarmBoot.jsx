@@ -39,7 +39,7 @@ export function useWarmBoot() {
           }
           
           if (projectsResult.status === 'fulfilled') {
-            window.__eden.projectsWarm = projectsResult.value;
+            window.__eden.projectsWarm = projectsResult.value?.items || [];
             console.log('[WarmBoot] Projects preloaded:', window.__eden.projectsWarm?.length || 0);
           }
         } catch (err) {
