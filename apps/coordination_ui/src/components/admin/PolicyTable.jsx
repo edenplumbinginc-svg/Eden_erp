@@ -15,15 +15,15 @@ export default function PolicyTable() {
     mutationFn: ({ slug, enabled, dry_run }) => 
       apiService.toggleDecisionPolicy(slug, enabled, dry_run),
     onSuccess: () => {
-      queryClient.invalidateQueries(['decision-policies']);
-      queryClient.invalidateQueries(['decision-executions']);
+      queryClient.invalidateQueries({ queryKey: ['decision-policies'] });
+      queryClient.invalidateQueries({ queryKey: ['decision-executions'] });
     }
   });
 
   const runNowMutation = useMutation({
     mutationFn: () => apiService.runDecisionCycleNow(),
     onSuccess: () => {
-      queryClient.invalidateQueries(['decision-executions']);
+      queryClient.invalidateQueries({ queryKey: ['decision-executions'] });
     }
   });
 

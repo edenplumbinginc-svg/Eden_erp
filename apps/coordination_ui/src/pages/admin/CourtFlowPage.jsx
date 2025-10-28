@@ -21,8 +21,8 @@ const Card = ({ title, value, sub }) => (
 
 export default function CourtFlowPage() {
   const qc = useQueryClient();
-  const { data, isLoading, error } = useQuery(['court-flow'], perfApi.courtFlow, { refetchInterval: 15000 });
-  const { data: slaData } = useQuery(['unack-sla'], adminApi.getUnackSla);
+  const { data, isLoading, error } = useQuery({ queryKey: ['court-flow'], queryFn: perfApi.courtFlow, refetchInterval: 15000 });
+  const { data: slaData } = useQuery({ queryKey: ['unack-sla'], queryFn: adminApi.getUnackSla });
   const [sla, setSla] = React.useState('');
   
   React.useEffect(() => { 
@@ -31,7 +31,7 @@ export default function CourtFlowPage() {
   
   const save = useMutation({
     mutationFn: (v) => adminApi.setUnackSla(Number(v)),
-    onSuccess: () => { qc.invalidateQueries(['unack-sla']); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['unack-sla'] }); },
   });
   
   if (isLoading) return <div className="p-6">Loading court flow…</div>;
