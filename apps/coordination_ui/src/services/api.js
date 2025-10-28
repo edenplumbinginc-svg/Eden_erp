@@ -161,27 +161,42 @@ export const devAuth = {
     return currentDevUser;
   },
   
-  // Preset test users for different roles
+  // Preset test users for different RBAC roles
   presets: {
-    ops: {
-      email: 'test@edenplumbing.com',
-      id: '855546bf-f53d-4538-b8d5-cd30f5c157a2',
-      role: 'ops (has tasks:read + tasks:write)'
+    admin: {
+      email: 'admin@edenplumbing.com',
+      id: '22222222-2222-2222-2222-222222222222',
+      role: 'Administrator'
     },
-    contributor: {
-      email: 'contributor@edenplumbing.com',
-      id: '33333333-3333-3333-3333-333333333333',
-      role: 'contributor (can create/edit, cannot delete)'
+    ops: {
+      email: 'ops@edenplumbing.com',
+      id: '855546bf-f53d-4538-b8d5-cd30f5c157a2',
+      role: 'Operations'
+    },
+    estimator: {
+      email: 'estimator@edenplumbing.com',
+      id: '44444444-4444-4444-4444-444444444444',
+      role: 'Estimator'
+    },
+    procurement: {
+      email: 'procurement@edenplumbing.com',
+      id: '55555555-5555-5555-5555-555555555555',
+      role: 'Procurement'
+    },
+    coord: {
+      email: 'coord@edenplumbing.com',
+      id: '66666666-6666-6666-6666-666666666666',
+      role: 'Coordination'
+    },
+    hr: {
+      email: 'hr@edenplumbing.com',
+      id: '77777777-7777-7777-7777-777777777777',
+      role: 'HR'
     },
     viewer: {
       email: 'viewer@edenplumbing.com',
       id: '11111111-1111-1111-1111-111111111111',
-      role: 'viewer (has tasks:read only)'
-    },
-    admin: {
-      email: 'admin@edenplumbing.com',
-      id: '22222222-2222-2222-2222-222222222222',
-      role: 'admin (has all permissions)'
+      role: 'Read-Only Viewer'
     }
   }
 };
