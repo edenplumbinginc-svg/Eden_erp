@@ -59,7 +59,7 @@ export default function ProjectDetail() {
     if (check !== project.code) return;
 
     try {
-      await del(`/api/projects/${project.id}`);
+      await del(`/projects/${project.id}`);
       push("success", "Project permanently deleted");
       navigate('/');
     } catch (e) {
