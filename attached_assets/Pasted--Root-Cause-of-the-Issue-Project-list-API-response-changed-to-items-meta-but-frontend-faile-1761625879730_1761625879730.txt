@@ -1,0 +1,449 @@
+# Root Cause of the Issue
+
+Project list API response changed to `{items, meta}` but frontend failed to extract the `items` array.
+
+### App component initializes state for projects as an empty array.
+```javascript
+function AppContent() {
+  const [projects, setProjects] = useState([]);
+  // ...
+}
+```
+This sets the initial expectation that `projects` will always be an array.
+(See @apps/coordination_ui/src/App.jsx)
+
+### App calls loadProjects useEffect hook to fetch project data from API.
+```javascript
+useEffect(() => {
+    // ...
+    loadProjects();
+    loadUsers();
+  }, []);
+```
+This triggers the asynchronous data fetching process.
+(See @apps/coordination_ui/src/App.jsx)
+
+### Backend API successfully returns project data wrapped in an object for delta sync.
+```javascript
+// routes/projects.js
+res.json({
+  items: r.rows, // Array of projects
+  meta: { /* ... */ }
+});
+```
+The API response body is an object `{ items: [...], meta: {...} }` due to recent changes for delta sync support (commit 5bb7cf3).
+(See @routes/projects.js)
+
+### App component incorrectly sets projects state with the entire response object.
+```javascript
+// apps/coordination_ui/src/App.jsx
+const response = await apiService.getProjects();
+setProjects(response.data); // response.data is { items: [...], meta: {...} }
+```
+Instead of extracting `response.data.items`, the entire object is stored in the `projects` state. The `projects` variable is now an object, not an array.
+(See @apps/coordination_ui/src/App.jsx)
+
+### App renders ProjectList component, passing the non-array projects object as a prop.
+```javascript
+<ProjectList
+  projects={projects} // projects is { items: [...], meta: {...} }
+  // ...
+/>
+```
+The component receives an object where it expects an array.
+(See @apps/coordination_ui/src/App.jsx)
+
+### ProjectList attempts to call .map() on the projects object, causing a TypeError.
+```javascript
+// apps/coordination_ui/src/components/ProjectList.jsx:167
+{projects.map((project) => (
+  // ...
+)}
+// Error: TypeError: projects.map is not a function
+```
+Since `projects` is an object (`{ items: [...], meta: {...} }`) and not an array, the `.map` method does not exist, resulting in the fatal error.
+(See @apps/coordination_ui/src/components/ProjectList.jsx)
+
+# Solution Plan
+
+### 1. Update App.jsx loadProjects function to extract items array from response.data (line 78)
+(See @null)
+
+### 2. Update App.jsx warm boot fallback to handle structured response with items property (line 65)
+(See @null)
+
+### 3. Update TasksFilters.jsx getProjects queryFn to extract items from response.data (line 38)
+(See @null)
+
+### 4. Update TaskDetail.jsx getProjects queryFn to extract items from response.data (line 23)
+(See @null)
+
+### 5. Update TaskForm.jsx getProjects queryFn to extract items from response.data (line 38-39)
+(See @null)
+
+### 6. Update useWarmBoot.jsx to extract items from projects response before caching (line 42)
+(See @null)
+# Raw Event Data
+
+## Tags
+
+- **browser:** Edge 141.0.0
+- **browser.name:** Edge
+- **environment:** production
+- **handled:** yes
+- **level:** error
+- **mechanism:** generic
+- **os:** Windows >=10
+- **os.name:** Windows
+- **release:** 7b028da
+- **replayId:** 88ea04b1fe52409c94188a42c676b609
+- **transaction:** /
+- **url:** https://2713c1a8-c2ca-4411-ac2c-0a0e67fe0456-00-e7yxhv9hhk1n.riker.replit.dev/
+
+## Exceptions
+
+### Exception 1
+**Type:** React ErrorBoundary TypeError
+**Value:** projects.map is not a function
+
+#### Stacktrace
+
+```
+ ProjectList in ProjectList.jsx [Line 8] (In app)
+import { useQuery } from '@tanstack/react-query';
+import { apiService } from '../services/api';
+import { ChartSkeleton } from './LoadingSkeleton';
+import { useHasPermission } from '../hooks/usePermissions';
+
+function ProjectList({ projects = [], onRefresh, onSelectProject }) {  <-- SUSPECT LINE
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [formData, setFormData] = useState({ name: '', code: '' });
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+------
+ RequireAuth in RequireAuth.jsx [Line 5] (In app)
+import React from "react";
+import { Navigate, useLocation } from "react-router-dom";
+import { me } from "../api/auth";
+
+export default function RequireAuth({ children }) {  <-- SUSPECT LINE
+  const loc = useLocation();
+  const [state, setState] = React.useState({ loading: true, user: null });
+
+  const DEV_BYPASS = import.meta.env?.VITE_AUTH_DEV_BYPASS === 'true';
+  
+------
+ RenderedRoute in ../../react-router/dist/development/chunk-OIYGIGL5.mjs [Line 5275] (Not in app)
+        children: this.props.component
+      }
+    )) : this.props.children;
+  }
+};
+function RenderedRoute({ routeContext, match, children }) {  <-- SUSPECT LINE
+  let dataRouterContext = React2.useContext(DataRouterContext);
+  if (dataRouterContext && dataRouterContext.static && dataRouterContext.staticContext && (match.route.errorElement || match.route.ErrorBoundary)) {
+    dataRouterContext.staticContext._deepestRenderedBoundaryId = match.route.id;
+  }
+  return /* @__PURE__ */ React2.createElement(RouteContext.Provider, { value: routeContext }, children);
+------
+ Routes in ../../react-router/dist/development/chunk-OIYGIGL5.mjs [Line 6123] (Not in app)
+    return null;
+  }
+  return /* @__PURE__ */ React3.createElement(NavigationContext.Provider, { value: navigationContext }, /* @__PURE__ */ React3.createElement {snip}
+}
+function Routes({
+  children,  <-- SUSPECT LINE
+  location
+}) {
+  return useRoutes(createRoutesFromChildren(children), location);
+}
+function Await({
+------
+ Unknown function in div [Line null] (In app)
+------
+ MotionDOMComponent in ../../../../../node_modules/framer-motion/dist/es/motion/index.mjs [Line 42] (Not in app)
+         * If we need to measure the element we load this functionality in a
+         * separate class component in order to gain access to getSnapshotBeforeUpdate.
+         */
+        let MeasureLayout;
+        const configAndProps = {
+            ...useContext(MotionConfigContext),  <-- SUSPECT LINE
+            ...props,
+            layoutId: useLayoutId(props),
+        };
+        const { isStatic } = configAndProps;
+        const context = useCreateMotionContext(props);
+------
+ PresenceChild in ../../../../../node_modules/framer-motion/dist/es/components/AnimatePresence/PresenceChild.mjs [Line 9] (Not in app)
+import { useId, useMemo } from 'react';
+import { PresenceContext } from '../../context/PresenceContext.mjs';
+import { useConstant } from '../../utils/use-constant.mjs';
+import { PopChild } from './PopChild.mjs';
+
+const PresenceChild = ({ children, initial, isPresent, onExitComplete, custom, presenceAffectsLayout, mode, anchorX, root }) => {  <-- SUSPECT LINE
+    const presenceChildren = useConstant(newChildrenMap);
+    const id = useId();
+    let isReusedContext = true;
+    let context = useMemo(() => {
+        isReusedContext = false;
+------
+ AnimatePresence in ../../../../../node_modules/framer-motion/dist/es/components/AnimatePresence/index.mjs [Line 44] (Not in app)
+ * once all `motion` components have finished animating out. Likewise, any components using
+ * `usePresence` all need to call `safeToRemove`.
+ *
+ * @public
+ */
+const AnimatePresence = ({ children, custom, initial = true, onExitComplete, presenceAffectsLayout = true, mode = "sync", propagate = false, {snip}  <-- SUSPECT LINE
+    const [isParentPresent, safeToRemove] = usePresence(propagate);
+    /**
+     * Filter any children that aren't ReactElements. We can only track components
+     * between renders with a props.key.
+     */
+------
+ Unknown function in div [Line null] (In app)
+------
+ Unknown function in div [Line null] (In app)
+------
+ AppContent in App.jsx [Line 52] (In app)
+import ProtectedCheck from "./pages/ops/ProtectedCheck";
+
+const queryClient = new QueryClient();
+
+function AppContent() {
+  const [projects, setProjects] = useState([]);  <-- SUSPECT LINE
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+------
+ ToasterProvider in Toaster.jsx [Line 5] (In app)
+import { createContext, useContext, useState, useCallback } from "react";
+
+const ToastCtx = createContext(null);
+
+export function ToasterProvider({ children }) {  <-- SUSPECT LINE
+  const [toasts, setToasts] = useState([]);
+  const push = useCallback((type, msg) => {
+    const id = Math.random().toString(36).slice(2);
+    setToasts(t => [...t, { id, type, msg }]);
+    if (type === "success" || type === "info") setTimeout(() => dismiss(id), 2500);
+------
+ AuthProvider in AuthProvider.jsx [Line 16] (In app)
+    throw new Error('useAuth must be used within AuthProvider');
+  }
+  return context;
+};
+
+export function AuthProvider({ children }) {  <-- SUSPECT LINE
+  const [session, setSession] = useState(null);
+  const [user, setUser] = useState(null);
+  const [permissions, setPermissions] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+------
+ Router in ../../react-router/dist/development/chunk-OIYGIGL5.mjs [Line 6066] (Not in app)
+    false,
+    `A <Route> is only ever to be used as the child of <Routes> element, never rendered directly. Please wrap your <Route> in a <Routes>.`
+  );
+}
+function Router({
+  basename: basenameProp = "/",  <-- SUSPECT LINE
+  children = null,
+  location: locationProp,
+  navigationType = "POP" /* Pop */,
+  navigator,
+  static: staticProp = false
+------
+ BrowserRouter in ../../react-router/dist/development/chunk-OIYGIGL5.mjs [Line 9209] (Not in app)
+    }
+  }
+  return serialized;
+}
+function BrowserRouter({
+  basename,  <-- SUSPECT LINE
+  children,
+  window: window2
+}) {
+  let historyRef = React10.useRef();
+  if (historyRef.current == null) {
+------
+ QueryClientProvider in ../../../../../node_modules/@tanstack/react-query/src/QueryClientProvider.tsx [Line 30] (Not in app)
+  client: QueryClient
+  children?: React.ReactNode
+}
+
+export const QueryClientProvider = ({
+  client,  <-- SUSPECT LINE
+  children,
+}: QueryClientProviderProps): React.JSX.Element => {
+  React.useEffect(() => {
+    client.mount()
+    return () => {
+------
+```
+### Exception 2
+**Type:** TypeError
+**Value:** projects.map is not a function
+
+#### Stacktrace
+
+```
+ ProjectList in ProjectList.jsx [Line 167] (In app)
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="project-grid">
+          {projects.map((project) => (  <-- SUSPECT LINE
+            <div key={project.id} className="project-item">
+              <div className="project-header">
+                <div>
+                  <div className="project-title">{project.name}</div>
+                  <div className="text-muted" style={{ fontSize: '14px', marginTop: '4px' }}>
+ renderWithHooks in ../../react-dom/cjs/react-dom.development.js [Line 15486] (Not in app)
+    } else {
+      ReactCurrentDispatcher$1.current = HooksDispatcherOnMountInDEV;
+    }
+  }
+
+  var children = Component(props, secondArg); // Check if there was a render phase update  <-- SUSPECT LINE
+
+  if (didScheduleRenderPhaseUpdateDuringThisPass) {
+    // Keep rendering in a loop for as long as render phase updates continue to
+    // be scheduled. Use a counter to prevent infinite loops.
+    var numberOfReRenders = 0;
+ mountIndeterminateComponent in ../../react-dom/cjs/react-dom.development.js [Line 20103] (Not in app)
+      ReactStrictModeWarnings.recordLegacyContextWarning(workInProgress, null);
+    }
+
+    setIsRendering(true);
+    ReactCurrentOwner$1.current = workInProgress;
+    value = renderWithHooks(null, workInProgress, Component, props, context, renderLanes);  <-- SUSPECT LINE
+    hasId = checkDidRenderIdHook();
+    setIsRendering(false);
+  }
+
+  {
+ beginWork in ../../react-dom/cjs/react-dom.development.js [Line 21626] (Not in app)
+  workInProgress.lanes = NoLanes;
+
+  switch (workInProgress.tag) {
+    case IndeterminateComponent:
+      {
+        return mountIndeterminateComponent(current, workInProgress, workInProgress.type, renderLanes);  <-- SUSPECT LINE
+      }
+
+    case LazyComponent:
+      {
+        var elementType = workInProgress.elementType;
+ beginWork$1 in ../../react-dom/cjs/react-dom.development.js [Line 27465] (Not in app)
+    // Before entering the begin phase, copy the work-in-progress onto a dummy
+    // fiber. If beginWork throws, we'll use this to reset the state.
+    var originalWorkInProgressCopy = assignFiberPropertiesInDEV(dummyFiber, unitOfWork);
+
+    try {
+      return beginWork(current, unitOfWork, lanes);  <-- SUSPECT LINE
+    } catch (originalError) {
+      if (didSuspendOrErrorWhileHydratingDEV() || originalError !== null && typeof originalError === 'object' && typeof originalError.then = {snip}
+        // Don't replay promises.
+        // Don't replay errors if we are hydrating and have already suspended or handled an error
+        throw originalError;
+ performUnitOfWork in ../../react-dom/cjs/react-dom.development.js [Line 26596] (Not in app)
+  setCurrentFiber(unitOfWork);
+  var next;
+
+  if ( (unitOfWork.mode & ProfileMode) !== NoMode) {
+    startProfilerTimer(unitOfWork);
+    next = beginWork$1(current, unitOfWork, subtreeRenderLanes);  <-- SUSPECT LINE
+    stopProfilerTimerIfRunningAndRecordDelta(unitOfWork, true);
+  } else {
+    next = beginWork$1(current, unitOfWork, subtreeRenderLanes);
+  }
+
+ workLoopSync in ../../react-dom/cjs/react-dom.development.js [Line 26505] (Not in app)
+
+
+function workLoopSync() {
+  // Already timed out, so perform work without checking if we need to yield.
+  while (workInProgress !== null) {
+    performUnitOfWork(workInProgress);  <-- SUSPECT LINE
+  }
+}
+
+function renderRootConcurrent(root, lanes) {
+  var prevExecutionContext = executionContext;
+ renderRootSync in ../../react-dom/cjs/react-dom.development.js [Line 26473] (Not in app)
+    markRenderStarted(lanes);
+  }
+
+  do {
+    try {
+      workLoopSync();  <-- SUSPECT LINE
+      break;
+    } catch (thrownValue) {
+      handleError(root, thrownValue);
+    }
+  } while (true);
+ recoverFromConcurrentError in ../../react-dom/cjs/react-dom.development.js [Line 25889] (Not in app)
+    {
+      errorHydratingContainer(root.containerInfo);
+    }
+  }
+
+  var exitStatus = renderRootSync(root, errorRetryLanes);  <-- SUSPECT LINE
+
+  if (exitStatus !== RootErrored) {
+    // Successfully finished rendering on retry
+    // The errors from the failed first attempt have been recovered. Add
+    // them to the collection of recoverable errors. We'll log them in the
+ performConcurrentWorkOnRoot in ../../react-dom/cjs/react-dom.development.js [Line 25789] (Not in app)
+      // the second attempt, we'll give up and commit the resulting tree.
+      var errorRetryLanes = getLanesToRetrySynchronouslyOnError(root);
+
+      if (errorRetryLanes !== NoLanes) {
+        lanes = errorRetryLanes;
+        exitStatus = recoverFromConcurrentError(root, errorRetryLanes);  <-- SUSPECT LINE
+      }
+    }
+
+    if (exitStatus === RootFatalErrored) {
+      var fatalError = workInProgressRootFatalError;
+ workLoop in ../../scheduler/cjs/scheduler.development.js [Line 266] (Not in app)
+    if (typeof callback === 'function') {
+      currentTask.callback = null;
+      currentPriorityLevel = currentTask.priorityLevel;
+      var didUserCallbackTimeout = currentTask.expirationTime <= currentTime;
+
+      var continuationCallback = callback(didUserCallbackTimeout);  <-- SUSPECT LINE
+      currentTime = exports.unstable_now();
+
+      if (typeof continuationCallback === 'function') {
+        currentTask.callback = continuationCallback;
+      } else {
+ flushWork in ../../scheduler/cjs/scheduler.development.js [Line 239] (Not in app)
+
+        throw error;
+      }
+    } else {
+      // No catch in prod code path.
+      return workLoop(hasTimeRemaining, initialTime);  <-- SUSPECT LINE
+    }
+  } finally {
+    currentTask = null;
+    currentPriorityLevel = previousPriorityLevel;
+    isPerformingWork = false;
+ performWorkUntilDeadline in ../../scheduler/cjs/scheduler.development.js [Line 533] (Not in app)
+    // `hasMoreWork` will remain true, and we'll continue the work loop.
+
+    var hasMoreWork = true;
+
+    try {
+      hasMoreWork = scheduledHostCallback(hasTimeRemaining, currentTime);  <-- SUSPECT LINE
+    } finally {
+      if (hasMoreWork) {
+        // If there's more work, schedule the next message event at the end
+        // of the preceding one.
+        schedulePerformWorkUntilDeadline();
+```
