@@ -1,19 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { apiService } from '../services/api';
 import { ChartSkeleton } from './LoadingSkeleton';
 import { useHasPermission } from '../hooks/usePermissions';
+import FeatureGate from './FeatureGate';
+import { getBoolParam, setBoolParam } from '../lib/urlState';
 
 function ProjectList({ projects = [], onRefresh, onSelectProject }) {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [formData, setFormData] = useState({ name: '', code: '' });
   const [loading, setLoading] = useState(false);
+  const [showArchived, setShowArchived] = useState(() => getBoolParam("archived", false));
   const navigate = useNavigate();
 
   const canCreateProject = useHasPermission('project.create');
   const canEditProject = useHasPermission('project.edit');
   const canDeleteProject = useHasPermission('project.delete');
+
+  useEffect(() => {
+    setBoolParam("archived", showArchived);
+  }, [showArchived]);
+
+  const visibleProjects = useMemo(() => {
+    return showArchived ? projects : projects.filter(p => !p.archived);
+  }, [projects, showArchived]);
 
   const { data: taskStats = [], isLoading: statsLoading } = useQuery({
     queryKey: ['tasks_by_status'],
@@ -111,7 +122,20 @@ function ProjectList({ projects = [], onRefresh, onSelectProject }) {
       
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h2>Projects</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <h2>Projects</h2>
+            <FeatureGate feature="includeArchivedToggle" fallback={null}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '14px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={showArchived}
+                  onChange={e => setShowArchived(e.target.checked)}
+                  style={{ cursor: 'pointer' }}
+                />
+                Include archived
+              </label>
+            </FeatureGate>
+          </div>
           {canCreateProject && (
             <button className="btn btn-primary" onClick={() => setShowCreateForm(!showCreateForm)}>
               {showCreateForm ? 'Cancel' : 'New Project'}
@@ -149,14 +173,19 @@ function ProjectList({ projects = [], onRefresh, onSelectProject }) {
         </form>
       )}
 
-      {projects.length === 0 ? (
+      {visibleProjects.length === 0 ? (
         <div className="text-center" style={{padding: 'var(--space-6) 0'}}>
           <div className="text-display mb-4" style={{fontSize: '48px'}}>📁</div>
-          <h3 className="text-large font-semibold mb-2">No projects yet</h3>
+          <h3 className="text-large font-semibold mb-2">
+            {projects.length === 0 ? 'No projects yet' : 'No projects to display'}
+          </h3>
           <p className="text-muted mb-4">
-            Create your first project to get started organizing your tasks
+            {projects.length === 0 
+              ? 'Create your first project to get started organizing your tasks'
+              : 'All projects are currently archived. Toggle "Include archived" to view them.'
+            }
           </p>
-          {canCreateProject && (
+          {canCreateProject && projects.length === 0 && (
             <button className="btn btn-primary" onClick={() => setShowCreateForm(true)}>
               + New Project
             </button>
@@ -164,7 +193,7 @@ function ProjectList({ projects = [], onRefresh, onSelectProject }) {
         </div>
       ) : (
         <div className="project-grid">
-          {projects.map((project) => (
+          {visibleProjects.map((project) => (
             <div key={project.id} className="project-item">
               <div className="project-header">
                 <div>
@@ -172,6 +201,19 @@ function ProjectList({ projects = [], onRefresh, onSelectProject }) {
                   <div className="text-muted" style={{ fontSize: '14px', marginTop: '4px' }}>
                     Code: {project.code}
                   </div>
+                  {project.archived && (
+                    <span style={{
+                      marginTop: '8px',
+                      display: 'inline-block',
+                      fontSize: '12px',
+                      padding: '2px 8px',
+                      border: '1px solid var(--color-outline)',
+                      borderRadius: '4px',
+                      color: 'var(--color-on-surface-variant)'
+                    }}>
+                      Archived
+                    </span>
+                  )}
                 </div>
                 <span className={`status-badge status-${project.status}`}>
                   {project.status}

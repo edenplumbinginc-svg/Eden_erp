@@ -1,0 +1,107 @@
+Step: Add an “Include archived” toggle on the Projects list (gated by the includeArchivedToggle flag).
+
+Why it matters: Archive/Unarchive is done; now the list should default to active projects and let authorized users reveal archived ones—without touching RBAC or backend filters.
+
+Inputs needed: Path to your Projects list component (e.g., apps/coordination_ui/src/pages/Projects.jsx) and that it receives an array projects with archived: boolean.
+
+Command (Frontend layer — list UX filter)
+
+Add a tiny URL helper (optional file):
+
+// apps/coordination_ui/src/lib/urlState.ts
+export function getBoolParam(name: string, def = false) {
+  const u = new URL(window.location.href);
+  const v = u.searchParams.get(name);
+  if (v === null) return def;
+  return v === "1" || v === "true";
+}
+export function setBoolParam(name: string, val: boolean) {
+  const u = new URL(window.location.href);
+  if (val) u.searchParams.set(name, "1"); else u.searchParams.delete(name);
+  window.history.replaceState({}, "", u.toString());
+}
+
+
+In your Projects list page, wire the toggle:
+
+// apps/coordination_ui/src/pages/Projects.jsx
+import { useEffect, useMemo, useState } from "react";
+import FeatureGate from "../components/FeatureGate";            // use relative path if aliases are tricky
+import { getBoolParam, setBoolParam } from "../lib/urlState";   // relative path as well
+
+export default function ProjectsPage({ projects = [] }) {
+  // initial from URL → survive refresh
+  const [showArchived, setShowArchived] = useState(() => getBoolParam("archived", false));
+
+  useEffect(() => {
+    setBoolParam("archived", showArchived);
+  }, [showArchived]);
+
+  const visible = useMemo(() => {
+    return showArchived ? projects : projects.filter(p => !p.archived);
+  }, [projects, showArchived]);
+
+  return (
+    <div className="p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h1 className="text-xl font-semibold">Projects</h1>
+
+        {/* Feature-gated toggle */}
+        <FeatureGate feature="includeArchivedToggle" fallback={null}>
+          <label className="inline-flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={showArchived}
+              onChange={e => setShowArchived(e.target.checked)}
+            />
+            Include archived
+          </label>
+        </FeatureGate>
+      </div>
+
+      {/* Your existing list/grid; example mapping */}
+      <ul className="grid gap-2">
+        {visible.map(p => (
+          <li key={p.id} className="border rounded p-3 flex items-center justify-between">
+            <div>
+              <div className="font-medium">{p.name}</div>
+              {p.archived && (
+                <span className="mt-1 inline-block text-xs px-2 py-0.5 border rounded">
+                  Archived
+                </span>
+              )}
+            </div>
+            {/* existing actions go here */}
+          </li>
+        ))}
+        {visible.length === 0 && (
+          <li className="text-sm text-gray-600">No projects to display.</li>
+        )}
+      </ul>
+    </div>
+  );
+}
+
+
+Ensure the flag is on (we set it earlier, but confirm):
+
+// apps/coordination_ui/src/config/features.json
+{
+  "voiceToText": false,
+  "hardDeleteProjects": false,
+  "includeArchivedToggle": true,
+  "rbacDevBanner": true
+}
+
+
+Success check:
+
+By default, archived projects are hidden.
+
+Toggling the checkbox shows archived projects and writes ?archived=1 to the URL; refresh preserves the view.
+
+RBAC remains unchanged; only users who can load the page (route guard) see the list.
+
+Next: wait for user
+
+Quick dev note (layers/status): RBAC layer is stable ✅; Route guards ✅; Component guards ✅; Archive/Unarchive ✅; Feature flags ✅. This step is purely Frontend list UX. When you’re ready, paste your current Projects.jsx (or the exact file that renders the list) and I’ll splice this in line-by-line to avoid any merge friction.
