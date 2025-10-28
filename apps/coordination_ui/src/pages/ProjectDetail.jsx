@@ -76,6 +76,15 @@ export default function ProjectDetail() {
           <div className="text-body text-muted">Code: {project?.code}</div>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <RequirePermission resource="projects" action="edit" fallback={null}>
+            <Link 
+              to={`/projects/${projectId}/edit`}
+              className="btn btn-secondary"
+              style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+            >
+              ✏️ Edit
+            </Link>
+          </RequirePermission>
           <FeatureGate feature="voiceToText">
             <button 
               className="btn btn-secondary" 

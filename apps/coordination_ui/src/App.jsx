@@ -48,6 +48,7 @@ import ProtectedCheck from "./pages/ops/ProtectedCheck";
 import DevAuthSwitcher from './components/DevAuthSwitcher';
 import RoutePermission from './components/RoutePermission';
 import ProjectCreate from './pages/ProjectCreate';
+import ProjectEdit from './pages/ProjectEdit';
 
 const queryClient = new QueryClient();
 
@@ -171,6 +172,16 @@ function AppContent() {
                     <RequireAuth>
                       <RoutePermission resource="projects" action="create">
                         <ProjectCreate />
+                      </RoutePermission>
+                    </RequireAuth>
+                  }
+                />
+                <Route
+                  path="/projects/:id/edit"
+                  element={
+                    <RequireAuth>
+                      <RoutePermission resource="projects" action="edit">
+                        <ProjectEdit />
                       </RoutePermission>
                     </RequireAuth>
                   }
