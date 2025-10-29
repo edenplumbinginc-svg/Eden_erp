@@ -24,6 +24,11 @@ if (process.env.SENTRY_DSN && process.env.SENTRY_DSN.startsWith('https://')) {
       tracesSampleRate: 0.3,
       profilesSampleRate: 0.1,
       beforeSend(event) {
+        // Filter out diagnostic messages that should not be tracked as issues
+        if (event.message === 'SENTRY_INIT_OK') {
+          return null;
+        }
+        
         const scrub = (obj) => {
           if (!obj || typeof obj !== 'object') return obj;
           return JSON.parse(JSON.stringify(obj, (key, value) => {
