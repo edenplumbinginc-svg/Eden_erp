@@ -1,0 +1,122 @@
+[Layer: Status] [Stage: Soft-Delete slice — VERIFIED READY]
+Nice. Soft delete + restore is in, RBAC/flags wired, counts exclude archived, docs updated. That closes the “destructive actions” requirement for the Attachments module.
+
+[Layer: Test] [Stage: Final smoke — paste to Notion → Test Scripts]
+
+Slice: Tasks — Attachments: Soft Delete (+ Undelete)
+Pre-reqs: taskAttachments=true, taskFilesDelete=false (UI hidden) → then set true for UI tests. Roles: Admin (create/read/delete), Viewer (read).
+
+CLI checks (Admin token)
+
+BASE=http://localhost:5000
+T=$TASK_ID
+# Upload a tiny file to get a FILE_ID
+curl -s -H "Authorization: Bearer $ADMIN" -F "file=@/etc/hosts;type=text/csv" \
+  $BASE/api/tasks/$T/files | jq .item.id -r > /tmp/FID
+FID=$(cat /tmp/FID)
+
+# List (default excludes archived)
+curl -s -H "Authorization: Bearer $ADMIN" $BASE/api/tasks/$T/files | jq '.[].id?, .items[].id?'
+
+# Delete → 200
+curl -s -X DELETE -H "Authorization: Bearer $ADMIN" $BASE/api/task-files/$FID -i | sed -n '1,1p'
+
+# List default (should not include FID)
+curl -s -H "Authorization: Bearer $ADMIN" $BASE/api/tasks/$T/files | jq
+
+# List with archived (should include FID with deletedAt)
+curl -s -H "Authorization: Bearer $ADMIN" "$BASE/api/tasks/$T/files?include=archived" | jq
+
+# Restore → 200
+curl -s -X POST -H "Authorization: Bearer $ADMIN" $BASE/api/task-files/$FID/restore -i | sed -n '1,1p'
+
+# RBAC 403 on delete
+curl -s -X DELETE -H "Authorization: Bearer $NO_DELETE" $BASE/api/task-files/$FID -o /dev/null -w "%{http_code}\n"
+
+
+UI checks
+
+Flag ON (taskFilesDelete=true) → on Task Detail:
+Admin sees Archive/Restore actions; Viewer does not.
+Toggle “Include archived” shows greyed items with ARCHIVED badge.
+
+Tasks List 📎 decrements after archive, increments after restore.
+
+Attach screenshots + curl outputs as Evidence.
+
+[Layer: Docs] [Stage: PR body — Definition of Done]
+
+## Slice: Tasks — Attachments: Soft Delete (+ Undelete)
+
+### AC (met)
+- Data: task_files.deleted_at + indexes.
+- API: DELETE /api/task-files/:id, POST /api/task-files/:id/restore (403/404 enforced).
+- List: GET /api/tasks/:taskId/files supports ?include=archived; default excludes archived.
+- Counts: attachments_count excludes archived (and is RBAC-aware).
+- RBAC: tasks.files.delete for Admin, PM, Ops Lead.
+- UI: Archive/Restore buttons (flag+RBAC), Include archived toggle.
+- Flag: taskFilesDelete default OFF.
+- Tests: curl + UI smoke executed with evidence.
+- Docs: ATTACHMENTS.md + CHANGELOG updated.
+
+### DoD
+- [x] Migration + rollback applied.
+- [x] API contracts documented; 403/404 paths verified.
+- [x] Backend RBAC enforced (DB + middleware).
+- [x] Frontend guards + empty/error/loading handled.
+- [x] Feature flag added/updated.
+- [x] Smoke evidence attached.
+
+
+[Layer: Planning] [Stage: Choose next vertical slice]
+
+Recommendation: RBAC Drift Auditor (utility, fast).
+Purpose: guarantee UX cache (rbac.json) never diverges from DB role_permissions. Prevents the exact class of bugs we just fixed for voice_notes_count and attachments_count.
+
+AC
+
+Script scripts/rbac-drift-audit.mjs:
+
+Pulls DB matrix, loads rbac.json, compares:
+
+missing in DB,
+
+extra in DB,
+
+casing / resource-action mismatches.
+
+Exit code: 0 (clean), 2 (drift).
+
+Pretty table output; optional --fix to write rbac.json (no DB writes).
+
+CI step: runs on PR; fails if drift detected (allow override label rbac-drift-allow).
+
+Docs: RBAC_AUDIT.md with usage + CI badge.
+
+New thread seed (Execution)
+
+[Mode: Execution]
+Slice: RBAC Drift Auditor
+Layers: API/RBAC → Test → Docs
+
+AC:
+1) Node script compares DB role_permissions vs rbac.json; prints diff; exit non-zero on drift.
+2) CI job runs on PR; blocks merge on drift unless label 'rbac-drift-allow' present.
+3) Docs: RBAC_AUDIT.md (how to run, how to fix).
+
+Start with a read-only query to dump DB permissions; then implement the comparator; finally add a GitHub Action workflow.
+
+
+Pipeline after Auditor
+
+Attachments — Storage Migration (S3 + signed URLs): move bytes out of disk, keep our policy gate; add magic-bytes sniff.
+
+Procurement v1 (draft → sent): leverage attachments for PO PDFs; introduces Vendors + PO flows.
+
+[Layer: Cleanup] [Stage: Tech-debt]
+
+Deprecate or remove the legacy Supabase attachments path (one canonical flow).
+
+Centralize UPLOAD_ROOT + URL↔path mapping in a single helper with root-clamp (prevents path escape).
+
+Mini-lesson (guard your aggregates): any count/summary field exposed by the API must be both role-aware and state-aware (e.g., exclude archived). Existence leaks creep in through aggregates first—treat them like mini-endpoints with their own policy.
