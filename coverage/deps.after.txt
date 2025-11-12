@@ -1,7 +1,0 @@
-Checking /home/runner/workspace/package.json
-
-
-Major   Potentially breaking API changes
- jest  ^29.7.0  →  ^30.2.0
-
-Run npx npm-check-updates --dep prod,dev --format group -u to upgrade package.json
